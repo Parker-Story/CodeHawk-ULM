@@ -13,9 +13,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String createUser(User user) {
-        userRepository.save(user);
-        return "Create Success...";
+    public User createUser(User user) {
+        return userRepository.save(user);
     }
 
     @Override
@@ -29,15 +28,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String updateUser(User user) {
-        userRepository.save(user);
-        return "Update Success...";
+    public User updateUser(User user) {
+        return userRepository.save(user);
     }
 
     @Override
-    public String deleteUser(String cwid) {
+    public void deleteUser(String cwid) {
         userRepository.deleteById(cwid);
-        return "Delete Success...";
     }
     
 }

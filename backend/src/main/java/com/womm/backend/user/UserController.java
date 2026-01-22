@@ -17,9 +17,8 @@ public class UserController {
     // ----- CRUD -----
     // Create
     @PostMapping
-    public String createUserDetails(@RequestBody User user) {
-        userService.createUser(user);
-        return "User created successfully.";
+    public User createUserDetails(@RequestBody User user) {
+        return userService.createUser(user);
     }
 
     // Retrieve One
@@ -36,16 +35,14 @@ public class UserController {
 
     // Update
     @PutMapping
-    public String updateUserDetails(@RequestBody User user) {
-        userService.updateUser(user);
-        return "User updated successfully.";
+    public User updateUserDetails(@RequestBody User user) {
+        return userService.updateUser(user);
     }
 
     // Delete
     @DeleteMapping("{cwid}")
-    public String deleteUserDetails(@PathVariable("cwid") String cwid) {
+    public void deleteUserDetails(@PathVariable("cwid") String cwid) {
         userService.deleteUser(cwid);
-        return "User deleted successfully.";
     }
 
 }

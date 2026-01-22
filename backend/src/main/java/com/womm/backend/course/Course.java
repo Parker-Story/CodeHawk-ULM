@@ -1,9 +1,9 @@
 package com.womm.backend.course;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.womm.backend.assignment.Assignment;
+import com.womm.backend.courseUser.CourseUser;
+import jakarta.persistence.*;
+import java.util.List;
 
 
 @Entity
@@ -20,6 +20,13 @@ public class Course {
     //TODO: add timestamp logic
 
 
+    @OneToMany(mappedBy = "course")
+    private List<CourseUser> users;
+
+    @OneToMany(mappedBy = "course")
+    private List<Assignment> assignments;
+
+
     // ----- Constructors -----
     public Course() {}
 
@@ -29,7 +36,7 @@ public class Course {
     }
 
 
-    // ----- Getters and Setters -----
+    // ----- Getters/Setters -----
     public String getCrn() {
         return crn;
     }

@@ -1,6 +1,9 @@
 package com.womm.backend.user;
 
+import com.womm.backend.courseUser.CourseUser;
 import jakarta.persistence.*;
+
+import java.util.List;
 
 
 @Entity
@@ -24,8 +27,11 @@ public class User {
     private String passwordHash; //TODO: add hash logic
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role")
+    @Column(name = "user_role")
     private Role role;
+
+    @OneToMany (mappedBy = "user")
+    private List<CourseUser> courses;
 
     //TODO: add timestamp logic
 
@@ -43,7 +49,7 @@ public class User {
     }
 
 
-    // ----- Getters/Setters -----//
+    // ----- Getters/Setters -----
     public String getCwid() {
         return cwid;
     }

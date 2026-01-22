@@ -14,12 +14,12 @@ public class CourseController {
         this.courseService = courseService;
     }
 
+
     // ----- CRUD -----
     // Create
     @PostMapping
-    public String createCourseDetails(@RequestBody Course course) {
-        courseService.createCourse(course);
-        return "Course created successfully.";
+    public Course createCourseDetails(@RequestBody Course course) {
+        return courseService.createCourse(course);
     }
 
     // Retrieve One
@@ -36,16 +36,14 @@ public class CourseController {
 
     // Update
     @PutMapping
-    public String updateCourseDetails(@RequestBody Course course) {
-        courseService.updateCourse(course);
-        return "Course updated successfully.";
+    public Course updateCourseDetails(@RequestBody Course course) {
+        return courseService.updateCourse(course);
     }
 
     // Delete
     @DeleteMapping("{crn}")
-    public String deleteCourseDetails(@PathVariable("crn") String crn) {
+    public void deleteCourseDetails(@PathVariable("crn") String crn) {
         courseService.deleteCourse(crn);
-        return "Course deleted successfully.";
     }
 
 }

@@ -38,10 +38,10 @@ CREATE TABLE assignments (
 );
 
 CREATE TABLE submissions (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     assignment_id BIGINT NOT NULL,
     user_cwid CHAR(8) NOT NULL,
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (assignment_id, user_cwid),
     FOREIGN KEY (assignment_id) REFERENCES assignments(id),
     FOREIGN KEY (user_cwid) REFERENCES users(cwid)
 );

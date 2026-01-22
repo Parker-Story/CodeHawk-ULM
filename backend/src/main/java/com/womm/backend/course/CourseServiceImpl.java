@@ -13,9 +13,8 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public String createCourse(Course course) {
-        courseRepository.save(course);
-        return "Create Success...";
+    public Course createCourse(Course course) {
+        return courseRepository.save(course);
     }
 
     @Override
@@ -29,15 +28,13 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public String updateCourse(Course course) {
-        courseRepository.save(course);
-        return "Update Success...";
+    public Course updateCourse(Course course) {
+        return courseRepository.save(course);
     }
 
     @Override
-    public String deleteCourse(String crn) {
+    public void deleteCourse(String crn) {
         courseRepository.deleteById(crn);
-        return "Delete Success...";
     }
 
 }
