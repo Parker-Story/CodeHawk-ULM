@@ -1,13 +1,10 @@
 package com.womm.backend.assignment;
 
-import com.womm.backend.course.Course;
 import com.womm.backend.course.CourseRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-@Transactional
 public class AssignmentServiceImpl implements AssignmentService{
 
     AssignmentRepository assignmentRepository;
@@ -19,9 +16,7 @@ public class AssignmentServiceImpl implements AssignmentService{
     }
 
     @Override
-    public Assignment createAssignment(String courseCrn, Long id, String title) {
-        Course course = courseRepository.findById(courseCrn).get();
-        Assignment assignment = new Assignment(id, course, title);
+    public Assignment createAssignment(Assignment assignment) {
         return assignmentRepository.save(assignment);
     }
 
@@ -36,9 +31,7 @@ public class AssignmentServiceImpl implements AssignmentService{
     }
 
     @Override
-    public Assignment updateAssignment(String courseCrn, Long id, String title) {
-        Course course = courseRepository.findById(courseCrn).get();
-        Assignment assignment = new Assignment(id, course, title);
+    public Assignment updateAssignment(Assignment assignment) {
         return assignmentRepository.save(assignment);
     }
 

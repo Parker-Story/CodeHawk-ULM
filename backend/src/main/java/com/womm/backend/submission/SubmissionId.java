@@ -1,38 +1,39 @@
-package com.womm.backend.courseUser;
+package com.womm.backend.submission;
 
 import jakarta.persistence.Embeddable;
+
 import java.io.Serializable;
 import java.util.Objects;
 
 @Embeddable
-public class CourseUserId implements Serializable {
+public class SubmissionId implements Serializable {
 
     private String userCwid;
-    private String courseCrn;
+    private Long assignmentId;
 
 
     // ----- Constructors -----
-    public CourseUserId() {}
+    public SubmissionId() {}
 
-    public CourseUserId(String userCwid, String courseCrn) {
+    public SubmissionId(String userCwid, Long assignmentId) {
         this.userCwid = userCwid;
-        this.courseCrn = courseCrn;
+        this.assignmentId = assignmentId;
     }
 
 
     // ----- Equals/Hash -----
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
-        CourseUserId that = (CourseUserId) o;
-        return Objects.equals(userCwid, that.userCwid) && Objects.equals(courseCrn, that.courseCrn);
+        SubmissionId that = (SubmissionId) o;
+        return Objects.equals(userCwid, that.userCwid) && Objects.equals(assignmentId, that.assignmentId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userCwid, courseCrn);
+        return Objects.hash(userCwid, assignmentId);
     }
-
 
     // ----- Getters/Setters -----
     public String getUserCwid() {
@@ -42,11 +43,11 @@ public class CourseUserId implements Serializable {
         this.userCwid = userCwid;
     }
 
-    public String getCourseCrn() {
-        return courseCrn;
+    public Long getAssignmentId() {
+        return assignmentId;
     }
-    public void setCourseCrn(String courseCrn) {
-        this.courseCrn = courseCrn;
+    public void setAssignmentId(Long assignmentId) {
+        this.assignmentId = assignmentId;
     }
 
 }

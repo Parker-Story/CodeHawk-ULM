@@ -21,13 +21,6 @@ public class CourseUserServiceImpl implements CourseUserService {
 
     @Override
     public CourseUser createCourseUser(CourseUser courseUser) {
-
-        String userCwid = courseUser.getCourseUserId().getUserCwid();
-        String courseCrn = courseUser.getCourseUserId().getCourseCrn();
-
-        courseUser.setUser(userRepository.findById(userCwid).get());
-        courseUser.setCourse(courseRepository.findById(courseCrn).get());
-
         return courseUserRepository.save(courseUser);
 
     }
@@ -44,13 +37,6 @@ public class CourseUserServiceImpl implements CourseUserService {
 
     @Override
     public CourseUser updateCourseUser(CourseUser courseUser) {
-
-        String userCwid = courseUser.getCourseUserId().getUserCwid();
-        String courseCrn = courseUser.getCourseUserId().getCourseCrn();
-
-        courseUser.setUser(userRepository.findById(userCwid).get());
-        courseUser.setCourse(courseRepository.findById(courseCrn).get());
-
         return courseUserRepository.save(courseUser);
 
     }

@@ -4,7 +4,7 @@ import com.womm.backend.course.Course;
 import com.womm.backend.user.User;
 
 import jakarta.persistence.*;
-//TODO: does not work :( idk
+
 @Entity
 @Table(name = "course_users")
 public class CourseUser {
@@ -36,7 +36,9 @@ public class CourseUser {
     public CourseUserId getCourseUserId() {
         return courseUserId;
     }
-
+    public void setCourseUserId(CourseUserId courseUserId) {
+        this.courseUserId = courseUserId;
+    }
     public Course getCourse() {
         return course;
     }

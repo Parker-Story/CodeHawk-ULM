@@ -25,8 +25,7 @@ public class Assignment {
     // ----- Constructors -----
     public Assignment() {}
 
-    public Assignment(Long id, Course course, String title) {
-        this.id = id;
+    public Assignment(Course course, String title) {
         this.course = course;
         this.title = title;
     }

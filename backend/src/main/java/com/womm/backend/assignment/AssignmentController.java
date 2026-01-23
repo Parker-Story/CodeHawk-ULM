@@ -19,8 +19,8 @@ public class AssignmentController {
     // ----- CRUD -----
     // Create
     @PostMapping
-    public Assignment createAssignmentDetails(@RequestParam String courseCrn, @RequestParam Long id, @RequestParam String title) {
-        return assignmentService.createAssignment(courseCrn, id, title);
+    public Assignment createAssignmentDetails(@RequestBody Assignment assignment) {
+        return assignmentService.createAssignment(assignment);
     }
 
     // Retrieve One
@@ -37,8 +37,8 @@ public class AssignmentController {
 
     // Update
     @PutMapping
-    public Assignment updateAssignmentDetails(@RequestParam String courseCrn, @RequestParam Long id, @RequestParam String title) {
-        return assignmentService.updateAssignment(courseCrn, id, title);
+    public Assignment updateAssignmentDetails(@RequestBody Assignment assignment) {
+        return assignmentService.updateAssignment(assignment);
     }
 
     // Delete
