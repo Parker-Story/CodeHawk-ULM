@@ -1,14 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { X, BookOpen, Building2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, GraduationCap, BookOpen } from "lucide-react";
 
 export default function Home() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
+  const router = useRouter();
+
+  const handleContinue = () => {
+    if (selectedRole === "student") {
+      router.push("/students/login");
+    } else if (selectedRole === "faculty") {
+      router.push("/faculty/login");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-4 border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/50">
         <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -37,7 +47,7 @@ export default function Home() {
           />
 
           {/* Dialog */}
-          <div className="relative z-10 w-full max-w-xl p-10 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl shadow-violet-900/20">
+          <div className="relative z-10 w-full max-w-xl p-10 bg-slate-800/90 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl">
             {/* Close button */}
             <button
               onClick={() => setIsDialogOpen(false)}
@@ -52,16 +62,16 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-4">
               <div
                 onClick={() => setSelectedRole("student")}
-                className={`flex flex-col items-center gap-4 p-6 bg-slate-900 border-2 rounded-xl cursor-pointer transition-all group ${
+                className={`flex flex-col items-center gap-4 p-6 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
                   selectedRole === "student"
-                    ? "border-cyan-500 bg-slate-800"
-                    : "border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800"
+                    ? "border-orange-500 bg-slate-800"
+                    : "border-slate-700 hover:border-orange-500/50 hover:bg-slate-800"
                 }`}
               >
                 <div className={`w-16 h-16 flex items-center justify-center rounded-xl transition-colors ${
-                  selectedRole === "student" ? "bg-cyan-600/40" : "bg-cyan-600/20 group-hover:bg-cyan-600/30"
+                  selectedRole === "student" ? "bg-orange-600/40" : "bg-orange-600/20 group-hover:bg-orange-600/30"
                 }`}>
-                  <BookOpen className="w-8 h-8 text-cyan-400" />
+                  <GraduationCap className="w-8 h-8 text-orange-400" />
                 </div>
                 <div className="text-center">
                   <h3 className="font-semibold text-white text-lg">Student</h3>
@@ -71,16 +81,16 @@ export default function Home() {
 
               <div
                 onClick={() => setSelectedRole("faculty")}
-                className={`flex flex-col items-center gap-4 p-6 bg-slate-900 border-2 rounded-xl cursor-pointer transition-all group ${
+                className={`flex flex-col items-center gap-4 p-6 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
                   selectedRole === "faculty"
-                    ? "border-amber-500 bg-slate-800"
-                    : "border-slate-700 hover:border-amber-500/50 hover:bg-slate-800"
+                    ? "border-teal-500 bg-slate-800"
+                    : "border-slate-700 hover:border-teal-500/50 hover:bg-slate-800"
                 }`}
               >
                 <div className={`w-16 h-16 flex items-center justify-center rounded-xl transition-colors ${
-                  selectedRole === "faculty" ? "bg-amber-600/40" : "bg-amber-600/20 group-hover:bg-amber-600/30"
+                  selectedRole === "faculty" ? "bg-teal-600/40" : "bg-teal-600/20 group-hover:bg-teal-600/30"
                 }`}>
-                  <Building2 className="w-8 h-8 text-amber-400" />
+                  <BookOpen className="w-8 h-8 text-teal-400" />
                 </div>
                 <div className="text-center">
                   <h3 className="font-semibold text-white text-lg">Faculty</h3>
@@ -90,6 +100,7 @@ export default function Home() {
             </div>
 
             <button
+              onClick={handleContinue}
               disabled={!selectedRole}
               className={`w-full mt-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                 selectedRole

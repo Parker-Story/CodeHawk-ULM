@@ -1,10 +1,5 @@
-import React from 'react'
+import LoginForm from "@/components/LoginForm";
 
 export default function StudentLoginPage() {
-  return (
-    <div>
-      <h1>Student Login</h1>
-    </div>
-  )
+  return <LoginForm variant="student" />;
 }
-

@@ -3,9 +3,29 @@
 import { useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
 
-export default function DropZone({ onFilesAdded }) {
+export default function DropZone({ onFilesAdded, theme = "default" }) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+
+  const themes = {
+    default: {
+      border: isDragging ? 'border-violet-500 bg-slate-800' : 'border-slate-700 hover:border-violet-500/50 hover:bg-slate-800',
+      iconBg: isDragging ? 'bg-violet-600/40' : 'bg-violet-600/20',
+      iconColor: 'text-violet-400',
+    },
+    student: {
+      border: isDragging ? 'border-orange-500 bg-slate-800' : 'border-slate-700 hover:border-orange-500/50 hover:bg-slate-800',
+      iconBg: isDragging ? 'bg-orange-600/40' : 'bg-orange-600/20',
+      iconColor: 'text-orange-400',
+    },
+    faculty: {
+      border: isDragging ? 'border-teal-500 bg-slate-800' : 'border-slate-700 hover:border-teal-500/50 hover:bg-slate-800',
+      iconBg: isDragging ? 'bg-teal-600/40' : 'bg-teal-600/20',
+      iconColor: 'text-teal-400',
+    },
+  };
+
+  const currentTheme = themes[theme] || themes.default;
 
   function handleDrop(e) {
     e.preventDefault();
@@ -23,11 +43,7 @@ export default function DropZone({ onFilesAdded }) {
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
       onClick={() => fileInputRef.current.click()}
-      className={`bg-slate-900 border-2 rounded-2xl p-16 text-center cursor-pointer transition-all ${
-        isDragging 
-          ? 'border-cyan-500 bg-slate-800' 
-          : 'border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800'
-      }`}
+      className={`bg-slate-900/80 backdrop-blur-sm border-2 rounded-2xl p-16 text-center cursor-pointer transition-all ${currentTheme.border}`}
     >
       <input
         ref={fileInputRef}
@@ -36,10 +52,8 @@ export default function DropZone({ onFilesAdded }) {
         onChange={handleFileSelect}
         className="hidden"
       />
-      <div className={`w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-2xl transition-colors ${
-        isDragging ? 'bg-cyan-600/40' : 'bg-cyan-600/20'
-      }`}>
-        <Upload className="w-10 h-10 text-cyan-400" />
+      <div className={`w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-2xl transition-colors ${currentTheme.iconBg}`}>
+        <Upload className={`w-10 h-10 ${currentTheme.iconColor}`} />
       </div>
       <p className="text-2xl font-semibold text-white mb-3">
         {isDragging ? 'Drop files here' : 'Drag & drop your files here'}
@@ -49,4 +63,3 @@ export default function DropZone({ onFilesAdded }) {
     </div>
   );
 }
-
