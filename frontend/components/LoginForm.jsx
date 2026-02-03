@@ -29,16 +29,16 @@ export default function LoginForm({ variant = "student" }) {
   const Icon = isStudent ? GraduationCap : BookOpen;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
       {/* Login Card */}
       <div className="relative w-full max-w-md">
         {/* Glow effect behind card */}
-        <div className={`absolute -inset-1 bg-gradient-to-r ${theme.cardGlow} rounded-2xl blur opacity-20`} />
+        <div className={`absolute -inset-1 bg-linear-to-r ${theme.cardGlow} rounded-2xl blur opacity-20`} />
         
         <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
           {/* Logo / Brand */}
           <div className="text-center mb-8">
-            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.iconBg} shadow-lg ${theme.iconShadow} mb-4`}>
+            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br ${theme.iconBg} shadow-lg ${theme.iconShadow} mb-4`}>
               <Icon className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">
@@ -120,7 +120,7 @@ export default function LoginForm({ variant = "student" }) {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full py-4 text-base font-semibold text-white bg-gradient-to-r ${theme.button} rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
+              className={`w-full py-4 text-base font-semibold text-white bg-linear-to-r ${theme.button} rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]`}
             >
               Sign In
             </button>

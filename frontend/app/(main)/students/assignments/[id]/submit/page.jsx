@@ -28,8 +28,8 @@ export default function SubmitAssignmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <div className="flex items-center justify-center min-h-screen p-8">
+    <div className="p-8">
+      <div className="flex items-center justify-center min-h-[80vh]">
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Submit Assignment</h1>
