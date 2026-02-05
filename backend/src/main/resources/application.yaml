@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/codehawk_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: codehawk_user
+    password: devpassword123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+#JPA settings
+  jpa.hibernate.ddl-auto: update
+
+# change ssl and publicKeyAccess with a remote database
