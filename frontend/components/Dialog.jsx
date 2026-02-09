@@ -5,12 +5,6 @@ import { X } from "lucide-react";
 export default function Dialog({ isOpen, onClose, title, children, size = "md" }) {
   if (!isOpen) return null;
 
-  const sizes = {
-    sm: "max-w-md",
-    md: "max-w-xl",
-    lg: "max-w-2xl",
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -20,7 +14,7 @@ export default function Dialog({ isOpen, onClose, title, children, size = "md" }
       />
 
       {/* Dialog */}
-      <div className={`relative z-10 w-full ${sizes[size]} max-h-[90vh] flex flex-col bg-slate-800/90 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl`}>
+      <div className={`relative z-10 w-full max-h-[90vh] flex flex-col bg-slate-800/90 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl ${size === "sm" ? "max-w-md" : size === "lg" ? "max-w-2xl" : "max-w-xl"}`}>
         {/* Header */}
         <div className="shrink-0 flex items-center justify-between p-6 pb-0">
           {title && (
