@@ -7,7 +7,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping(path = "/api/user")
+@RequestMapping(path = "/api/users")
 @CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
 
@@ -25,7 +25,7 @@ public class UserController {
     }
 
     // Retrieve One
-    @GetMapping("{cwid}")
+    @GetMapping("/{cwid}")
     public User getUserDetails(@PathVariable("cwid") String cwid) {
         return userService.getUser(cwid);
     }
@@ -37,14 +37,22 @@ public class UserController {
     }
 
     // Update
-    @PutMapping
-    public User updateUserDetails(@RequestBody User user) {
+    @PutMapping("/{cwid}")
+    public User updateUserDetails(@PathVariable String cwid, @RequestBody User updatedUser) {
+        User user = userService.getUser(cwid);
+
+        user.setFirstName(updatedUser.getFirstName());
+        user.setLastName(updatedUser.getLastName());
+        user.setEmail(updatedUser.getEmail());
+        user.setPasswordHash(updatedUser.getPasswordHash());
+
         return userService.updateUser(user);
     }
 
     // Delete
-    @DeleteMapping("{cwid}")
+    @DeleteMapping("/{cwid}")
     public void deleteUserDetails(@PathVariable("cwid") String cwid) {
+        System.out.println("Deleting user: " + cwid);
         userService.deleteUser(cwid);
     }
 

@@ -3,16 +3,34 @@ package com.womm.backend.dto;
 import com.womm.backend.enums.Role;
 
 public class LoginResponse {
-    private Role role;
+    private Boolean success;
+    private String cwid;
     private String firstName;
     private String lastName;
-    private String cwid;
+    private Role role;
 
-    public Role getRole() {
-        return role;
-    }
-    public void setRole(Role role) {
+    public LoginResponse() {}
+
+    public LoginResponse(Boolean success, String cwid, String firstName, String lastName,Role role) {
+        this.success = success;
+        this.cwid = cwid;
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.role = role;
+    }
+
+    public Boolean getSuccess() {
+        return success;
+    }
+    public void setSuccess(Boolean success) {
+        this.success = success;
+    }
+
+    public String getCwid() {
+        return cwid;
+    }
+    public void setCwid(String cwid) {
+        this.cwid = cwid;
     }
 
     public String getFirstName() {
@@ -29,10 +47,10 @@ public class LoginResponse {
         this.lastName = lastName;
     }
 
-    public String getCwid() {
-        return cwid;
+    public Role getRole() {
+        return role;
     }
-    public void setCwid(String cwid) {
-        this.cwid = cwid;
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

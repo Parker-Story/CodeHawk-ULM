@@ -10,6 +10,8 @@ public class RegisterRequest {
     private String password;
     private Role role;
 
+    public RegisterRequest() {}
+
     public String getCwid() {
         return cwid;
     }

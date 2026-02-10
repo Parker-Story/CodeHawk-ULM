@@ -5,13 +5,11 @@ import com.womm.backend.dto.LoginResponse;
 import com.womm.backend.dto.RegisterRequest;
 import com.womm.backend.entity.User;
 import com.womm.backend.service.UserService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
 
     UserService userService;
