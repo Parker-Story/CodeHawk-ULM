@@ -2,8 +2,8 @@ DROP SCHEMA IF EXISTS codehawk_dev;
 CREATE DATABASE codehawk_dev;
 USE codehawk_dev;
 
-CREATE USER IF NOT EXISTS 'codehawk_user'@'localhost' IDENTIFIED BY 'devpassword123';
-GRANT ALL PRIVILEGES ON codehawk_dev.* TO 'codehawk_user'@'localhost';
+CREATE USER IF NOT EXISTS 'codehawk_user'@'%' IDENTIFIED BY 'devpassword123';
+GRANT ALL PRIVILEGES ON codehawk_dev.* TO 'codehawk_user'@'%';
 FLUSH PRIVILEGES;
 
 CREATE TABLE users (

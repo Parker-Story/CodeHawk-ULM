@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 
-export default function UserPage({ params }) {
-  const { cwid } = params;
+export default function UserPage() {
   const router = useRouter();
+  const params = useParams();
+  const { cwid } = params; // safe now
 
   // Keep controlled inputs always as strings
   const [user, setUser] = useState({
