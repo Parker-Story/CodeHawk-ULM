@@ -9,11 +9,9 @@ export default function LoginForm({ variant = "student" }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [cwid, setCwid] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const isStudent = variant === "student";
   const Icon = isStudent ? GraduationCap : BookOpen;
@@ -23,25 +21,13 @@ export default function LoginForm({ variant = "student" }) {
     
     if (isSignUp) {
       // Handle sign up logic here if needed
-      await fetch("http://localhost:8080/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cwid,
-          firstName,
-          lastName,
-          email,
-          password,
-          role: isStudent ? "STUDENT" : "FACULTY"
-        })
-      });
       // Switch back to login form after account creation
       setIsSignUp(false);
       return;
     }
 
     // Call backend API for login
-    const response = await fetch("http://localhost:8080/api/auth/login", {
+    await fetch("http://localhost:8080/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -50,18 +36,11 @@ export default function LoginForm({ variant = "student" }) {
       })
     });
 
-    const data = await response.json();
-
-    if(!data.success){
-      alert("Login failed: Incorrect email or password.");
-      return;
-    }
-
     // Navigate based on variant
     if (isStudent) {
-      router.push(`/students/${data.cwid}`);
+      router.push("/students");
     } else {
-      router.push(`/faculty/${data.cwid}`);
+      router.push("/faculty");
     }
   };
 
@@ -89,10 +68,10 @@ export default function LoginForm({ variant = "student" }) {
           {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             {isSignUp && (
+              /* Name Field (sign up only) */
               <div className="space-y-2">
-                {/* CWID */}
                 <label className="text-sm font-medium text-slate-300 block">
-                  CWID
+                  Full Name
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -100,41 +79,9 @@ export default function LoginForm({ variant = "student" }) {
                   </div>
                   <input
                     type="text"
-                    placeholder="Campus-Wide ID"
-                    onChange={(e) => setCwid(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
-                  />
-                </div>
-                {/* First Name */}
-                <label className="text-sm font-medium text-slate-300 block">
-                  First Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
-                  />
-                </div>
-
-                {/* Last Name */}
-                <label className="text-sm font-medium text-slate-300 block">
-                  Last Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
                   />
                 </div>
