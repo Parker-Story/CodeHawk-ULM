@@ -1,4 +1,4 @@
-structure# AI Module - Capstone Project
+AI Module - Capstone Project
 
 This directory contains the AI-powered components of our capstone project. There are two distinct modules, each serving a different purpose. Both are designed to support academic integrity tools for a faculty-facing web application.
 
