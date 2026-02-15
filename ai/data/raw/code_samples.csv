@@ -1,0 +1,4 @@
+1,python,"print('hello world')",0
+2,python,"def add(a,b): return a+b",0
+3,python,"Sure! Here's a Python function that adds two numbers.",1
+4,python,"import torch\nclass Model(torch.nn.Module):\n",1
