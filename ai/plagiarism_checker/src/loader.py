@@ -83,3 +83,19 @@ if __name__ == "__main__":
         print("Path:", submissions[0]["filepath"])
         print("\n--- CODE PREVIEW ---")
         print(submissions[0]["code"][:500])
+        
+    if len(submissions) > 0:
+        print("Second file loaded:")
+        print("Filename:", submissions[1]["filename"])
+        print("Language:", submissions[1]["language"])
+        print("Path:", submissions[1]["filepath"])
+        print("\n--- CODE PREVIEW ---")
+        print(submissions[1]["code"][:500])
+
+    if len(submissions) > 0:
+        print("Third file loaded:")
+        print("Filename:", submissions[2]["filename"])
+        print("Language:", submissions[2]["language"])
+        print("Path:", submissions[2]["filepath"])
+        print("\n--- CODE PREVIEW ---")
+        print(submissions[2]["code"][:500])
