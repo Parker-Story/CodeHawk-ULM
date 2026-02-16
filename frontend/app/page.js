@@ -20,7 +20,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-4 border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/50">
         <h1 className="text-2xl font-bold tracking-tight text-white">
           Code<span className="text-violet-400">Hawk</span>
@@ -33,12 +32,10 @@ export default function Home() {
         </button>
       </nav>
 
-      {/* Main content */}
       <main className="flex items-center justify-center h-[calc(100vh-73px)]">
         <h1 className="text-4xl font-bold text-white/80">Hello World</h1>
       </main>
 
-      {/* Login Role Selection Dialog */}
       <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} size="lg">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-white mb-2">Login as</h2>
