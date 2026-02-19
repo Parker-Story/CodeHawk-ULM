@@ -1,9 +1,13 @@
+import os
 from loader import load_code_files
 from normalize import normalize_code
+from similarity import compute_similarity_matrix, get_top_similar_pairs
 
 
 def main():
-    submissions_folder = "plagiarism_checker/data/submissions"
+    # Get absolute path relative to this file
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    submissions_folder = os.path.join(BASE_DIR, "data", "submissions")
 
     print(f"Loading submissions from: {submissions_folder}\n")
 
@@ -11,8 +15,8 @@ def main():
 
     print(f"Loaded {len(submissions)} code submissions.\n")
 
-    if len(submissions) == 0:
-        print("No files found. Make sure you placed .java or .py files in the submissions folder.")
+    if len(submissions) < 2:
+        print("Need at least 2 submissions to compare.")
         return
 
     # Normalize every submission
@@ -22,16 +26,35 @@ def main():
             submission["language"]
         )
 
-    # Print a preview so we can verify normalization is working on REAL files
-    print("===== NORMALIZED CODE PREVIEW =====\n")
+    print("Computing similarity...\n")
 
-    for submission in submissions:
-        print("-----------------------------------")
-        print("Filename:", submission["filename"])
-        print("Language:", submission["language"])
-        print("-----------------------------------")
-        print(submission["normalized_code"][:500])
-        print("\n")
+    # Compute similarity matrix
+    similarity_matrix = compute_similarity_matrix(submissions)
+
+    # Print similarity matrix
+    print("===== SIMILARITY MATRIX =====\n")
+
+    n = len(submissions)
+    for i in range(n):
+        for j in range(n):
+            score = similarity_matrix[i][j]
+            print(f"{score:.2f}", end="\t")
+        print()
+
+    print("\n===== SUSPICIOUS PAIRS =====\n")
+
+    # Flag pairs above threshold
+    threshold = 0.7
+    suspicious_pairs = get_top_similar_pairs(submissions, similarity_matrix, threshold)
+
+    if not suspicious_pairs:
+        print(f"No pairs above threshold ({threshold}).")
+    else:
+        for pair in suspicious_pairs:
+            print(
+                f"{pair['file1']}  <-->  {pair['file2']}  "
+                f"Similarity: {pair['similarity']:.2f}"
+            )
 
 
 if __name__ == "__main__":
