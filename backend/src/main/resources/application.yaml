@@ -11,17 +11,14 @@ spring:
 
   # Database settings
   datasource:
-    # in url use 'db' for docker and 'localhost' for local development
-    url: jdbc:mysql://localhost:3306/codehawk_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: codehawk_user
-    password: devpassword123
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
     # retry for database connection on error
     hikari:
       initializationFailTimeout: -1
-    
-  # !!change ssl and publicKeyAccess with a remote database
 
 #JPA settings
   jpa.hibernate.ddl-auto: update
