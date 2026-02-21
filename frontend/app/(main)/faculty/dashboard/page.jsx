@@ -2,44 +2,64 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, BookOpen, Clock, Trash2 } from "lucide-react";
+import { BookOpen, Clock, Trash2 } from "lucide-react";
+import DashboardView from "@/components/shared/DashboardView";
 import Dialog from "@/components/Dialog";
+import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
+
+const daysOfWeek = [
+  { id: "mon", label: "Mon" },
+  { id: "tue", label: "Tue" },
+  { id: "wed", label: "Wed" },
+  { id: "thu", label: "Thu" },
+  { id: "fri", label: "Fri" },
+];
+
+const initialFormData = {
+  courseName: "",
+  courseAbbreviation: "",
+  crn: "",
+  courseDescription: "",
+  semester: "",
+  year: "",
+  days: [],
+  startTime: "",
+  endTime: "",
+};
+
+const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200";
+const labelStyles = "text-sm font-medium text-slate-300 block mb-2";
+
+const CODE_CHARS = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function generateUniqueCode(existingCodes) {
+  let code;
+  do {
+    code = "";
+    for (let i = 0; i < 7; i++) {
+      code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    }
+  } while (existingCodes.includes(code));
+  return code;
+}
 
 export default function FacultyDashboardPage() {
   const router = useRouter();
+  const { classes, setClasses } = useFacultyClasses();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, crn: null, className: "" });
-  const [classes, setClasses] = useState([]);
-  const [formData, setFormData] = useState({
-    courseName: "",
-    courseAbbreviation: "",
-    crn: "",
-    courseDescription: "",
-    semester: "",
-    year: "",
-    days: [],
-    startTime: "",
-    endTime: "",
-  });
-
-  const daysOfWeek = [
-    { id: "mon", label: "Mon" },
-    { id: "tue", label: "Tue" },
-    { id: "wed", label: "Wed" },
-    { id: "thu", label: "Thu" },
-    { id: "fri", label: "Fri" },
-  ];
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, code: null, className: "" });
+  const [formData, setFormData] = useState(initialFormData);
 
   const openDeleteConfirm = (classItem) => {
-    setDeleteConfirm({ isOpen: true, crn: classItem.crn, className: classItem.courseName });
+    setDeleteConfirm({ isOpen: true, code: classItem.code, className: classItem.courseName });
   };
 
   const closeDeleteConfirm = () => {
-    setDeleteConfirm({ isOpen: false, crn: null, className: "" });
+    setDeleteConfirm({ isOpen: false, code: null, className: "" });
   };
 
   const handleDelete = () => {
-    setClasses((prev) => prev.filter((c) => c.crn !== deleteConfirm.crn));
+    setClasses((prev) => prev.filter((c) => c.code !== deleteConfirm.code));
     closeDeleteConfirm();
   };
 
@@ -59,115 +79,85 @@ export default function FacultyDashboardPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newClass = {
-      ...formData,
-    };
-    setClasses((prev) => [...prev, newClass]);
+    const existingCodes = classes.map((c) => c.code).filter(Boolean);
+    const code = generateUniqueCode(existingCodes);
+    setClasses((prev) => [...prev, { ...formData, code, archived: false }]);
     setIsDialogOpen(false);
-    setFormData({
-      courseName: "",
-      courseAbbreviation: "",
-      crn: "",
-      courseDescription: "",
-      semester: "",
-      year: "",
-      days: [],
-      startTime: "",
-      endTime: "",
-    });
+    setFormData(initialFormData);
   };
 
-  const inputStyles = "w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200";
-  const labelStyles = "text-sm font-medium text-slate-300 block mb-2";
+  const activeClasses = classes.filter((c) => !c.archived);
+  const dashboardContent =
+    activeClasses.length === 0 ? (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-slate-400">No classes yet. Click &quot;Add course&quot; to get started.</p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activeClasses.map((classItem) => (
+          <div
+            key={classItem.code}
+            onClick={() => router.push(`/faculty/courses/${classItem.code}`)}
+            className="relative bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-teal-500/50 transition-all duration-200 cursor-pointer group"
+          >
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openDeleteConfirm(classItem);
+              }}
+              className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 bg-teal-600/20 rounded-xl flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-teal-400" />
+              </div>
+              <div className="flex-1 min-w-0 pr-6">
+                <h3 className="text-lg font-semibold text-white truncate">{classItem.courseName}</h3>
+                <p className="text-teal-400 font-medium text-sm">{classItem.courseAbbreviation}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-slate-400 text-sm line-clamp-2">
+                {classItem.courseDescription || "No description provided."}
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
+              <Clock className="w-4 h-4" />
+              <span>
+                {classItem.days.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}
+                {" · "}
+                {classItem.startTime} - {classItem.endTime}
+              </span>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-700 space-y-1">
+              <p className="text-slate-500 text-xs">
+                {classItem.semester.charAt(0).toUpperCase() + classItem.semester.slice(1)} {classItem.year}
+                {" · "}CRN: {classItem.crn}
+              </p>
+              <p className="text-xs font-medium text-teal-400">Class code: {classItem.code}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
 
   return (
-    <div className="p-8">
-      {/* Page Header */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-white">My Classes</h1>
-          <button 
-            onClick={() => setIsDialogOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors duration-200 shadow-lg shadow-teal-600/30"
-          >
-            <Plus className="w-4 h-4" />
-            Add Classes
-          </button>
-        </div>
+    <>
+      <DashboardView
+        title="Faculty Dashboard"
+        showAddCourse
+        variant="faculty"
+        onAddCourseClick={() => setIsDialogOpen(true)}
+      >
+        {dashboardContent}
+      </DashboardView>
 
-        {/* Content */}
-        {classes.length === 0 ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <p className="text-slate-400">No classes yet. Click &quot;Add Classes&quot; to get started.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classes.map((classItem) => (
-              <div
-                key={classItem.crn}
-                onClick={() => router.push(`/faculty/courses/${classItem.crn}`)}
-                className="relative bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-teal-500/50 transition-all duration-200 cursor-pointer group"
-              >
-                {/* Delete Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDeleteConfirm(classItem);
-                  }}
-                  className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-
-                <div className="flex items-start gap-4">
-                  <div className="shrink-0 w-12 h-12 bg-teal-600/20 rounded-xl flex items-center justify-center">
-                    <BookOpen className="w-6 h-6 text-teal-400" />
-                  </div>
-                  <div className="flex-1 min-w-0 pr-6">
-                    <h3 className="text-lg font-semibold text-white truncate">
-                      {classItem.courseName}
-                    </h3>
-                    <p className="text-teal-400 font-medium text-sm">
-                      {classItem.courseAbbreviation}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="text-slate-400 text-sm line-clamp-2">
-                    {classItem.courseDescription || "No description provided."}
-                  </p>
-                </div>
-                {/* Schedule */}
-                <div className="mt-4 flex items-center gap-2 text-slate-400 text-sm">
-                  <Clock className="w-4 h-4" />
-                  <span>
-                    {classItem.days.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}
-                    {" · "}
-                    {classItem.startTime} - {classItem.endTime}
-                  </span>
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-700 flex items-center justify-between">
-                  <p className="text-slate-500 text-xs">
-                    {classItem.semester.charAt(0).toUpperCase() + classItem.semester.slice(1)} {classItem.year}
-                  </p>
-                  <p className="text-slate-500 text-xs">
-                    CRN: {classItem.crn}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Add Classes Dialog */}
       <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} title="Add Class">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Course Name */}
           <div>
-            <label htmlFor="courseName" className={labelStyles}>
-              Course Name
-            </label>
+            <label htmlFor="courseName" className={labelStyles}>Course Name</label>
             <input
               type="text"
               id="courseName"
@@ -179,13 +169,9 @@ export default function FacultyDashboardPage() {
               required
             />
           </div>
-
-          {/* Course Abbreviation and CRN */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="courseAbbreviation" className={labelStyles}>
-                Course Abbreviation
-              </label>
+              <label htmlFor="courseAbbreviation" className={labelStyles}>Course Abbreviation</label>
               <input
                 type="text"
                 id="courseAbbreviation"
@@ -198,9 +184,7 @@ export default function FacultyDashboardPage() {
               />
             </div>
             <div>
-              <label htmlFor="crn" className={labelStyles}>
-                CRN
-              </label>
+              <label htmlFor="crn" className={labelStyles}>CRN</label>
               <input
                 type="text"
                 id="crn"
@@ -213,13 +197,9 @@ export default function FacultyDashboardPage() {
               />
             </div>
           </div>
-
-          {/* Semester and Year */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="semester" className={labelStyles}>
-                Semester
-              </label>
+              <label htmlFor="semester" className={labelStyles}>Semester</label>
               <select
                 id="semester"
                 name="semester"
@@ -235,9 +215,7 @@ export default function FacultyDashboardPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="year" className={labelStyles}>
-                Year
-              </label>
+              <label htmlFor="year" className={labelStyles}>Year</label>
               <input
                 type="number"
                 id="year"
@@ -250,8 +228,6 @@ export default function FacultyDashboardPage() {
               />
             </div>
           </div>
-
-          {/* Days */}
           <div>
             <label className={labelStyles}>Days</label>
             <div className="flex gap-2">
@@ -271,13 +247,9 @@ export default function FacultyDashboardPage() {
               ))}
             </div>
           </div>
-
-          {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="startTime" className={labelStyles}>
-                Start Time
-              </label>
+              <label htmlFor="startTime" className={labelStyles}>Start Time</label>
               <input
                 type="time"
                 id="startTime"
@@ -289,9 +261,7 @@ export default function FacultyDashboardPage() {
               />
             </div>
             <div>
-              <label htmlFor="endTime" className={labelStyles}>
-                End Time
-              </label>
+              <label htmlFor="endTime" className={labelStyles}>End Time</label>
               <input
                 type="time"
                 id="endTime"
@@ -303,12 +273,8 @@ export default function FacultyDashboardPage() {
               />
             </div>
           </div>
-
-          {/* Course Description */}
           <div>
-            <label htmlFor="courseDescription" className={labelStyles}>
-              Course Description
-            </label>
+            <label htmlFor="courseDescription" className={labelStyles}>Course Description</label>
             <textarea
               id="courseDescription"
               name="courseDescription"
@@ -319,8 +285,6 @@ export default function FacultyDashboardPage() {
               className={inputStyles}
             />
           </div>
-
-          {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -339,7 +303,6 @@ export default function FacultyDashboardPage() {
         </form>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog isOpen={deleteConfirm.isOpen} onClose={closeDeleteConfirm} title="Delete Class" size="sm">
         <div className="space-y-4">
           <p className="text-slate-300">
@@ -363,6 +326,6 @@ export default function FacultyDashboardPage() {
           </div>
         </div>
       </Dialog>
-    </div>
+    </>
   );
 }

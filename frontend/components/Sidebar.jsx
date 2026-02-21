@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel = "Navigation", showSignOut = false }) {
   const pathname = usePathname();
@@ -23,18 +24,19 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
       >
         <div className="flex flex-col h-full pt-4 px-4 pb-6">
           <nav className="flex flex-col gap-1">
-            {items.map(({ href, label }) => {
+            {items.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href || pathname.startsWith(href + "/");
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? activeClassName || "bg-slate-700 text-white"
                       : "text-slate-300 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
+                  {Icon && <Icon className="w-5 h-5 shrink-0" />}
                   {label}
                 </Link>
               );
@@ -44,8 +46,9 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
             <div className="mt-auto pt-4 border-t border-slate-700/50">
               <button
                 type="button"
-                className="w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
               >
+                <LogOut className="w-5 h-5 shrink-0" />
                 Sign out
               </button>
             </div>
