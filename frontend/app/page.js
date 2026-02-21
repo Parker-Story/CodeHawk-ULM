@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, BookOpen } from "lucide-react";
+import { GraduationCap, BookOpen, UserCog } from "lucide-react";
 import Dialog from "@/components/Dialog";
 
 export default function Home() {
@@ -15,6 +15,8 @@ export default function Home() {
       router.push("/students/login");
     } else if (selectedRole === "faculty") {
       router.push("/faculty/login");
+    } else if (selectedRole === "ta") {
+      router.push("/ta/login");
     }
   };
 
@@ -42,7 +44,7 @@ export default function Home() {
           <p className="text-slate-400">Select your role to continue</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div
             onClick={() => setSelectedRole("student")}
             className={`flex flex-col items-center gap-4 p-6 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
@@ -78,6 +80,25 @@ export default function Home() {
             <div className="text-center">
               <h3 className="font-semibold text-white text-lg">Faculty</h3>
               <p className="text-sm text-slate-400 mt-1">Manage courses & grade students</p>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setSelectedRole("ta")}
+            className={`flex flex-col items-center gap-4 p-6 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
+              selectedRole === "ta"
+                ? "border-violet-500 bg-slate-800"
+                : "border-slate-700 hover:border-violet-500/50 hover:bg-slate-800"
+            }`}
+          >
+            <div className={`w-16 h-16 flex items-center justify-center rounded-xl transition-colors ${
+              selectedRole === "ta" ? "bg-violet-600/40" : "bg-violet-600/20 group-hover:bg-violet-600/30"
+            }`}>
+              <UserCog className="w-8 h-8 text-violet-400" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-semibold text-white text-lg">Teaching Assistant</h3>
+              <p className="text-sm text-slate-400 mt-1">Assist with grading & courses</p>
             </div>
           </div>
         </div>
