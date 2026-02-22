@@ -1,12 +1,9 @@
 package com.codehawk.dto;
 
-/**
- * DTO class to hold the result of code execution
- */
 public class ExecutionResult {
-    private boolean status;  // true if execution succeeded, false otherwise
-    private String output;   // Program output (stdout)
-    private String error;    // Error message if execution failed
+    private boolean status;
+    private String output;
+    private String error;
     
     public ExecutionResult() {
         this.status = false;
