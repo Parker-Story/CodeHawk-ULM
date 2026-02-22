@@ -1,0 +1,57 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel = "Navigation", showSignOut = false }) {
+  const pathname = usePathname();
+
+  return (
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-slate-900 border-r border-slate-700/50 shadow-xl transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+        aria-label={ariaLabel}
+      >
+        <div className="flex flex-col h-full pt-4 px-4 pb-6">
+          <nav className="flex flex-col gap-1">
+            {items.map(({ href, label }) => {
+              const isActive = pathname === href || pathname.startsWith(href + "/");
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? activeClassName || "bg-slate-700 text-white"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          {showSignOut && (
+            <div className="mt-auto pt-4 border-t border-slate-700/50">
+              <button
+                type="button"
+                className="w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
