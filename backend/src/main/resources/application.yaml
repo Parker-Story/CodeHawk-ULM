@@ -28,4 +28,4 @@ python:
     timeout: 10
 
 backend:
-  url: http://localhost:${server.port}/api/execution/result
+  url: https://codehawk-ulm-2.onrender.com/api/execution/result

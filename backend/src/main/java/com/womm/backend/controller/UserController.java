@@ -8,7 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = "/api/users")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class UserController {
 
     UserService userService;

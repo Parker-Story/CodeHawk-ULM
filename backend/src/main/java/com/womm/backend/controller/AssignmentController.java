@@ -8,6 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = "/assignment")
+@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class AssignmentController {
 
     AssignmentService assignmentService;

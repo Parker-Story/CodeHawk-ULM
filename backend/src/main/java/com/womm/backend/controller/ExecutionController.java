@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
  */
 @RestController
 @RequestMapping("/api/execute")
+@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class ExecutionController {
 
     @Autowired
