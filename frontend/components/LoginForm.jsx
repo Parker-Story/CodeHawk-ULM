@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User } from "lucide-react";
+import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, UserCog } from "lucide-react";
 
 export default function LoginForm({ variant = "student" }) {
   const router = useRouter();
@@ -16,7 +16,20 @@ export default function LoginForm({ variant = "student" }) {
   const [lastName, setLastName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const isStudent = variant === "student";
-  const Icon = isStudent ? GraduationCap : BookOpen;
+  const isTa = variant === "ta";
+  const Icon = isStudent ? GraduationCap : isTa ? UserCog : BookOpen;
+  const theme = isStudent ? "orange" : isTa ? "violet" : "teal";
+  const focusRing = theme === "orange" ? "focus:ring-orange-500" : theme === "violet" ? "focus:ring-violet-500" : "focus:ring-teal-500";
+  const linkClass = theme === "orange" ? "text-orange-400 hover:text-orange-300" : theme === "violet" ? "text-violet-400 hover:text-violet-300" : "text-teal-400 hover:text-teal-300";
+  const buttonClass = theme === "orange"
+    ? "from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-orange-600/30"
+    : theme === "violet"
+      ? "from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 shadow-violet-600/30"
+      : "from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 shadow-teal-600/30";
+  const glowClass = theme === "orange" ? "from-orange-600 to-orange-400" : theme === "violet" ? "from-violet-600 to-violet-400" : "from-teal-600 to-teal-400";
+  const logoClass = theme === "orange" ? "from-orange-600 to-orange-500 shadow-orange-600/30" : theme === "violet" ? "from-violet-600 to-violet-500 shadow-violet-600/30" : "from-teal-600 to-teal-500 shadow-teal-600/30";
+  const portalTitle = isStudent ? "Student Portal" : isTa ? "TA Portal" : "Faculty Portal";
+  const checkboxClass = theme === "orange" ? "peer-checked:bg-orange-600 peer-checked:border-orange-600" : theme === "violet" ? "peer-checked:bg-violet-600 peer-checked:border-violet-600" : "peer-checked:bg-teal-600 peer-checked:border-teal-600";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +45,7 @@ export default function LoginForm({ variant = "student" }) {
           lastName,
           email,
           password,
-          role: isStudent ? "STUDENT" : "FACULTY"
+          role: isStudent ? "STUDENT" : isTa ? "TA" : "FACULTY"
         })
       });
       // Switch back to login form after account creation
@@ -60,6 +73,8 @@ export default function LoginForm({ variant = "student" }) {
     // Navigate based on variant
     if (isStudent) {
       router.push(`/students/${data.cwid}`);
+    } else if (isTa) {
+      router.push("/ta/dashboard");
     } else {
       router.push(`/faculty/${data.cwid}`);
     }
@@ -70,16 +85,16 @@ export default function LoginForm({ variant = "student" }) {
       {/* Login Card */}
       <div className="relative w-full max-w-md">
         {/* Glow effect behind card */}
-        <div className={`absolute -inset-1 bg-linear-to-r rounded-2xl blur opacity-20 ${isStudent ? "from-orange-600 to-orange-400" : "from-teal-600 to-teal-400"}`} />
+        <div className={`absolute -inset-1 bg-linear-to-r rounded-2xl blur opacity-20 ${glowClass}`} />
         
         <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
           {/* Logo / Brand */}
           <div className="text-center mb-8">
-            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br shadow-lg mb-4 ${isStudent ? "from-orange-600 to-orange-500 shadow-orange-600/30" : "from-teal-600 to-teal-500 shadow-teal-600/30"}`}>
+            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br shadow-lg mb-4 ${logoClass}`}>
               <Icon className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">
-              {isStudent ? "Student Portal" : "Faculty Portal"}
+              {portalTitle}
             </h1>
             <p className="text-slate-400 mt-2">
               {isSignUp ? "Create an account to get started" : "Sign in to continue to CodeHawk"}
@@ -102,7 +117,7 @@ export default function LoginForm({ variant = "student" }) {
                     type="text"
                     placeholder="Campus-Wide ID"
                     onChange={(e) => setCwid(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                 </div>
                 {/* First Name */}
@@ -118,7 +133,7 @@ export default function LoginForm({ variant = "student" }) {
                     placeholder="First Name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                 </div>
 
@@ -135,7 +150,7 @@ export default function LoginForm({ variant = "student" }) {
                     placeholder="Last Name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                 </div>
               </div>
@@ -155,7 +170,7 @@ export default function LoginForm({ variant = "student" }) {
                   placeholder="you@university.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                  className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                 />
               </div>
             </div>
@@ -174,7 +189,7 @@ export default function LoginForm({ variant = "student" }) {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                  className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                 />
                 <button
                   type="button"
@@ -201,7 +216,7 @@ export default function LoginForm({ variant = "student" }) {
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${isStudent ? "focus:ring-orange-500" : "focus:ring-teal-500"}`}
+                    className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                   <button
                     type="button"
@@ -223,7 +238,7 @@ export default function LoginForm({ variant = "student" }) {
                       type="checkbox"
                       className="peer sr-only"
                     />
-                    <div className={`w-5 h-5 border-2 border-slate-600 rounded-md bg-slate-800/50 transition-all duration-200 ${isStudent ? "peer-checked:bg-orange-600 peer-checked:border-orange-600" : "peer-checked:bg-teal-600 peer-checked:border-teal-600"}`} />
+                    <div className={`w-5 h-5 border-2 border-slate-600 rounded-md bg-slate-800/50 transition-all duration-200 ${checkboxClass}`} />
                     <Check 
                       className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200" 
                       strokeWidth={2.5} 
@@ -235,7 +250,7 @@ export default function LoginForm({ variant = "student" }) {
                 </label>
                 <a
                   href="#"
-                  className={`text-sm transition-colors ${isStudent ? "text-orange-400 hover:text-orange-300" : "text-teal-400 hover:text-teal-300"}`}
+                  className={`text-sm transition-colors ${linkClass}`}
                 >
                   Forgot password?
                 </a>
@@ -245,7 +260,7 @@ export default function LoginForm({ variant = "student" }) {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full py-4 text-base font-semibold text-white bg-linear-to-r rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] ${isStudent ? "from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 shadow-orange-600/30" : "from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 shadow-teal-600/30"}`}
+              className={`w-full py-4 text-base font-semibold text-white bg-linear-to-r rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] ${buttonClass}`}
             >
               {isSignUp ? "Create Account" : "Sign In"}
             </button>
@@ -259,7 +274,7 @@ export default function LoginForm({ variant = "student" }) {
                 <button
                   type="button"
                   onClick={() => setIsSignUp(false)}
-                  className={`font-medium transition-colors hover:underline focus:outline-none ${isStudent ? "text-orange-400 hover:text-orange-300" : "text-teal-400 hover:text-teal-300"}`}
+                  className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}
                 >
                   Sign in
                 </button>
@@ -270,7 +285,7 @@ export default function LoginForm({ variant = "student" }) {
                 <button
                   type="button"
                   onClick={() => setIsSignUp(true)}
-                  className={`font-medium transition-colors hover:underline focus:outline-none ${isStudent ? "text-orange-400 hover:text-orange-300" : "text-teal-400 hover:text-teal-300"}`}
+                  className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}
                 >
                   Create account
                 </button>
