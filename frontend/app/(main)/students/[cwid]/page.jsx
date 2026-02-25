@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function UserPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function UserPage() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        const res = await fetch(`https://codehawk-ulm-2.onrender.com/api/users/${cwid}`);
+        const res = await fetch(`${API_BASE}/api/users/${cwid}`);
         if (!res.ok) throw new Error("Failed to fetch user");
         const data = await res.json();
 
@@ -42,7 +43,7 @@ export default function UserPage() {
   // Update user
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`https://codehawk-ulm-2.onrender.com/api/users/${cwid}`, {
+      const res = await fetch(`${API_BASE}/api/users/${cwid}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +69,7 @@ export default function UserPage() {
   // Delete user
   const handleDelete = async () => {
     try {
-      const res = await fetch(`https://codehawk-ulm-2.onrender.com/api/users/${cwid}`, {
+      const res = await fetch(`${API_BASE}/api/users/${cwid}`, {
         method: "DELETE"
       });
 
