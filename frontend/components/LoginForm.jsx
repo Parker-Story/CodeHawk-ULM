@@ -37,7 +37,7 @@ export default function LoginForm({ variant = "student" }) {
     
     if (isSignUp) {
       // Handle sign up logic here if needed
-      await fetch("${API_BASE}/api/auth/register", {
+     await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -55,7 +55,7 @@ export default function LoginForm({ variant = "student" }) {
     }
 
     // Call backend API for login
-    const response = await fetch("${API_BASE}/api/auth/login", {
+  const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
