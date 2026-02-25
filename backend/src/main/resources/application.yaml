@@ -28,4 +28,4 @@ python:
     timeout: 10
 
 backend:
-  url: https://codehawk-ulm-2.onrender.com/api/execution/result
+  url: ${BACKEND_URL:https://codehawk-ulm-2.onrender.com}/api/execution/result
