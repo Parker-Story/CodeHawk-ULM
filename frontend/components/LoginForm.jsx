@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, UserCog } from "lucide-react";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function LoginForm({ variant = "student" }) {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function LoginForm({ variant = "student" }) {
     
     if (isSignUp) {
       // Handle sign up logic here if needed
-      await fetch("https://codehawk-ulm-2.onrender.com/api/auth/register", {
+      await fetch("${API_BASE}/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -54,7 +55,7 @@ export default function LoginForm({ variant = "student" }) {
     }
 
     // Call backend API for login
-    const response = await fetch("https://codehawk-ulm-2.onrender.com/api/auth/login", {
+    const response = await fetch("${API_BASE}/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
