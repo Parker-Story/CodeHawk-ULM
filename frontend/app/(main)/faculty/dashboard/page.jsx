@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation";
 import { BookOpen, Clock, Trash2 } from "lucide-react";
 import DashboardView from "@/components/shared/DashboardView";
@@ -50,6 +50,14 @@ export default function FacultyDashboardPage() {
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, code: null, className: "" });
   const [formData, setFormData] = useState(initialFormData);
 
+  
+  useEffect(() => {
+  fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course`)
+    .then((res) => res.json())
+    .then((data) => setClasses(data.map((c) => ({ ...c, days: c.days ? c.days.split(",") : [] }))))
+    .catch((err) => console.error("Error loading courses:", err));
+}, []);
+
   const openDeleteConfirm = (classItem) => {
     setDeleteConfirm({ isOpen: true, code: classItem.code, className: classItem.courseName });
   };
@@ -77,14 +85,35 @@ export default function FacultyDashboardPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const existingCodes = classes.map((c) => c.code).filter(Boolean);
-    const code = generateUniqueCode(existingCodes);
-    setClasses((prev) => [...prev, { ...formData, code, archived: false }]);
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  const existingCodes = classes.map((c) => c.code).filter(Boolean);
+  const code = generateUniqueCode(existingCodes);
+
+  const newCourse = {
+    ...formData,
+    code,
+    archived: false,
+    days: formData.days.join(","),
+  };
+
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCourse),
+    });
+
+    if (!response.ok) throw new Error("Failed to create course");
+
+    const savedCourse = await response.json();
+    setClasses((prev) => [...prev, { ...savedCourse, days: savedCourse.days ? savedCourse.days.split(",") : [] }]);
     setIsDialogOpen(false);
     setFormData(initialFormData);
-  };
+  } catch (error) {
+    console.error("Error creating course:", error);
+  }
+};
 
   const activeClasses = classes.filter((c) => !c.archived);
   const dashboardContent =
@@ -96,8 +125,8 @@ export default function FacultyDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {activeClasses.map((classItem) => (
           <div
-            key={classItem.code}
-            onClick={() => router.push(`/faculty/courses/${classItem.code}`)}
+            key={classItem.crn}
+            onClick={() => router.push(`/faculty/courses/${classItem.crn}`)}
             className="relative bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-teal-500/50 transition-all duration-200 cursor-pointer group"
           >
             <button
