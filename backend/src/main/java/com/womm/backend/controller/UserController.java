@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = "/api/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
 
     UserService userService;

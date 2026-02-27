@@ -2,36 +2,33 @@ spring:
   application:
     name: CodeHawk
 
-  # File Upload Settings
   servlet:
     multipart:
       enabled: true
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # Database settings
   datasource:
-    # in url use 'db' for docker and 'localhost' for local development
-    url: jdbc:mysql://localhost:3306/codehawk_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: codehawk_user
-    password: devpassword123
+    url: ${DB_URL:jdbc:mysql://localhost:3306/codehawk_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:codehawk_user}
+    password: ${DB_PASSWORD:devpassword123}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-    # retry for database connection on error
     hikari:
       initializationFailTimeout: -1
-    
-  # !!change ssl and publicKeyAccess with a remote database
 
-#JPA settings
-  jpa.hibernate.ddl-auto: update
+  jpa:
+    hibernate:
+      ddl-auto: update
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 python:
   execution:
     timeout: 10
 
 backend:
-  url: http://localhost:8080/api/execution/result
+  url: ${BACKEND_URL:http://localhost:8080}/api/execution/result
+
+frontend:
+  url: ${FRONTEND_URL:http://localhost:3000}
