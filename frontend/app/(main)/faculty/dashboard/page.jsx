@@ -6,6 +6,7 @@ import { BookOpen, Clock, Trash2 } from "lucide-react";
 import DashboardView from "@/components/shared/DashboardView";
 import Dialog from "@/components/Dialog";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
+import { API_BASE } from "@/lib/apiBase";
 
 const daysOfWeek = [
   { id: "mon", label: "Mon" },
@@ -52,7 +53,7 @@ export default function FacultyDashboardPage() {
 
   
   useEffect(() => {
-  fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course`)
+  fetch(`${API_BASE}/course`)
     .then((res) => res.json())
     .then((data) => setClasses(data.map((c) => ({ ...c, days: c.days ? c.days.split(",") : [] }))))
     .catch((err) => console.error("Error loading courses:", err));
@@ -98,7 +99,7 @@ export default function FacultyDashboardPage() {
   };
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course`, {
+    const response = await fetch(`${API_BASE}/course`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newCourse),
