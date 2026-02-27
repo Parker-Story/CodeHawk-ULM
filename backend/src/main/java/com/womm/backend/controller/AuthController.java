@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class AuthController {
 
     UserService userService;

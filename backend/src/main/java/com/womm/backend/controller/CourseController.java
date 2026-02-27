@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path = "/course")
-@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class CourseController {
 
     CourseService courseService;

@@ -9,9 +9,9 @@ spring:
       max-request-size: 10MB
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/codehawk_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:codehawk_user}
+    password: ${DB_PASSWORD:devpassword123}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initializationFailTimeout: -1
@@ -28,4 +28,7 @@ python:
     timeout: 10
 
 backend:
-  url: ${BACKEND_URL:https://codehawk-ulm-2.onrender.com}/api/execution/result
+  url: ${BACKEND_URL:http://localhost:8080}/api/execution/result
+
+frontend:
+  url: ${FRONTEND_URL:http://localhost:3000}

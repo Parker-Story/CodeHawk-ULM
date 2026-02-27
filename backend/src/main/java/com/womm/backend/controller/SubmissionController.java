@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping(path="/submission")
-@CrossOrigin(origins = "https://codehawk-ulm.onrender.com")
 public class SubmissionController {
 
     SubmissionService submissionService;
