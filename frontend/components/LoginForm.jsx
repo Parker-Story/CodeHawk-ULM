@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, UserCog } from "lucide-react";
@@ -7,6 +8,7 @@ import { API_BASE } from "@/lib/apiBase";
 
 export default function LoginForm({ variant = "student" }) {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -67,9 +69,19 @@ export default function LoginForm({ variant = "student" }) {
     const data = await response.json();
 
     if(!data.success){
-      alert("Login failed: Incorrect email or password.");
-      return;
-    }
+  alert("Login failed: Incorrect email or password.");
+  return;
+  }
+
+  setUser({
+    cwid: data.cwid,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    role: data.role,
+  });
+  
+  console.log("User set:", data);
+
 
     // Navigate based on variant
     if (isStudent) {
