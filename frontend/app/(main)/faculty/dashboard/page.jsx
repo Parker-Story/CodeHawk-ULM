@@ -7,6 +7,7 @@ import DashboardView from "@/components/shared/DashboardView";
 import Dialog from "@/components/Dialog";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import { API_BASE } from "@/lib/apiBase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const daysOfWeek = [
   { id: "mon", label: "Mon" },
@@ -45,31 +46,44 @@ function generateUniqueCode(existingCodes) {
 }
 
 export default function FacultyDashboardPage() {
+  const { user } = useAuth();
   const router = useRouter();
   const { classes, setClasses } = useFacultyClasses();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, code: null, className: "" });
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, crn: null, className: "" });
   const [formData, setFormData] = useState(initialFormData);
 
   
   useEffect(() => {
-  fetch(`${API_BASE}/course`)
-    .then((res) => res.json())
-    .then((data) => setClasses(data.map((c) => ({ ...c, days: c.days ? c.days.split(",") : [] }))))
+  if (!user?.cwid) return;
+  fetch(`${API_BASE}/course/faculty/${user.cwid}`)
+    .then((res) => {
+      if (!res.ok) throw new Error("Failed to fetch courses");
+      return res.json();
+    })
+    .then((data) => setClasses(Array.isArray(data) ? data.map((c) => ({ ...c, days: c.days ? c.days.split(",") : [] })) : []))
     .catch((err) => console.error("Error loading courses:", err));
-}, []);
+}, [user]);
 
   const openDeleteConfirm = (classItem) => {
-    setDeleteConfirm({ isOpen: true, code: classItem.code, className: classItem.courseName });
+    setDeleteConfirm({ isOpen: true, crn: classItem.crn, className: classItem.courseName });
   };
 
   const closeDeleteConfirm = () => {
-    setDeleteConfirm({ isOpen: false, code: null, className: "" });
+    setDeleteConfirm({ isOpen: false, crn: null, className: "" });
   };
 
-  const handleDelete = () => {
-    setClasses((prev) => prev.filter((c) => c.code !== deleteConfirm.code));
+  const handleDelete = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/course/${deleteConfirm.crn}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete course");
+    setClasses((prev) => prev.filter((c) => c.crn !== deleteConfirm.crn));
     closeDeleteConfirm();
+  } catch (error) {
+    console.error("Error deleting course:", error);
+  }
   };
 
   const handleDayToggle = (dayId) => {
@@ -86,27 +100,23 @@ export default function FacultyDashboardPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
   const existingCodes = classes.map((c) => c.code).filter(Boolean);
   const code = generateUniqueCode(existingCodes);
-
   const newCourse = {
     ...formData,
     code,
     archived: false,
     days: formData.days.join(","),
   };
-
   try {
-    const response = await fetch(`${API_BASE}/course`, {
+    const response = await fetch(`${API_BASE}/course/${user.cwid}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newCourse),
     });
-
     if (!response.ok) throw new Error("Failed to create course");
-
     const savedCourse = await response.json();
     setClasses((prev) => [...prev, { ...savedCourse, days: savedCourse.days ? savedCourse.days.split(",") : [] }]);
     setIsDialogOpen(false);

@@ -9,23 +9,25 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/course")
 public class CourseController {
-
     CourseService courseService;
-
     public CourseController(CourseService courseService) {
         this.courseService = courseService;
     }
 
+    // Get courses by faculty - must be ABOVE /{crn} to avoid routing conflict
+    @GetMapping("/faculty/{cwid}")
+    public List<Course> getCoursesByFaculty(@PathVariable("cwid") String cwid) {
+        return courseService.getCoursesByFaculty(cwid);
+    }
 
-    // ----- CRUD -----
     // Create
-    @PostMapping
-    public Course createCourseDetails(@RequestBody Course course) {
-        return courseService.createCourse(course);
+    @PostMapping("/{cwid}")
+    public Course createCourseDetails(@RequestBody Course course, @PathVariable("cwid") String cwid) {
+        return courseService.createCourse(course, cwid);
     }
 
     // Retrieve One
-    @GetMapping("{crn}")
+    @GetMapping("/{crn}")
     public Course getCourseDetails(@PathVariable("crn") String crn) {
         return courseService.getCourse(crn);
     }
@@ -43,9 +45,8 @@ public class CourseController {
     }
 
     // Delete
-    @DeleteMapping("{crn}")
+    @DeleteMapping("/{crn}")
     public void deleteCourseDetails(@PathVariable("crn") String crn) {
         courseService.deleteCourse(crn);
     }
-
 }
