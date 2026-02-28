@@ -1,17 +1,16 @@
 package com.womm.backend.service;
-
-import com.womm.backend.repository.AssignmentRepository;
+import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Submission;
+import com.womm.backend.entity.User;
+import com.womm.backend.id.SubmissionId;
+import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.SubmissionRepository;
 import com.womm.backend.repository.UserRepository;
-import com.womm.backend.id.SubmissionId;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 
 @Service
-public class SubmissionServiceImpl implements SubmissionService{
-
+public class SubmissionServiceImpl implements SubmissionService {
     SubmissionRepository submissionRepository;
     UserRepository userRepository;
     AssignmentRepository assignmentRepository;
@@ -47,4 +46,18 @@ public class SubmissionServiceImpl implements SubmissionService{
         submissionRepository.deleteById(new SubmissionId(userCwid, assignmentId));
     }
 
+    @Override
+    public Submission submitAssignment(Long assignmentId, String cwid, Submission submission) {
+        User user = userRepository.findById(cwid).get();
+        Assignment assignment = assignmentRepository.findById(assignmentId).get();
+        submission.setUser(user);
+        submission.setAssignment(assignment);
+        submission.setSubmissionId(new SubmissionId(cwid, assignmentId));
+        return submissionRepository.save(submission);
+    }
+
+    @Override
+    public List<Submission> getSubmissionsByAssignment(Long assignmentId) {
+        return submissionRepository.findByAssignmentId(assignmentId);
+    }
 }

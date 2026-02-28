@@ -1,7 +1,5 @@
 package com.womm.backend.service;
-
 import com.womm.backend.entity.Submission;
-
 import java.util.List;
 
 public interface SubmissionService {
@@ -10,4 +8,6 @@ public interface SubmissionService {
     public List<Submission> getAllSubmissions();
     public Submission updateSubmission(Submission submission);
     public void deleteSubmission(String userCwid, Long assignmentId);
+    Submission submitAssignment(Long assignmentId, String cwid, Submission submission);
+    List<Submission> getSubmissionsByAssignment(Long assignmentId);
 }
