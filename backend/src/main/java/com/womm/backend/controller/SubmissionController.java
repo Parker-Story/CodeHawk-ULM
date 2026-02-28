@@ -42,4 +42,16 @@ public class SubmissionController {
         submissionService.deleteSubmission(userCwid, assignmentId);
     }
 
+    @PostMapping("/submit/{assignmentId}/{cwid}")
+    public Submission submitAssignment(
+        @PathVariable Long assignmentId,
+        @PathVariable String cwid,
+        @RequestBody Submission submission) {
+        return submissionService.submitAssignment(assignmentId, cwid, submission);
+    }
+
+    @GetMapping("/assignment/{assignmentId}")
+    public List<Submission> getSubmissionsByAssignment(@PathVariable Long assignmentId) {
+        return submissionService.getSubmissionsByAssignment(assignmentId);
+}
 }

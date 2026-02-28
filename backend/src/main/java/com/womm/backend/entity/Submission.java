@@ -20,6 +20,12 @@ public class Submission {
     @JoinColumn(name = "assignment_id")
     private Assignment assignment;
 
+    @Column(name = "file_name")
+    private String fileName;
+
+    @Column(name = "file_content", columnDefinition = "LONGTEXT")
+    private String fileContent; // Base64 encoded file content
+
 
     // ----- Constructors -----
     public Submission() {}
@@ -52,5 +58,10 @@ public class Submission {
     public void setAssignment(Assignment assignment) {
         this.assignment = assignment;
     }
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getFileContent() { return fileContent; }
+    public void setFileContent(String fileContent) { this.fileContent = fileContent; }
 
 }
