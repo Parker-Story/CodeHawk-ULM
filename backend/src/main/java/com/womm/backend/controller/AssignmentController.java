@@ -46,4 +46,14 @@ public class AssignmentController {
     public void deleteAssignmentDetails(@PathVariable("id") Long id) {
         assignmentService.deleteAssignment(id);
     }
+
+    @PostMapping("/course/{crn}")
+    public Assignment createAssignmentForCourse(@RequestBody Assignment assignment, @PathVariable("crn") String crn) {
+        return assignmentService.createAssignmentForCourse(assignment, crn);
+    }
+
+    @GetMapping("/course/{crn}")
+    public List<Assignment> getAssignmentsByCourse(@PathVariable("crn") String crn) {
+        return assignmentService.getAssignmentsByCourse(crn);
+    }
 }

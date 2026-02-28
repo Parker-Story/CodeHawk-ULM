@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { API_BASE } from "@/lib/apiBase";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus } from "lucide-react";
 import Link from "next/link";
@@ -10,26 +11,62 @@ import GradeReportDialog from "@/components/faculty/GradeReportDialog";
 import ArchiveClassDialog from "@/components/faculty/ArchiveClassDialog";
 import GradingWorkspaceDialog from "@/components/faculty/GradingWorkspaceDialog";
 
-const placeholderAssignments = [
-  { title: "Binary Search Tree Implementation", due: "Feb 15, 2026", language: "Java" },
-  { title: "Hash Table Lab", due: "Feb 1, 2026", language: "Python" },
-];
-
 export default function CourseDetailPage() {
   const params = useParams();
-  const code = params.id;
-  const { classes, setClasses } = useFacultyClasses();
-  const classItem = classes.find((c) => c.code === code);
+  const crn = params.id;
+  const { setClasses } = useFacultyClasses();
+  const [classItem, setClassItem] = useState(null);
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [newAssignmentOpen, setNewAssignmentOpen] = useState(false);
   const [gradeReportOpen, setGradeReportOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [gradingWorkspaceOpen, setGradingWorkspaceOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
-  const handleArchiveConfirm = () => {
-    if (!classItem) return;
-    setClasses((prev) => prev.map((c) => (c.code === classItem.code ? { ...c, archived: true } : c)));
-  };
+  useEffect(() => {
+    fetch(`${API_BASE}/course/${crn}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Course not found");
+        return res.json();
+      })
+      .then((data) => {
+        setClassItem({ ...data, days: data.days ? data.days.split(",") : [] });
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [crn]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/assignment/course/${crn}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch assignments");
+        return res.json();
+      })
+      .then((data) => setAssignments(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error loading assignments:", err));
+  }, [crn]);
+    const handleArchiveConfirm = () => {
+      if (!classItem) return;
+      fetch(`${API_BASE}/course`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...classItem, archived: true, days: classItem.days.join(",") }),
+      }).then(() => {
+        setClasses((prev) => prev.map((c) => (c.crn === classItem.crn ? { ...c, archived: true } : c)));
+      });
+    };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <p className="text-slate-400">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -82,25 +119,29 @@ export default function CourseDetailPage() {
             <section className="mb-8">
               <h2 className="text-lg font-semibold text-white mb-4">Course Assignments</h2>
               <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
-                {placeholderAssignments.map((a, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAssignment(a);
-                      setGradingWorkspaceOpen(true);
-                    }}
-                    className="flex items-center gap-4 p-4 w-full text-left text-slate-300 hover:bg-slate-700/30 transition-colors rounded-lg first:rounded-t-xl last:rounded-b-xl"
-                  >
-                    <FileText className="w-5 h-5 text-teal-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-white">{a.title}</p>
-                      <p className="text-sm text-slate-400">
-                        Due {a.due} • {a.language}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {assignments.length === 0 ? (
+                  <p className="text-slate-400 p-4">No assignments yet.</p>
+                ) : (
+                  assignments.map((a, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAssignment(a);
+                        setGradingWorkspaceOpen(true);
+                      }}
+                      className="flex items-center gap-4 p-4 w-full text-left text-slate-300 hover:bg-slate-700/30 transition-colors rounded-lg first:rounded-t-xl last:rounded-b-xl"
+                    >
+                      <FileText className="w-5 h-5 text-teal-400 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white">{a.title}</p>
+                        <p className="text-sm text-slate-400">
+                          Due {a.due} • {a.language}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </section>
 
@@ -137,7 +178,8 @@ export default function CourseDetailPage() {
         )}
       </div>
 
-      <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} />
+      <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(newAssignment) => setAssignments((prev) => [...prev, newAssignment])}
+/>
       <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} />
       {selectedAssignment && (
         <GradingWorkspaceDialog
