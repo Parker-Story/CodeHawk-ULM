@@ -1,5 +1,6 @@
 "use client";
 
+import { API_BASE } from "@/lib/apiBase";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus } from "lucide-react";
@@ -24,7 +25,7 @@ export default function CourseDetailPage() {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course/${crn}`)
+    fetch(`${API_BASE}/course/${crn}`)
       .then((res) => {
         if (!res.ok) throw new Error("Course not found");
         return res.json();
@@ -40,7 +41,7 @@ export default function CourseDetailPage() {
   }, [crn]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/assignment/course/${crn}`)
+    fetch(`${API_BASE}/assignment/course/${crn}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch assignments");
         return res.json();
@@ -50,7 +51,7 @@ export default function CourseDetailPage() {
   }, [crn]);
     const handleArchiveConfirm = () => {
       if (!classItem) return;
-      fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course`, {
+      fetch(`${API_BASE}/course`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...classItem, archived: true, days: classItem.days.join(",") }),
