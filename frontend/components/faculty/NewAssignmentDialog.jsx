@@ -1,5 +1,5 @@
 "use client";
-
+import { API_BASE } from "@/lib/apiBase";
 import { useState } from "react";
 import Dialog from "@/components/Dialog";
 
@@ -13,7 +13,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/assignment/course/${crn}`, {
+      const response = await fetch(`${API_BASE}/assignment/course/${crn}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
