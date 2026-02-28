@@ -10,4 +10,5 @@ public interface SubmissionService {
     public void deleteSubmission(String userCwid, Long assignmentId);
     Submission submitAssignment(Long assignmentId, String cwid, Submission submission);
     List<Submission> getSubmissionsByAssignment(Long assignmentId);
+    Submission scoreSubmission(Long assignmentId, String cwid, Integer score);
 }

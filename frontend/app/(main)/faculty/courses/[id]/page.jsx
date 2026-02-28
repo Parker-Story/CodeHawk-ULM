@@ -11,6 +11,7 @@ import GradeReportDialog from "@/components/faculty/GradeReportDialog";
 import ArchiveClassDialog from "@/components/faculty/ArchiveClassDialog";
 import GradingWorkspaceDialog from "@/components/faculty/GradingWorkspaceDialog";
 import Dialog from "@/components/Dialog";
+import { useRouter } from "next/navigation";
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -32,6 +33,7 @@ export default function CourseDetailPage() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [editAssignment, setEditAssignment] = useState(null);
   const [deleteAssignmentConfirm, setDeleteAssignmentConfirm] = useState({ isOpen: false, assignment: null });
+  const router = useRouter();
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -208,7 +210,8 @@ export default function CourseDetailPage() {
                   assignments.map((a) => (
                     <div
                       key={a.id}
-                      className="group flex items-center gap-4 p-4 text-slate-300"
+                      className="group flex items-center gap-4 p-4 text-slate-300 cursor-pointer hover:bg-slate-700/30 transition-colors rounded-lg"
+                      onClick={() => router.push(`/faculty/courses/${crn}/assignments/${a.id}`)}
                     >
                       <FileText className="w-5 h-5 text-teal-400 shrink-0" />
                       <div className="min-w-0 flex-1">

@@ -3,7 +3,7 @@ package com.womm.backend.controller;
 import com.womm.backend.entity.Submission;
 import com.womm.backend.service.SubmissionService;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.Map;
 import java.util.List;
 
 @RestController
@@ -53,5 +53,13 @@ public class SubmissionController {
     @GetMapping("/assignment/{assignmentId}")
     public List<Submission> getSubmissionsByAssignment(@PathVariable Long assignmentId) {
         return submissionService.getSubmissionsByAssignment(assignmentId);
+    }
+
+    @PutMapping("/score/{assignmentId}/{cwid}")
+    public Submission scoreSubmission(
+    @PathVariable Long assignmentId,
+    @PathVariable String cwid,
+    @RequestBody Map<String, Integer> body) {
+    return submissionService.scoreSubmission(assignmentId, cwid, body.get("score"));
 }
 }
