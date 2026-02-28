@@ -8,7 +8,7 @@ const labelClass = "text-sm font-medium text-slate-300 block mb-1.5";
 
 export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignmentCreated }) {
   const [title, setTitle] = useState("");
-  const [groupAssignment, setGroupAssignment] = useState(false);
+  const [description, setDescription] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,12 +16,13 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
       const response = await fetch(`${API_BASE}/assignment/course/${crn}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, description }),
       });
       if (!response.ok) throw new Error("Failed to create assignment");
       const savedAssignment = await response.json();
       onAssignmentCreated(savedAssignment);
       setTitle("");
+      setDescription("");
       onClose();
     } catch (error) {
       console.error("Error creating assignment:", error);
@@ -30,8 +31,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
 
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title="New Assignment" size="xl">
-      <p className="text-slate-400 text-sm mb-6">Define evaluation criteria and rules</p>
-      <form className="space-y-6" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label htmlFor="assignment-title" className={labelClass}>Assignment Title</label>
           <input
@@ -44,20 +44,17 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
             required
           />
         </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="group-assignment"
-            checked={groupAssignment}
-            onChange={(e) => setGroupAssignment(e.target.checked)}
-            className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-teal-600 focus:ring-teal-500"
+        <div>
+          <label htmlFor="assignment-description" className={labelClass}>Description</label>
+          <textarea
+            id="assignment-description"
+            rows={4}
+            placeholder="Provide clear instructions for students..."
+            className={inputClass}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
-          <label htmlFor="group-assignment" className="text-slate-300 text-sm">
-            Group Assignment — Enable collaborative submissions for students
-          </label>
         </div>
-
         <div className="flex gap-3 pt-4 border-t border-slate-700">
           <button
             type="button"

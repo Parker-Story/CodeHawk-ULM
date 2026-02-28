@@ -26,16 +26,17 @@ public class Submission {
     @Column(name = "file_content", columnDefinition = "LONGTEXT")
     private String fileContent; // Base64 encoded file content
 
+    @Column(name = "score")
+    private Integer score;
+
 
     // ----- Constructors -----
     public Submission() {}
 
     public Submission(User user, Assignment assignment) {
-        this.user = user;
-        this.assignment = assignment;
-        submissionId = new SubmissionId(user.getCwid(), assignment.getId());
+    this.user = user;
+    this.assignment = assignment;
     }
-
 
     // ----- Getters/Setters -----
     public SubmissionId getSubmissionId() {
@@ -63,5 +64,8 @@ public class Submission {
     public void setFileName(String fileName) { this.fileName = fileName; }
     public String getFileContent() { return fileContent; }
     public void setFileContent(String fileContent) { this.fileContent = fileContent; }
+
+    public Integer getScore() { return score; }
+    public void setScore(Integer score) { this.score = score; }
 
 }

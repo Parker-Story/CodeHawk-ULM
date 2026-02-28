@@ -60,4 +60,11 @@ public class SubmissionServiceImpl implements SubmissionService {
     public List<Submission> getSubmissionsByAssignment(Long assignmentId) {
         return submissionRepository.findByAssignmentId(assignmentId);
     }
+
+    @Override
+    public Submission scoreSubmission(Long assignmentId, String cwid, Integer score) {
+    Submission submission = submissionRepository.findById(new SubmissionId(cwid, assignmentId)).get();
+    submission.setScore(score);
+    return submissionRepository.save(submission);
+    }
 }
