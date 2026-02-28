@@ -1,14 +1,14 @@
 package com.womm.backend.service;
-
 import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.CourseRepository;
+import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.entity.Assignment;
+import com.womm.backend.entity.Course;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class AssignmentServiceImpl implements AssignmentService{
-
+public class AssignmentServiceImpl implements AssignmentService {
     AssignmentRepository assignmentRepository;
     CourseRepository courseRepository;
 
@@ -40,5 +40,17 @@ public class AssignmentServiceImpl implements AssignmentService{
     @Override
     public void deleteAssignment(Long id) {
         assignmentRepository.deleteById(id);
+    }
+
+    @Override
+    public Assignment createAssignmentForCourse(Assignment assignment, String crn) {
+        Course course = courseRepository.findById(crn).get();
+        assignment.setCourse(course);
+        return assignmentRepository.save(assignment);
+    }
+
+    @Override
+    public List<Assignment> getAssignmentsByCourse(String crn) {
+        return assignmentRepository.findByCoursecrn(crn);
     }
 }
