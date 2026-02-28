@@ -1,7 +1,6 @@
 package com.womm.backend.service;
 import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.CourseRepository;
-import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Course;
 import org.springframework.stereotype.Service;

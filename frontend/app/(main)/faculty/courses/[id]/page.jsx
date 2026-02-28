@@ -10,6 +10,7 @@ import NewAssignmentDialog from "@/components/faculty/NewAssignmentDialog";
 import GradeReportDialog from "@/components/faculty/GradeReportDialog";
 import ArchiveClassDialog from "@/components/faculty/ArchiveClassDialog";
 import GradingWorkspaceDialog from "@/components/faculty/GradingWorkspaceDialog";
+import Dialog from "@/components/Dialog";
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -23,6 +24,11 @@ export default function CourseDetailPage() {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [gradingWorkspaceOpen, setGradingWorkspaceOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [studentCwid, setStudentCwid] = useState("");
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [roster, setRoster] = useState([]);
+  const [removeConfirm, setRemoveConfirm] = useState({ isOpen: false, student: null });
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -59,6 +65,46 @@ export default function CourseDetailPage() {
         setClasses((prev) => prev.map((c) => (c.crn === classItem.crn ? { ...c, archived: true } : c)));
       });
     };
+
+    const handleAddStudent = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/courseUser/add/${crn}/${studentCwid}`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to add student");
+    setStudentCwid("");
+    setAddStudentOpen(false);
+    alert("Student added successfully!");
+  } catch (error) {
+    console.error("Error adding student:", error);
+    alert("Failed to add student. Please check the CWID and try again.");
+  }
+};
+
+  const handleViewRoster = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/courseUser/roster/${crn}`);
+    if (!response.ok) throw new Error("Failed to fetch roster");
+    const data = await response.json();
+    setRoster(Array.isArray(data) ? data : []);
+    setRosterOpen(true);
+  } catch (error) {
+    console.error("Error fetching roster:", error);
+  }
+  };
+
+  const handleRemoveStudent = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/courseUser/${removeConfirm.student.cwid}/${crn}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to remove student");
+    setRoster((prev) => prev.filter((s) => s.cwid !== removeConfirm.student.cwid));
+    setRemoveConfirm({ isOpen: false, student: null });
+  } catch (error) {
+    console.error("Error removing student:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -164,6 +210,24 @@ export default function CourseDetailPage() {
                   <FileDown className="w-5 h-5" />
                   Export Grades
                 </button>
+                
+                <button
+                  type="button"
+                  onClick={handleViewRoster}
+                  className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
+                >
+                  <BookOpen className="w-5 h-5" />
+                  View Roster
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setAddStudentOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Student
+                </button>
                 <button
                   type="button"
                   onClick={() => setArchiveConfirmOpen(true)}
@@ -181,6 +245,103 @@ export default function CourseDetailPage() {
       <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(newAssignment) => setAssignments((prev) => [...prev, newAssignment])}
 />
       <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} />
+      
+      <Dialog isOpen={addStudentOpen} onClose={() => setAddStudentOpen(false)} title="Add Student">
+      <div className="space-y-4">
+        <p className="text-slate-400 text-sm">Enter the student's CWID to add them to this course.</p>
+        <div>
+          <label className="text-sm font-medium text-slate-300 block mb-2">Student CWID</label>
+          <input
+            type="text"
+            value={studentCwid}
+            onChange={(e) => setStudentCwid(e.target.value)}
+            placeholder="e.g. 12345678"
+            className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => setAddStudentOpen(false)}
+            className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAddStudent}
+            className="flex-1 py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors"
+          >
+            Add Student
+          </button>
+        </div>
+      </div>
+    </Dialog>
+
+      <Dialog isOpen={rosterOpen} onClose={() => setRosterOpen(false)} title="Course Roster">
+  <div className="space-y-3">
+    {roster.length === 0 ? (
+      <p className="text-slate-400 text-sm">No students enrolled yet.</p>
+    ) : (
+      roster.map((student) => (
+        <div
+          key={student.cwid}
+          className="group flex items-center justify-between gap-3 p-3 bg-slate-800/50 border border-slate-700 rounded-xl"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-teal-600/20 rounded-full flex items-center justify-center shrink-0">
+              <span className="text-teal-400 text-xs font-medium">
+                {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">{student.firstName} {student.lastName}</p>
+              <p className="text-slate-400 text-xs">CWID: {student.cwid}</p>
+            </div>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setRemoveConfirm({ isOpen: true, student })}
+              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+            >
+              ···
+            </button>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</Dialog>
+
+  <Dialog isOpen={removeConfirm.isOpen} onClose={() => setRemoveConfirm({ isOpen: false, student: null })} title="Remove Student" size="sm">
+    <div className="space-y-4">
+      <p className="text-slate-300">
+        Are you sure you want to remove{" "}
+        <span className="font-semibold text-white">
+          {removeConfirm.student?.firstName} {removeConfirm.student?.lastName} ({removeConfirm.student?.cwid})
+        </span>{" "}
+        from this course?
+      </p>
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={() => setRemoveConfirm({ isOpen: false, student: null })}
+          className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleRemoveStudent}
+          className="flex-1 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-500 transition-colors"
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  </Dialog>
+
       {selectedAssignment && (
         <GradingWorkspaceDialog
           isOpen={gradingWorkspaceOpen}
