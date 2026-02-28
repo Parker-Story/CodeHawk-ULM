@@ -56,7 +56,7 @@ export default function FacultyDashboardPage() {
   
   useEffect(() => {
   if (!user?.cwid) return;
-  fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course/faculty/${user.cwid}`)
+  fetch(`${API_BASE}/course/faculty/${user.cwid}`)
     .then((res) => {
       if (!res.ok) throw new Error("Failed to fetch courses");
       return res.json();
@@ -75,7 +75,7 @@ export default function FacultyDashboardPage() {
 
   const handleDelete = async () => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course/${deleteConfirm.crn}`, {
+    const response = await fetch(`${API_BASE}/course/${deleteConfirm.crn}`, {
       method: "DELETE",
     });
     if (!response.ok) throw new Error("Failed to delete course");
@@ -111,7 +111,7 @@ const handleSubmit = async (e) => {
     days: formData.days.join(","),
   };
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/course/${user.cwid}`, {
+    const response = await fetch(`${API_BASE}/course/${user.cwid}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newCourse),
