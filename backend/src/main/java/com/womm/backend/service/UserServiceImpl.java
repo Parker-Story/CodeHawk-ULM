@@ -4,6 +4,7 @@ import com.womm.backend.dto.LoginRequest;
 import com.womm.backend.dto.LoginResponse;
 import com.womm.backend.dto.RegisterRequest;
 import com.womm.backend.entity.User;
+import com.womm.backend.enums.Role;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -23,8 +24,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUser(String cwid) {
-        return userRepository.findById(cwid).get();
+    public User getUser(Long id) {
+        return userRepository.findById(id).get();
     }
 
     @Override
@@ -38,19 +39,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(String cwid) {
-        userRepository.deleteById(cwid);
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
     }
 
     // Registration/Login
     @Override
     public User register(RegisterRequest request) {
-        //is user with cwid and role in database
-        if(userRepository.findByCwidAndRole(request.getCwid(), request.getRole()).isPresent()) {
+        //is user with id and role in database
+        if(userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("User already exists.");
         }
 
-        User user = new User(request.getCwid(), request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
+        User user;
+        if (request.getRole() == Role.STUDENT) { // if student, add cwid
+            user = new User(request.getCwid(), request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
+        } else { // if faculty/TA, keep null
+            user = new User(null, request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
+        }
+
         return userRepository.save(user);
     }
 
@@ -61,10 +68,15 @@ public class UserServiceImpl implements UserService {
 
         // if no user with email or incorrect password
         if(user == null || !user.getPasswordHash().equals(request.getPassword())) {
-            return new LoginResponse(false, null, null, null, null);
+            return new LoginResponse(false, null, null, null, null, null);
         }
 
         // correct email and password
-        return new LoginResponse(true, user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole());
+        if (user.getRole() == Role.STUDENT) { // if student, return cwid also
+            return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole());
+        } else { // if faculty/TA, return null
+            return new LoginResponse(true, user.getId(), null, user.getFirstName(), user.getLastName(), user.getRole());
+        }
+
     }
 }

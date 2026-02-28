@@ -24,9 +24,9 @@ public class UserController {
     }
 
     // Retrieve One
-    @GetMapping("/{cwid}")
-    public User getUserDetails(@PathVariable("cwid") String cwid) {
-        return userService.getUser(cwid);
+    @GetMapping("/{id}")
+    public User getUserDetails(@PathVariable("id") Long id) {
+        return userService.getUser(id);
     }
 
     // Retrieve All
@@ -36,9 +36,9 @@ public class UserController {
     }
 
     // Update
-    @PutMapping("/{cwid}")
-    public User updateUserDetails(@PathVariable String cwid, @RequestBody User updatedUser) {
-        User user = userService.getUser(cwid);
+    @PutMapping("/{id}")
+    public User updateUserDetails(@PathVariable Long id, @RequestBody User updatedUser) {
+        User user = userService.getUser(id);
 
         user.setFirstName(updatedUser.getFirstName());
         user.setLastName(updatedUser.getLastName());
@@ -49,10 +49,10 @@ public class UserController {
     }
 
     // Delete
-    @DeleteMapping("/{cwid}")
-    public void deleteUserDetails(@PathVariable("cwid") String cwid) {
-        System.out.println("Deleting user: " + cwid);
-        userService.deleteUser(cwid);
+    @DeleteMapping("/{id}")
+    public void deleteUserDetails(@PathVariable("id") Long id) {
+        System.out.println("Deleting user: " + id);
+        userService.deleteUser(id);
     }
 
 }

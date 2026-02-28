@@ -11,7 +11,10 @@ import java.util.List;
 public class User {
 
     @Id
-    @Column(name = "cwid", length = 8)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "cwid", length = 8, nullable = true, unique = true)
     private String cwid;
 
     @Column(name = "first_name", nullable = false)
@@ -53,6 +56,14 @@ public class User {
 
 
     // ----- Getters/Setters -----
+
+    public long getId() {
+        return id;
+    }
+    public void setId(long id) {
+        this.id = id;
+    }
+
     public String getCwid() {
         return cwid;
     }

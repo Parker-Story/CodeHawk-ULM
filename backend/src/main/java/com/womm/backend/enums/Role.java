@@ -4,5 +4,4 @@ public enum Role {
     STUDENT,
     FACULTY,
     TA,
-    ADMIN //TODO: remove?
 }

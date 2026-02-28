@@ -4,6 +4,7 @@ import com.womm.backend.enums.Role;
 
 public class LoginResponse {
     private Boolean success;
+    private Long id;
     private String cwid;
     private String firstName;
     private String lastName;
@@ -11,8 +12,9 @@ public class LoginResponse {
 
     public LoginResponse() {}
 
-    public LoginResponse(Boolean success, String cwid, String firstName, String lastName,Role role) {
+    public LoginResponse(Boolean success, Long id, String cwid, String firstName, String lastName,Role role) {
         this.success = success;
+        this.id = id;
         this.cwid = cwid;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -24,6 +26,13 @@ public class LoginResponse {
     }
     public void setSuccess(Boolean success) {
         this.success = success;
+    }
+
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getCwid() {
