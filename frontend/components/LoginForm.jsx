@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, UserCog } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 
-export default function LoginForm({ variant = "student" }) {
+export default function LoginForm() {
   const router = useRouter();
   const { setUser } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -18,8 +18,10 @@ export default function LoginForm({ variant = "student" }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const isStudent = variant === "student";
-  const isTa = variant === "ta";
+  const [selectedRole, setSelectedRole] = useState("student");
+
+  const isStudent = selectedRole === "student";
+  const isTa = selectedRole === "ta";
   const Icon = isStudent ? GraduationCap : isTa ? UserCog : BookOpen;
   const theme = isStudent ? "orange" : isTa ? "violet" : "teal";
   const focusRing = theme === "orange" ? "focus:ring-orange-500" : theme === "violet" ? "focus:ring-violet-500" : "focus:ring-teal-500";
@@ -36,10 +38,9 @@ export default function LoginForm({ variant = "student" }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (isSignUp) {
-      // Handle sign up logic here if needed
-     await fetch(`${API_BASE}/api/auth/register`, {
+      await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -51,77 +52,80 @@ export default function LoginForm({ variant = "student" }) {
           role: isStudent ? "STUDENT" : isTa ? "TA" : "FACULTY"
         })
       });
-      // Switch back to login form after account creation
       setIsSignUp(false);
       return;
     }
 
-    // Call backend API for login
-  const response = await fetch(`${API_BASE}/api/auth/login`, {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        password
-      })
+      body: JSON.stringify({ email, password })
     });
 
     const data = await response.json();
 
-    if(!data.success){
-  alert("Login failed: Incorrect email or password.");
-  return;
-  }
+    if (!data.success) {
+      alert("Login failed: Incorrect email or password.");
+      return;
+    }
 
-  setUser({
-    cwid: data.cwid,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    role: data.role,
-  });
-  
-  console.log("User set:", data);
+    setUser({
+      cwid: data.cwid,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: data.role,
+    });
 
-
-    // Navigate based on variant
-    if (isStudent) {
-      router.push(`/students/${data.cwid}`);
-    } else if (isTa) {
+    // Route based on role from backend
+    const role = data.role?.toUpperCase();
+    if (role === "STUDENT") {
+      router.push("/students/dashboard");
+    } else if (role === "TA") {
       router.push("/ta/dashboard");
-    } else {
-      router.push(`/faculty/${data.cwid}`);
+    } else if (role === "FACULTY") {
+      router.push("/faculty/dashboard");
     }
   };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-      {/* Login Card */}
       <div className="relative w-full max-w-md">
-        {/* Glow effect behind card */}
         <div className={`absolute -inset-1 bg-linear-to-r rounded-2xl blur opacity-20 ${glowClass}`} />
-        
         <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
-          {/* Logo / Brand */}
           <div className="text-center mb-8">
             <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br shadow-lg mb-4 ${logoClass}`}>
               <Icon className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              {portalTitle}
-            </h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">CodeHawk</h1>
             <p className="text-slate-400 mt-2">
               {isSignUp ? "Create an account to get started" : "Sign in to continue to CodeHawk"}
             </p>
           </div>
 
-          {/* Form */}
+          {/* Role selector - only shown on sign up */}
+          {isSignUp && (
+            <div className="flex gap-2 mb-6">
+              {["student", "faculty", "ta"].map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => setSelectedRole(role)}
+                  className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-colors capitalize ${
+                    selectedRole === role
+                      ? "border-violet-500 bg-violet-600/20 text-white"
+                      : "border-slate-700 text-slate-400 hover:text-white hover:border-slate-500"
+                  }`}
+                >
+                  {role === "ta" ? "TA" : role.charAt(0).toUpperCase() + role.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+
           <form className="space-y-5" onSubmit={handleSubmit}>
             {isSignUp && (
               <div className="space-y-2">
-                {/* CWID */}
-                <label className="text-sm font-medium text-slate-300 block">
-                  CWID
-                </label>
+                <label className="text-sm font-medium text-slate-300 block">CWID</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -133,10 +137,7 @@ export default function LoginForm({ variant = "student" }) {
                     className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                 </div>
-                {/* First Name */}
-                <label className="text-sm font-medium text-slate-300 block">
-                  First Name
-                </label>
+                <label className="text-sm font-medium text-slate-300 block">First Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -149,11 +150,7 @@ export default function LoginForm({ variant = "student" }) {
                     className={`w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 ${focusRing}`}
                   />
                 </div>
-
-                {/* Last Name */}
-                <label className="text-sm font-medium text-slate-300 block">
-                  Last Name
-                </label>
+                <label className="text-sm font-medium text-slate-300 block">Last Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -169,11 +166,8 @@ export default function LoginForm({ variant = "student" }) {
               </div>
             )}
 
-            {/* Email Field */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 block">
-                Email Address
-              </label>
+              <label className="text-sm font-medium text-slate-300 block">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -188,11 +182,8 @@ export default function LoginForm({ variant = "student" }) {
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 block">
-                Password
-              </label>
+              <label className="text-sm font-medium text-slate-300 block">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -215,11 +206,8 @@ export default function LoginForm({ variant = "student" }) {
             </div>
 
             {isSignUp && (
-              /* Confirm Password (sign up only) */
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300 block">
-                  Confirm Password
-                </label>
+                <label className="text-sm font-medium text-slate-300 block">Confirm Password</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
@@ -243,34 +231,19 @@ export default function LoginForm({ variant = "student" }) {
             )}
 
             {!isSignUp && (
-              /* Remember Me & Forgot Password (login only) */
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <div className="relative">
-                    <input
-                      type="checkbox"
-                      className="peer sr-only"
-                    />
+                    <input type="checkbox" className="peer sr-only" />
                     <div className={`w-5 h-5 border-2 border-slate-600 rounded-md bg-slate-800/50 transition-all duration-200 ${checkboxClass}`} />
-                    <Check 
-                      className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200" 
-                      strokeWidth={2.5} 
-                    />
+                    <Check className="absolute top-0.5 left-0.5 w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200" strokeWidth={2.5} />
                   </div>
-                  <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
-                    Remember me
-                  </span>
+                  <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">Remember me</span>
                 </label>
-                <a
-                  href="#"
-                  className={`text-sm transition-colors ${linkClass}`}
-                >
-                  Forgot password?
-                </a>
+                <a href="#" className={`text-sm transition-colors ${linkClass}`}>Forgot password?</a>
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               type="submit"
               className={`w-full py-4 text-base font-semibold text-white bg-linear-to-r rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] ${buttonClass}`}
@@ -279,27 +252,18 @@ export default function LoginForm({ variant = "student" }) {
             </button>
           </form>
 
-          {/* Toggle Login / Sign Up */}
           <p className="text-center text-slate-400 mt-8">
             {isSignUp ? (
               <>
                 Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(false)}
-                  className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}
-                >
+                <button type="button" onClick={() => setIsSignUp(false)} className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}>
                   Sign in
                 </button>
               </>
             ) : (
               <>
                 Don&apos;t have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(true)}
-                  className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}
-                >
+                <button type="button" onClick={() => setIsSignUp(true)} className={`font-medium transition-colors hover:underline focus:outline-none ${linkClass}`}>
                   Create account
                 </button>
               </>
