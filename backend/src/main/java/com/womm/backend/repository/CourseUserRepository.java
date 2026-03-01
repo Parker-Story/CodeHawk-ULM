@@ -14,11 +14,14 @@ public interface CourseUserRepository extends JpaRepository<CourseUser, CourseUs
     @Query("SELECT cu.course FROM CourseUser cu WHERE cu.user.id = :userId")
     List<Course> findCoursesByUserId(@Param("userId") String userId);
 
-    @Query("SELECT cu.user FROM CourseUser cu WHERE cu.course.crn = :crn")
-    List<User> findUsersByCourseCrn(@Param("crn") String crn);
+    @Query("SELECT cu FROM CourseUser cu WHERE cu.course.crn = :crn")
+    List<CourseUser> findUsersByCourseCrn(@Param("crn") String crn);
 
     @Modifying
     @Transactional
     @Query("DELETE FROM CourseUser cu WHERE cu.course.crn = :crn")
     void deleteByCoursecrn(@Param("crn") String crn);
+
+    @Query("SELECT cu FROM CourseUser cu WHERE cu.user.id = :userId")
+    List<CourseUser> findCourseUsersByUserId(@Param("userId") String userId);
 }

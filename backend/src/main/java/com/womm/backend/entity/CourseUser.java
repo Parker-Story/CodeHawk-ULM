@@ -1,4 +1,5 @@
 package com.womm.backend.entity;
+import com.womm.backend.enums.CourseRole;
 import com.womm.backend.id.CourseUserId;
 import jakarta.persistence.*;
 
@@ -18,11 +19,17 @@ public class CourseUser {
     @JoinColumn(name = "course_crn")
     private Course course;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "course_role", nullable = false)
+    private CourseRole courseRole;
+
     // ----- Constructors -----
     public CourseUser() {}
-    public CourseUser(User user, Course course) {
+
+    public CourseUser(User user, Course course, CourseRole courseRole) {
         this.user = user;
         this.course = course;
+        this.courseRole = courseRole;
         courseUserId = new CourseUserId(user.getId(), course.getCrn());
     }
 
@@ -33,4 +40,6 @@ public class CourseUser {
     public void setCourse(Course course) { this.course = course; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+    public CourseRole getCourseRole() { return courseRole; }
+    public void setCourseRole(CourseRole courseRole) { this.courseRole = courseRole; }
 }

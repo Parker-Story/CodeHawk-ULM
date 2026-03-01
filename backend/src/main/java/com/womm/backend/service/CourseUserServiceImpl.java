@@ -2,6 +2,7 @@ package com.womm.backend.service;
 import com.womm.backend.entity.Course;
 import com.womm.backend.entity.CourseUser;
 import com.womm.backend.entity.User;
+import com.womm.backend.enums.CourseRole;
 import com.womm.backend.id.CourseUserId;
 import com.womm.backend.repository.CourseRepository;
 import com.womm.backend.repository.CourseUserRepository;
@@ -48,27 +49,38 @@ public class CourseUserServiceImpl implements CourseUserService {
 
     @Override
     public CourseUser addUserToCourse(String crn, String cwid) {
-        // Look up user by CWID since faculty adds students/TAs by CWID
         User user = userRepository.findByCwid(cwid)
-            .orElseThrow(() -> new RuntimeException("User not found with CWID: " + cwid));
+                .orElseThrow(() -> new RuntimeException("User not found with CWID: " + cwid));
         Course course = courseRepository.findById(crn)
-            .orElseThrow(() -> new RuntimeException("Course not found: " + crn));
-        CourseUser courseUser = new CourseUser(user, course);
+                .orElseThrow(() -> new RuntimeException("Course not found: " + crn));
+        CourseUser courseUser = new CourseUser(user, course, CourseRole.STUDENT);
         return courseUserRepository.save(courseUser);
     }
 
     @Override
-    public List<User> getUsersByCourse(String crn) {
+    public List<CourseUser> getUsersByCourse(String crn) {
         return courseUserRepository.findUsersByCourseCrn(crn);
     }
-
     @Override
     public CourseUser enrollByCode(String code, String cwid) {
         Course course = courseRepository.findByCode(code)
             .orElseThrow(() -> new RuntimeException("Course not found with code: " + code));
         User user = userRepository.findByCwid(cwid)
             .orElseThrow(() -> new RuntimeException("User not found with CWID: " + cwid));
-        CourseUser courseUser = new CourseUser(user, course);
+        CourseUser courseUser = new CourseUser(user, course, CourseRole.STUDENT);
         return courseUserRepository.save(courseUser);
+    }
+
+    @Override
+    public CourseUser promoteToTa(String crn, String userId) {
+        CourseUser courseUser = courseUserRepository.findById(new CourseUserId(userId, crn))
+            .orElseThrow(() -> new RuntimeException("CourseUser not found"));
+        courseUser.setCourseRole(CourseRole.TA);
+        return courseUserRepository.save(courseUser);
+    }
+
+    @Override
+    public List<CourseUser> getCourseUsersByUserId(String userId) {
+        return courseUserRepository.findCourseUsersByUserId(userId);
     }
 }

@@ -45,12 +45,22 @@ public class CourseUserController {
     }
 
     @GetMapping("/roster/{crn}")
-    public List<User> getRosterByCourse(@PathVariable String crn) {
+    public List<CourseUser> getRosterByCourse(@PathVariable String crn) {
         return courseUserService.getUsersByCourse(crn);
     }
 
     @PostMapping("/enroll/{code}/{cwid}")
     public CourseUser enrollStudentByCode(@PathVariable String code, @PathVariable String cwid) {
         return courseUserService.enrollByCode(code, cwid);
+    }
+
+    @PutMapping("/promote-ta/{crn}/{userId}")
+    public CourseUser promoteToTa(@PathVariable String crn, @PathVariable String userId) {
+        return courseUserService.promoteToTa(crn, userId);
+    }
+
+    @GetMapping("/user/{userId}")
+    public List<CourseUser> getCourseUsersByUserId(@PathVariable String userId) {
+        return courseUserService.getCourseUsersByUserId(userId);
     }
 }
