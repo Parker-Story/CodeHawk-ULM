@@ -36,6 +36,7 @@ export default function CourseDetailPage() {
   const [deleteAssignmentConfirm, setDeleteAssignmentConfirm] = useState({ isOpen: false, assignment: null });
   const router = useRouter();
   const { user } = useAuth();
+  const [promoteTaConfirm, setPromoteTaConfirm] = useState({ isOpen: false, courseUser: null });
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -114,7 +115,8 @@ export default function CourseDetailPage() {
     }
   };
 
-  const handlePromoteToTa = async (courseUser) => {
+  const handlePromoteToTa = async () => {
+    const courseUser = promoteTaConfirm.courseUser;
     try {
       const response = await fetch(`${API_BASE}/courseUser/promote-ta/${crn}/${courseUser.user.id}`, {
         method: "PUT",
@@ -122,8 +124,22 @@ export default function CourseDetailPage() {
       if (!response.ok) throw new Error("Failed to promote to TA");
       const updated = await response.json();
       setRoster((prev) => prev.map((s) => s.user.id === courseUser.user.id ? updated : s));
+      setPromoteTaConfirm({ isOpen: false, courseUser: null });
     } catch (error) {
       console.error("Error promoting to TA:", error);
+    }
+  };
+
+  const handleDemoteFromTa = async (courseUser) => {
+    try {
+      const response = await fetch(`${API_BASE}/courseUser/demote-ta/${crn}/${courseUser.user.id}`, {
+        method: "PUT",
+      });
+      if (!response.ok) throw new Error("Failed to demote TA");
+      const updated = await response.json();
+      setRoster((prev) => prev.map((s) => s.user.id === courseUser.user.id ? updated : s));
+    } catch (error) {
+      console.error("Error demoting TA:", error);
     }
   };
 
@@ -442,9 +458,9 @@ export default function CourseDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-teal-600/20 rounded-full flex items-center justify-center shrink-0">
-                    <span className="text-teal-400 text-xs font-medium">
-                      {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
-                    </span>
+              <span className="text-teal-400 text-xs font-medium">
+                {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
+              </span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -463,29 +479,95 @@ export default function CourseDetailPage() {
                           </p>
                         </div>
                       </div>
-                      {courseUser.courseRole === "STUDENT" && (
-                          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all">
+
+                      {/* Three dot menu - only for non-faculty */}
+                      {courseUser.courseRole !== "FACULTY" && (
+                          <div className="relative">
                             <button
                                 type="button"
-                                onClick={() => handlePromoteToTa(courseUser)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-violet-400 hover:bg-violet-400/10 transition-all"
-                                title="Make TA"
+                                onClick={() => setActiveMenu(activeMenu === courseUser.user.id ? null : courseUser.user.id)}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
                             >
-                              <UserCog className="w-4 h-4" />
+                              <MoreVertical className="w-4 h-4" />
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setRemoveConfirm({ isOpen: true, student: courseUser })}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                                title="Remove"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {activeMenu === courseUser.user.id && (
+                                <div className="absolute right-0 top-8 z-10 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden w-44">
+                                  {courseUser.courseRole === "STUDENT" && (
+                                      <button
+                                          type="button"
+                                          onClick={() => {
+                                            setPromoteTaConfirm({ isOpen: true, courseUser });
+                                            setActiveMenu(null);
+                                          }}
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-violet-400 hover:bg-slate-700 transition-colors"
+                                      >
+                                        <UserCog className="w-4 h-4" />
+                                        Promote to TA
+                                      </button>
+                                  )}
+                                  {courseUser.courseRole === "TA" && (
+                                      <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleDemoteFromTa(courseUser);
+                                            setActiveMenu(null);
+                                          }}
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+                                      >
+                                        <UserCog className="w-4 h-4" />
+                                        Revoke TA
+                                      </button>
+                                  )}
+                                  <button
+                                      type="button"
+                                      onClick={() => {
+                                        setRemoveConfirm({ isOpen: true, student: courseUser });
+                                        setActiveMenu(null);
+                                      }}
+                                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remove
+                                  </button>
+                                </div>
+                            )}
                           </div>
                       )}
                     </div>
                 ))
             )}
+          </div>
+        </Dialog>
+
+        {/* Promote to TA Confirmation */}
+        <Dialog isOpen={promoteTaConfirm.isOpen} onClose={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })} title="Promote to TA" size="sm">
+          <div className="space-y-4">
+            <p className="text-slate-300">
+              Are you sure you want to make{" "}
+              <span className="font-semibold text-white">
+        {promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}
+      </span>{" "}
+              a TA for this course?
+            </p>
+            <p className="text-slate-400 text-sm">
+              They will have additional permissions such as viewing and grading student assignments.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                  type="button"
+                  onClick={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })}
+                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                  type="button"
+                  onClick={handlePromoteToTa}
+                  className="flex-1 py-3 text-sm font-medium text-white bg-violet-600 rounded-xl hover:bg-violet-500 transition-colors"
+              >
+                Promote to TA
+              </button>
+            </div>
           </div>
         </Dialog>
 

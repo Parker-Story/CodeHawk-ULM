@@ -63,4 +63,9 @@ public class CourseUserController {
     public List<CourseUser> getCourseUsersByUserId(@PathVariable String userId) {
         return courseUserService.getCourseUsersByUserId(userId);
     }
+
+    @PutMapping("/demote-ta/{crn}/{userId}")
+    public CourseUser demoteFromTa(@PathVariable String crn, @PathVariable String userId) {
+        return courseUserService.demoteFromTa(crn, userId);
+    }
 }

@@ -14,4 +14,5 @@ public interface CourseUserService {
     CourseUser enrollByCode(String code, String cwid);
     CourseUser promoteToTa(String crn, String userId);
     List<CourseUser> getCourseUsersByUserId(String userId);
+    CourseUser demoteFromTa(String crn, String userId);
 }

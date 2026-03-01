@@ -83,4 +83,12 @@ public class CourseUserServiceImpl implements CourseUserService {
     public List<CourseUser> getCourseUsersByUserId(String userId) {
         return courseUserRepository.findCourseUsersByUserId(userId);
     }
+
+    @Override
+    public CourseUser demoteFromTa(String crn, String userId) {
+        CourseUser courseUser = courseUserRepository.findById(new CourseUserId(userId, crn))
+                .orElseThrow(() -> new RuntimeException("CourseUser not found"));
+        courseUser.setCourseRole(CourseRole.STUDENT);
+        return courseUserRepository.save(courseUser);
+    }
 }
