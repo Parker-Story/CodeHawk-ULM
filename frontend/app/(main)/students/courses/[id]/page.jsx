@@ -49,15 +49,15 @@ export default function StudentCourseDetailPage() {
   }, [crn]);
 
   useEffect(() => {
-    if (!selectedAssignment || !user?.cwid) return;
-    fetch(`${API_BASE}/submission/${user.cwid}/${selectedAssignment.id}`)
-      .then((res) => {
-        if (!res.ok) return null;
-        return res.json();
-      })
-      .then((data) => setExistingSubmission(data))
-      .catch(() => setExistingSubmission(null));
-  }, [selectedAssignment, user]);
+  if (!selectedAssignment || !user?.id) return;
+  fetch(`${API_BASE}/submission/${user.id}/${selectedAssignment.id}`)
+    .then((res) => {
+      if (!res.ok) return null;
+      return res.json();
+    })
+    .then((data) => setExistingSubmission(data))
+    .catch(() => setExistingSubmission(null));
+}, [selectedAssignment, user]);
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -70,30 +70,30 @@ export default function StudentCourseDetailPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile || !user?.cwid) return;
-    setSubmitting(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
-        const response = await fetch(`${API_BASE}/submission/submit/${selectedAssignment.id}/${user.cwid}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: selectedFile.name,
-            fileContent: base64,
-          }),
-        });
-        if (!response.ok) throw new Error("Submission failed");
-        setSubmitted(true);
-        setSubmitting(false);
-      };
-      reader.readAsDataURL(selectedFile);
-    } catch (error) {
-      console.error("Error submitting:", error);
+  if (!selectedFile || !user?.id) return;
+  setSubmitting(true);
+  try {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result.split(",")[1];
+      const response = await fetch(`${API_BASE}/submission/submit/${selectedAssignment.id}/${user.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          fileContent: base64,
+        }),
+      });
+      if (!response.ok) throw new Error("Submission failed");
+      setSubmitted(true);
       setSubmitting(false);
-    }
-  };
+    };
+    reader.readAsDataURL(selectedFile);
+  } catch (error) {
+    console.error("Error submitting:", error);
+    setSubmitting(false);
+  }
+};
 
   const closeModal = () => {
     setSelectedAssignment(null);

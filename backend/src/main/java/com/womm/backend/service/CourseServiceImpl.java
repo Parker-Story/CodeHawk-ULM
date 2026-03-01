@@ -2,7 +2,6 @@ package com.womm.backend.service;
 import com.womm.backend.entity.Course;
 import com.womm.backend.entity.CourseUser;
 import com.womm.backend.entity.User;
-import com.womm.backend.id.CourseUserId;
 import com.womm.backend.repository.CourseRepository;
 import com.womm.backend.repository.CourseUserRepository;
 import com.womm.backend.repository.UserRepository;
@@ -22,9 +21,10 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public Course createCourse(Course course, String facultyCwid) {
+    public Course createCourse(Course course, String userId) {
         Course savedCourse = courseRepository.save(course);
-        User faculty = userRepository.findById(facultyCwid).get();
+        User faculty = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         CourseUser courseUser = new CourseUser(faculty, savedCourse);
         courseUserRepository.save(courseUser);
         return savedCourse;
@@ -52,7 +52,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public List<Course> getCoursesByFaculty(String cwid) {
-        return courseUserRepository.findCoursesByUserCwid(cwid);
+    public List<Course> getCoursesByUser(String userId) {
+        return courseUserRepository.findCoursesByUserId(userId);
     }
 }

@@ -1,5 +1,4 @@
 package com.womm.backend.controller;
-
 import com.womm.backend.entity.Submission;
 import com.womm.backend.service.SubmissionService;
 import org.springframework.web.bind.annotation.*;
@@ -9,22 +8,20 @@ import java.util.List;
 @RestController
 @RequestMapping(path="/submission")
 public class SubmissionController {
-
     SubmissionService submissionService;
 
     public SubmissionController(SubmissionService submissionService) {
         this.submissionService = submissionService;
     }
 
-    // ----- CRUD -----
     @PostMapping
     public Submission createSubmissionDetails(@RequestBody Submission submission) {
         return submissionService.createSubmission(submission);
     }
 
-    @GetMapping("/{userCwid}/{assignmentId}")
-    public Submission getSubmissionDetails(@PathVariable String userCwid, @PathVariable Long assignmentId) {
-        return submissionService.getSubmission(userCwid, assignmentId);
+    @GetMapping("/{userId}/{assignmentId}")
+    public Submission getSubmissionDetails(@PathVariable String userId, @PathVariable Long assignmentId) {
+        return submissionService.getSubmission(userId, assignmentId);
     }
 
     @GetMapping
@@ -37,17 +34,17 @@ public class SubmissionController {
         return submissionService.updateSubmission(submission);
     }
 
-    @DeleteMapping("/{userCwid}/{assignmentId}")
-    public void deleteSubmissionDetails(@PathVariable String userCwid, @PathVariable Long assignmentId) {
-        submissionService.deleteSubmission(userCwid, assignmentId);
+    @DeleteMapping("/{userId}/{assignmentId}")
+    public void deleteSubmissionDetails(@PathVariable String userId, @PathVariable Long assignmentId) {
+        submissionService.deleteSubmission(userId, assignmentId);
     }
 
-    @PostMapping("/submit/{assignmentId}/{cwid}")
+    @PostMapping("/submit/{assignmentId}/{userId}")
     public Submission submitAssignment(
         @PathVariable Long assignmentId,
-        @PathVariable String cwid,
+        @PathVariable String userId,
         @RequestBody Submission submission) {
-        return submissionService.submitAssignment(assignmentId, cwid, submission);
+        return submissionService.submitAssignment(assignmentId, userId, submission);
     }
 
     @GetMapping("/assignment/{assignmentId}")
@@ -55,11 +52,11 @@ public class SubmissionController {
         return submissionService.getSubmissionsByAssignment(assignmentId);
     }
 
-    @PutMapping("/score/{assignmentId}/{cwid}")
+    @PutMapping("/score/{assignmentId}/{userId}")
     public Submission scoreSubmission(
-    @PathVariable Long assignmentId,
-    @PathVariable String cwid,
-    @RequestBody Map<String, Integer> body) {
-    return submissionService.scoreSubmission(assignmentId, cwid, body.get("score"));
-}
+        @PathVariable Long assignmentId,
+        @PathVariable String userId,
+        @RequestBody Map<String, Integer> body) {
+        return submissionService.scoreSubmission(assignmentId, userId, body.get("score"));
+    }
 }

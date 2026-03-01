@@ -27,8 +27,8 @@ public class CourseUserServiceImpl implements CourseUserService {
     }
 
     @Override
-    public CourseUser getCourseUser(String userCwid, String courseCrn) {
-        return courseUserRepository.findById(new CourseUserId(userCwid, courseCrn)).get();
+    public CourseUser getCourseUser(String userId, String courseCrn) {
+        return courseUserRepository.findById(new CourseUserId(userId, courseCrn)).get();
     }
 
     @Override
@@ -42,14 +42,17 @@ public class CourseUserServiceImpl implements CourseUserService {
     }
 
     @Override
-    public void deleteCourseUser(String userCwid, String courseCrn) {
-        courseUserRepository.deleteById(new CourseUserId(userCwid, courseCrn));
+    public void deleteCourseUser(String userId, String courseCrn) {
+        courseUserRepository.deleteById(new CourseUserId(userId, courseCrn));
     }
 
     @Override
     public CourseUser addUserToCourse(String crn, String cwid) {
-        User user = userRepository.findById(cwid).get();
-        Course course = courseRepository.findById(crn).get();
+        // Look up user by CWID since faculty adds students/TAs by CWID
+        User user = userRepository.findByCwid(cwid)
+            .orElseThrow(() -> new RuntimeException("User not found with CWID: " + cwid));
+        Course course = courseRepository.findById(crn)
+            .orElseThrow(() -> new RuntimeException("Course not found: " + crn));
         CourseUser courseUser = new CourseUser(user, course);
         return courseUserRepository.save(courseUser);
     }
@@ -63,8 +66,8 @@ public class CourseUserServiceImpl implements CourseUserService {
     public CourseUser enrollByCode(String code, String cwid) {
         Course course = courseRepository.findByCode(code)
             .orElseThrow(() -> new RuntimeException("Course not found with code: " + code));
-        User user = userRepository.findById(cwid)
-            .orElseThrow(() -> new RuntimeException("User not found with cwid: " + cwid));
+        User user = userRepository.findByCwid(cwid)
+            .orElseThrow(() -> new RuntimeException("User not found with CWID: " + cwid));
         CourseUser courseUser = new CourseUser(user, course);
         return courseUserRepository.save(courseUser);
     }

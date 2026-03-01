@@ -3,12 +3,12 @@ import com.womm.backend.entity.Submission;
 import java.util.List;
 
 public interface SubmissionService {
-    public Submission createSubmission(Submission submission);
-    public Submission getSubmission(String userCwid, Long assignmentId);
-    public List<Submission> getAllSubmissions();
-    public Submission updateSubmission(Submission submission);
-    public void deleteSubmission(String userCwid, Long assignmentId);
-    Submission submitAssignment(Long assignmentId, String cwid, Submission submission);
+    Submission createSubmission(Submission submission);
+    Submission getSubmission(String userId, Long assignmentId);
+    List<Submission> getAllSubmissions();
+    Submission updateSubmission(Submission submission);
+    void deleteSubmission(String userId, Long assignmentId);
+    Submission submitAssignment(Long assignmentId, String userId, Submission submission);
     List<Submission> getSubmissionsByAssignment(Long assignmentId);
-    Submission scoreSubmission(Long assignmentId, String cwid, Integer score);
+    Submission scoreSubmission(Long assignmentId, String userId, Integer score);
 }

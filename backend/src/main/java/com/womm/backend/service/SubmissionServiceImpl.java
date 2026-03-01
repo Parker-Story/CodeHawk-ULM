@@ -27,8 +27,8 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
-    public Submission getSubmission(String userCwid, Long assignmentId) {
-        return submissionRepository.findById(new SubmissionId(userCwid, assignmentId)).get();
+    public Submission getSubmission(String userId, Long assignmentId) {
+        return submissionRepository.findById(new SubmissionId(userId, assignmentId)).get();
     }
 
     @Override
@@ -42,17 +42,19 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
-    public void deleteSubmission(String userCwid, Long assignmentId) {
-        submissionRepository.deleteById(new SubmissionId(userCwid, assignmentId));
+    public void deleteSubmission(String userId, Long assignmentId) {
+        submissionRepository.deleteById(new SubmissionId(userId, assignmentId));
     }
 
     @Override
-    public Submission submitAssignment(Long assignmentId, String cwid, Submission submission) {
-        User user = userRepository.findById(cwid).get();
-        Assignment assignment = assignmentRepository.findById(assignmentId).get();
+    public Submission submitAssignment(Long assignmentId, String userId, Submission submission) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+            .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
         submission.setUser(user);
         submission.setAssignment(assignment);
-        submission.setSubmissionId(new SubmissionId(cwid, assignmentId));
+        submission.setSubmissionId(new SubmissionId(userId, assignmentId));
         return submissionRepository.save(submission);
     }
 
@@ -62,9 +64,10 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
-    public Submission scoreSubmission(Long assignmentId, String cwid, Integer score) {
-    Submission submission = submissionRepository.findById(new SubmissionId(cwid, assignmentId)).get();
-    submission.setScore(score);
-    return submissionRepository.save(submission);
+    public Submission scoreSubmission(Long assignmentId, String userId, Integer score) {
+        Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
+            .orElseThrow(() -> new RuntimeException("Submission not found"));
+        submission.setScore(score);
+        return submissionRepository.save(submission);
     }
 }

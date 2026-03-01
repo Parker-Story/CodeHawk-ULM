@@ -11,9 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 public interface CourseUserRepository extends JpaRepository<CourseUser, CourseUserId> {
-
-    @Query("SELECT cu.course FROM CourseUser cu WHERE cu.user.cwid = :cwid")
-    List<Course> findCoursesByUserCwid(@Param("cwid") String cwid);
+    @Query("SELECT cu.course FROM CourseUser cu WHERE cu.user.id = :userId")
+    List<Course> findCoursesByUserId(@Param("userId") String userId);
 
     @Query("SELECT cu.user FROM CourseUser cu WHERE cu.course.crn = :crn")
     List<User> findUsersByCourseCrn(@Param("crn") String crn);

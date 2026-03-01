@@ -1,16 +1,15 @@
 package com.womm.backend.service;
-
 import com.womm.backend.dto.LoginRequest;
 import com.womm.backend.dto.LoginResponse;
 import com.womm.backend.dto.RegisterRequest;
 import com.womm.backend.entity.User;
+import com.womm.backend.enums.Role;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
-
     UserRepository userRepository;
 
     public UserServiceImpl(UserRepository userRepository) {
@@ -23,8 +22,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUser(String cwid) {
-        return userRepository.findById(cwid).get();
+    public User getUser(String id) {
+        return userRepository.findById(id).get();
     }
 
     @Override
@@ -38,33 +37,39 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(String cwid) {
-        userRepository.deleteById(cwid);
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
     }
 
-    // Registration/Login
     @Override
     public User register(RegisterRequest request) {
-        //is user with cwid and role in database
-        if(userRepository.findByCwidAndRole(request.getCwid(), request.getRole()).isPresent()) {
-            throw new RuntimeException("User already exists.");
+        // Check if email already exists
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("User with this email already exists.");
         }
 
-        User user = new User(request.getCwid(), request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
+        // For students and TAs, check if CWID already exists
+        if (request.getCwid() != null && !request.getCwid().isEmpty()) {
+            if (userRepository.findByCwid(request.getCwid()).isPresent()) {
+                throw new RuntimeException("User with this CWID already exists.");
+            }
+        }
+
+        // Faculty have null CWID
+        String cwid = (request.getRole() == Role.FACULTY) ? null : request.getCwid();
+
+        User user = new User(cwid, request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
         return userRepository.save(user);
     }
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        // check for user with given email
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
-        // if no user with email or incorrect password
-        if(user == null || !user.getPasswordHash().equals(request.getPassword())) {
-            return new LoginResponse(false, null, null, null, null);
+        if (user == null || !user.getPasswordHash().equals(request.getPassword())) {
+            return new LoginResponse(false, null, null, null, null, null);
         }
 
-        // correct email and password
-        return new LoginResponse(true, user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole());
+        return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole());
     }
 }

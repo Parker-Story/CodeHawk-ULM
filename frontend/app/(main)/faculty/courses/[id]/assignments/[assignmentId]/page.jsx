@@ -32,7 +32,7 @@ export default function GradingWorkspacePage() {
         setSubmissions(list);
         const inputs = {};
         list.forEach((s) => {
-          inputs[s.submissionId.userCwid] = s.score ?? "";
+          inputs[s.submissionId.userId] = s.score ?? "";
         });
         setScoreInputs(inputs);
         setLoading(false);
@@ -43,12 +43,12 @@ export default function GradingWorkspacePage() {
       });
   }, [assignmentId]);
 
-  const handleScoreSave = async (cwid) => {
-    const score = scoreInputs[cwid];
+  const handleScoreSave = async (userId) => {
+    const score = scoreInputs[userId];
     if (score === "" || score === null || score === undefined) return;
-    setSavingScore((prev) => ({ ...prev, [cwid]: true }));
+    setSavingScore((prev) => ({ ...prev, [userId]: true }));
     try {
-      const response = await fetch(`${API_BASE}/submission/score/${assignmentId}/${cwid}`, {
+      const response = await fetch(`${API_BASE}/submission/score/${assignmentId}/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ score: parseInt(score) }),
@@ -56,12 +56,12 @@ export default function GradingWorkspacePage() {
       if (!response.ok) throw new Error("Failed to save score");
       const updated = await response.json();
       setSubmissions((prev) =>
-        prev.map((s) => (s.submissionId.userCwid === cwid ? updated : s))
+        prev.map((s) => (s.submissionId.userId === userId ? updated : s))
       );
     } catch (error) {
       console.error("Error saving score:", error);
     } finally {
-      setSavingScore((prev) => ({ ...prev, [cwid]: false }));
+      setSavingScore((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -107,9 +107,9 @@ export default function GradingWorkspacePage() {
                 </tr>
               ) : (
                 submissions.map((s) => {
-                  const cwid = s.submissionId.userCwid;
+                  const userId = s.submissionId.userId;
                   return (
-                    <tr key={cwid} className="border-b border-slate-700/50 last:border-0">
+                    <tr key={userId} className="border-b border-slate-700/50 last:border-0">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-teal-600/20 rounded-full flex items-center justify-center shrink-0">
@@ -132,18 +132,18 @@ export default function GradingWorkspacePage() {
                             type="number"
                             min="0"
                             max="100"
-                            value={scoreInputs[cwid] ?? ""}
-                            onChange={(e) => setScoreInputs((prev) => ({ ...prev, [cwid]: e.target.value }))}
+                            value={scoreInputs[userId] ?? ""}
+                            onChange={(e) => setScoreInputs((prev) => ({ ...prev, [userId]: e.target.value }))}
                             placeholder="—"
                             className="w-16 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                           />
                           <button
                             type="button"
-                            onClick={() => handleScoreSave(cwid)}
-                            disabled={savingScore[cwid]}
+                            onClick={() => handleScoreSave(userId)}
+                            disabled={savingScore[userId]}
                             className="px-3 py-1 text-xs font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors disabled:opacity-50"
                           >
-                            {savingScore[cwid] ? "Saving..." : "Save"}
+                            {savingScore[userId] ? "Saving..." : "Save"}
                           </button>
                         </div>
                       </td>

@@ -1,17 +1,17 @@
 package com.womm.backend.entity;
-
 import com.womm.backend.enums.Role;
 import jakarta.persistence.*;
-
 import java.util.List;
-
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
 public class User {
-
     @Id
-    @Column(name = "cwid", length = 8)
+    @Column(name = "id", length = 36)
+    private String id;
+
+    @Column(name = "cwid", length = 8, nullable = true)
     private String cwid;
 
     @Column(name = "first_name", nullable = false)
@@ -24,25 +24,25 @@ public class User {
     private String email;
 
     @Column(name = "password_hash", nullable = false)
-    private String passwordHash; //TODO: add hash logic
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "user_role")
     private Role role;
 
-    @OneToMany (mappedBy = "user")
+    @OneToMany(mappedBy = "user")
     private List<CourseUser> courses;
 
-    @OneToMany (mappedBy = "user")
+    @OneToMany(mappedBy = "user")
     private List<Submission> submissions;
 
-    //TODO: add timestamp logic
-
-
     // ----- Constructors -----
-    public User() {}
+    public User() {
+        this.id = UUID.randomUUID().toString();
+    }
 
     public User(String cwid, String firstName, String lastName, String email, String passwordHash, Role role) {
+        this.id = UUID.randomUUID().toString();
         this.cwid = cwid;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -50,49 +50,20 @@ public class User {
         this.passwordHash = passwordHash;
         this.role = role;
     }
-
 
     // ----- Getters/Setters -----
-    public String getCwid() {
-        return cwid;
-    }
-    public void setCwid(String cwid) {
-        this.cwid = cwid;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getCwid() { return cwid; }
+    public void setCwid(String cwid) { this.cwid = cwid; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
 }
