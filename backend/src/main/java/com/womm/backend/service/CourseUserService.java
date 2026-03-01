@@ -10,6 +10,8 @@ public interface CourseUserService {
     CourseUser updateCourseUser(CourseUser courseUser);
     void deleteCourseUser(String userId, String courseCrn);
     CourseUser addUserToCourse(String crn, String cwid);
-    List<User> getUsersByCourse(String crn);
+    List<CourseUser> getUsersByCourse(String crn);
     CourseUser enrollByCode(String code, String cwid);
+    CourseUser promoteToTa(String crn, String userId);
+    List<CourseUser> getCourseUsersByUserId(String userId);
 }

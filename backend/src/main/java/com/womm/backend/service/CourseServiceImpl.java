@@ -7,6 +7,7 @@ import com.womm.backend.repository.CourseUserRepository;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import com.womm.backend.enums.CourseRole;
 
 @Service
 public class CourseServiceImpl implements CourseService {
@@ -25,7 +26,7 @@ public class CourseServiceImpl implements CourseService {
         Course savedCourse = courseRepository.save(course);
         User faculty = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-        CourseUser courseUser = new CourseUser(faculty, savedCourse);
+        CourseUser courseUser = new CourseUser(faculty, savedCourse, CourseRole.FACULTY);
         courseUserRepository.save(courseUser);
         return savedCourse;
     }
