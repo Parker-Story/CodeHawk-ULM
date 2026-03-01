@@ -55,6 +55,7 @@ export default function LoginForm() {
       firstName: data.firstName,
       lastName: data.lastName,
       role: data.role,
+      email: data.email,
     });
     const role = data.role?.toUpperCase();
     if (role === "STUDENT") router.push("/students/dashboard");

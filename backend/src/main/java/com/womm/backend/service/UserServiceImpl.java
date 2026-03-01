@@ -67,9 +67,9 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
         if (user == null || !user.getPasswordHash().equals(request.getPassword())) {
-            return new LoginResponse(false, null, null, null, null, null);
+            return new LoginResponse(false, null, null, null, null, null, null);
         }
 
-        return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole());
+        return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole(), user.getEmail());
     }
 }
