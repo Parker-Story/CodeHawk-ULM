@@ -12,6 +12,7 @@ import ArchiveClassDialog from "@/components/faculty/ArchiveClassDialog";
 import GradingWorkspaceDialog from "@/components/faculty/GradingWorkspaceDialog";
 import Dialog from "@/components/Dialog";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -34,7 +35,9 @@ export default function CourseDetailPage() {
   const [editAssignment, setEditAssignment] = useState(null);
   const [deleteAssignmentConfirm, setDeleteAssignmentConfirm] = useState({ isOpen: false, assignment: null });
   const router = useRouter();
+  const { user } = useAuth();
 
+  
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
       .then((res) => {
@@ -101,11 +104,11 @@ export default function CourseDetailPage() {
 
   const handleRemoveStudent = async () => {
     try {
-      const response = await fetch(`${API_BASE}/courseUser/${removeConfirm.student.cwid}/${crn}`, {
+      const response = await fetch(`${API_BASE}/courseUser/${removeConfirm.student.id}/${crn}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to remove student");
-      setRoster((prev) => prev.filter((s) => s.cwid !== removeConfirm.student.cwid));
+      setRoster((prev) => prev.filter((s) => s.id !== removeConfirm.student.id));
       setRemoveConfirm({ isOpen: false, student: null });
     } catch (error) {
       console.error("Error removing student:", error);
@@ -442,13 +445,15 @@ export default function CourseDetailPage() {
                     <p className="text-slate-400 text-xs">CWID: {student.cwid}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setRemoveConfirm({ isOpen: true, student })}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
-                >
-                  ···
-                </button>
+                {student.role !== "FACULTY" && (
+                  <button
+                    type="button"
+                    onClick={() => setRemoveConfirm({ isOpen: true, student })}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+                  >
+                    ···
+                  </button>
+                )}
               </div>
             ))
           )}

@@ -55,8 +55,8 @@ export default function FacultyDashboardPage() {
 
   
   useEffect(() => {
-  if (!user?.cwid) return;
-  fetch(`${API_BASE}/course/faculty/${user.cwid}`)
+  if (!user?.id) return;
+  fetch(`${API_BASE}/course/user/${user.id}`)
     .then((res) => {
       if (!res.ok) throw new Error("Failed to fetch courses");
       return res.json();
@@ -111,7 +111,7 @@ const handleSubmit = async (e) => {
     days: formData.days.join(","),
   };
   try {
-    const response = await fetch(`${API_BASE}/course/${user.cwid}`, {
+    const response = await fetch(`${API_BASE}/course/${user.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newCourse),

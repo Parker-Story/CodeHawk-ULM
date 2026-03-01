@@ -23,15 +23,16 @@ export default function PortalDashboardPage({ variant }) {
   const [courses, setCourses] = useState([]);
 
   useEffect(() => {
-    if (!user?.cwid) return;
-    fetch(`${API_BASE}/course/faculty/${user.cwid}`)
+    if (!user?.id) return;
+    setCourses([]);
+    fetch(`${API_BASE}/course/user/${user.id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch courses");
         return res.json();
       })
       .then((data) => setCourses(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Error loading courses:", err));
-  }, [user]);
+  }, [user?.id]);
 
   if (!config?.dashboard) return null;
   const { title, showAddCourse, sidebarKey } = config.dashboard;

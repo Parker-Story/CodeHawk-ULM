@@ -9,6 +9,7 @@ import java.util.List;
 @RequestMapping(path="/courseUser")
 public class CourseUserController {
     CourseUserService courseUserService;
+
     public CourseUserController(CourseUserService courseUserService) {
         this.courseUserService = courseUserService;
     }
@@ -23,9 +24,9 @@ public class CourseUserController {
         return courseUserService.addUserToCourse(crn, cwid);
     }
 
-    @GetMapping("/{userCwid}/{courseCrn}")
-    public CourseUser getCourseUserDetails(@PathVariable String userCwid, @PathVariable String courseCrn) {
-        return courseUserService.getCourseUser(userCwid, courseCrn);
+    @GetMapping("/{userId}/{courseCrn}")
+    public CourseUser getCourseUserDetails(@PathVariable String userId, @PathVariable String courseCrn) {
+        return courseUserService.getCourseUser(userId, courseCrn);
     }
 
     @GetMapping
@@ -38,9 +39,9 @@ public class CourseUserController {
         return courseUserService.updateCourseUser(courseUser);
     }
 
-    @DeleteMapping("/{userCwid}/{courseCrn}")
-    public void deleteCourseUserDetails(@PathVariable String userCwid, @PathVariable String courseCrn) {
-        courseUserService.deleteCourseUser(userCwid, courseCrn);
+    @DeleteMapping("/{userId}/{courseCrn}")
+    public void deleteCourseUserDetails(@PathVariable String userId, @PathVariable String courseCrn) {
+        courseUserService.deleteCourseUser(userId, courseCrn);
     }
 
     @GetMapping("/roster/{crn}")
