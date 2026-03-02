@@ -1,29 +1,31 @@
 "use client";
 
 import AccountView from "@/components/shared/AccountView";
-import { PORTAL_CONFIG } from "@/lib/portals";
+import { useAuth } from "@/contexts/AuthContext";
 
-/**
- * Shared account page: uses config for display name, subtitle, academic info per variant.
- * Pass displayName, subtitle, academicInfo to override.
- */
-export default function PortalAccountPage({
-  variant,
-  displayName,
-  subtitle,
-  academicInfo,
-  onEditProfile = () => {},
-}) {
-  const config = PORTAL_CONFIG[variant];
-  if (!config?.account) return null;
-  const placeholders = config.account;
+export default function PortalAccountPage({ variant }) {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  const displayName = `${user.firstName} ${user.lastName}`;
+  const subtitle = variant === "faculty"
+      ? "Faculty"
+      : variant === "ta"
+          ? "Teaching Assistant"
+          : "Student";
+
+  const academicInfo = {
+    institution: "University of Louisiana at Monroe",
+    ...(variant !== "faculty" && { cwid: user.cwid ?? "N/A" }),
+    email: user.email ?? "",
+  };
+
   return (
-    <AccountView
-      displayName={displayName ?? placeholders.displayName}
-      subtitle={subtitle ?? placeholders.subtitle}
-      academicInfo={academicInfo ?? placeholders.academicInfo}
-      onEditProfile={onEditProfile}
-      variant={variant}
-    />
+      <AccountView
+          displayName={displayName}
+          subtitle={subtitle}
+          academicInfo={academicInfo}
+          variant={variant}
+      />
   );
 }

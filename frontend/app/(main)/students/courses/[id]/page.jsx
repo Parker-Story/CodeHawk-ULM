@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, FileText, Upload, X } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,51 +13,66 @@ export default function StudentCourseDetailPage() {
   const { user } = useAuth();
   const [classItem, setClassItem] = useState(null);
   const [assignments, setAssignments] = useState([]);
+  const [submissions, setSubmissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [activeTab, setActiveTab] = useState("description");
   const [selectedFile, setSelectedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [newAttempt, setNewAttempt] = useState(false);
   const fileInputRef = useRef(null);
-  const [existingSubmission, setExistingSubmission] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Course not found");
-        return res.json();
-      })
-      .then((data) => {
-        setClassItem({ ...data, days: data.days ? data.days.split(",") : [] });
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
+        .then((res) => {
+          if (!res.ok) throw new Error("Course not found");
+          return res.json();
+        })
+        .then((data) => {
+          setClassItem({ ...data, days: data.days ? data.days.split(",") : [] });
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error(err);
+          setLoading(false);
+        });
   }, [crn]);
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/course/${crn}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch assignments");
-        return res.json();
-      })
-      .then((data) => setAssignments(Array.isArray(data) ? data : []))
-      .catch((err) => console.error("Error loading assignments:", err));
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch assignments");
+          return res.json();
+        })
+        .then((data) => setAssignments(Array.isArray(data) ? data : []))
+        .catch((err) => console.error("Error loading assignments:", err));
   }, [crn]);
 
+  // Fetch all submissions for this student in this course once assignments load
   useEffect(() => {
-  if (!selectedAssignment || !user?.id) return;
-  fetch(`${API_BASE}/submission/${user.id}/${selectedAssignment.id}`)
-    .then((res) => {
-      if (!res.ok) return null;
-      return res.json();
-    })
-    .then((data) => setExistingSubmission(data))
-    .catch(() => setExistingSubmission(null));
-}, [selectedAssignment, user]);
+    if (!user?.id || assignments.length === 0) return;
+    const fetchAll = async () => {
+      const map = {};
+      await Promise.all(
+          assignments.map(async (a) => {
+            try {
+              const res = await fetch(`${API_BASE}/submission/${user.id}/${a.id}`);
+              if (res.ok) {
+                const data = await res.json();
+                if (data) map[a.id] = data;
+              }
+            } catch {
+              // no submission for this assignment
+            }
+          })
+      );
+      setSubmissions(map);
+    };
+    fetchAll();
+  }, [user?.id, assignments]);
+
+  const existingSubmission = selectedAssignment ? submissions[selectedAssignment.id] : null;
 
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
@@ -70,38 +85,42 @@ export default function StudentCourseDetailPage() {
   };
 
   const handleSubmit = async () => {
-  if (!selectedFile || !user?.id) return;
-  setSubmitting(true);
-  try {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result.split(",")[1];
-      const response = await fetch(`${API_BASE}/submission/submit/${selectedAssignment.id}/${user.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: selectedFile.name,
-          fileContent: base64,
-        }),
-      });
-      if (!response.ok) throw new Error("Submission failed");
-      setSubmitted(true);
+    if (!selectedFile || !user?.id) return;
+    setSubmitting(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
+        const response = await fetch(`${API_BASE}/submission/submit/${selectedAssignment.id}/${user.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: selectedFile.name,
+            fileContent: base64,
+          }),
+        });
+        if (!response.ok) throw new Error("Submission failed");
+        const updated = await response.json();
+        // Update submissions map so green icon persists
+        setSubmissions((prev) => ({ ...prev, [selectedAssignment.id]: updated }));
+        setSubmitted(true);
+        setNewAttempt(false);
+        setSubmitting(false);
+      };
+      reader.readAsDataURL(selectedFile);
+    } catch (error) {
+      console.error("Error submitting:", error);
       setSubmitting(false);
-    };
-    reader.readAsDataURL(selectedFile);
-  } catch (error) {
-    console.error("Error submitting:", error);
-    setSubmitting(false);
-  }
-};
+    }
+  };
 
   const closeModal = () => {
     setSelectedAssignment(null);
     setSelectedFile(null);
     setSubmitted(false);
     setSubmitting(false);
+    setNewAttempt(false);
     setActiveTab("description");
-    setExistingSubmission(null);
   };
 
   if (loading) {
@@ -109,248 +128,245 @@ export default function StudentCourseDetailPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-5xl mx-auto">
-        <Link
-          href="/students/dashboard"
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
+      <div className="p-8">
+        <div className="max-w-5xl mx-auto">
+          <Link
+              href="/students/dashboard"
+              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Link>
 
-        {!classItem ? (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-            <p className="text-slate-400">Course not found.</p>
-          </div>
-        ) : (
-          <>
-            {/* Course Header */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
-              <div className="flex items-center gap-4">
-                <div className="shrink-0 w-16 h-16 bg-orange-600/20 rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-8 h-8 text-orange-400" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">{classItem.courseName}</h1>
-                  <p className="text-orange-400 font-medium mt-1">{classItem.courseAbbreviation}</p>
-                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          {!classItem ? (
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                <p className="text-slate-400">Course not found.</p>
+              </div>
+          ) : (
+              <>
+                {/* Course Header */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0 w-16 h-16 bg-orange-600/20 rounded-xl flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-orange-400" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-white">{classItem.courseName}</h1>
+                      <p className="text-orange-400 font-medium mt-1">{classItem.courseAbbreviation}</p>
+                      <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                     <span className="text-slate-300">
                       <span className="text-slate-500">CRN:</span> {classItem.crn}
                     </span>
-                    <span className="text-slate-300">
+                        <span className="text-slate-300">
                       <span className="text-slate-500">Semester:</span> {classItem.semester?.charAt(0).toUpperCase() + classItem.semester?.slice(1)} {classItem.year}
                     </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              {classItem.courseDescription && (
-                <p className="mt-4 text-slate-400 text-sm">{classItem.courseDescription}</p>
-              )}
-            </div>
-
-            {/* Assignments */}
-            <section>
-              <h2 className="text-lg font-semibold text-white mb-4">Assignments</h2>
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
-                {assignments.length === 0 ? (
-                  <p className="text-slate-400 p-4">No assignments yet.</p>
-                ) : (
-                  assignments.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAssignment(a);
-                        setSelectedFile(null);
-                        setSubmitted(false);
-                        setActiveTab("description");
-                      }}
-                      className="flex items-center gap-4 p-4 w-full text-left text-slate-300 hover:bg-slate-700/30 transition-colors rounded-lg"
-                    >
-                      <FileText className="w-5 h-5 text-orange-400 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white">{a.title}</p>
-                        {a.description && (
-                          <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{a.description}</p>
-                        )}
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </section>
-          </>
-        )}
-      </div>
-
-      {/* Assignment Modal */}
-      {selectedAssignment && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl">
-
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-600/20 rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-orange-400" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-white">{selectedAssignment.title}</h2>
-                  {existingSubmission?.score !== null && existingSubmission?.score !== undefined && (
-                    <p className="text-sm mt-1">
-                      <span className="text-slate-400">Score: </span>
-                      <span className="text-orange-400 font-semibold">{existingSubmission.score} / 100</span>
-                    </p>
+                  {classItem.courseDescription && (
+                      <p className="mt-4 text-slate-400 text-sm">{classItem.courseDescription}</p>
                   )}
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-slate-700">
-              <button
-                type="button"
-                onClick={() => setActiveTab("description")}
-                className={`px-6 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "description"
-                    ? "text-orange-400 border-b-2 border-orange-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Description
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("upload")}
-                className={`px-6 py-3 text-sm font-medium transition-colors ${
-                  activeTab === "upload"
-                    ? "text-orange-400 border-b-2 border-orange-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Upload Solution
-              </button>
-            </div>
+                {/* Assignments */}
+                <section>
+                  <h2 className="text-lg font-semibold text-white mb-4">Assignments</h2>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
+                    {assignments.length === 0 ? (
+                        <p className="text-slate-400 p-4">No assignments yet.</p>
+                    ) : (
+                        assignments.map((a) => (
+                            <button
+                                key={a.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAssignment(a);
+                                  setSelectedFile(null);
+                                  setSubmitted(false);
+                                  setNewAttempt(false);
+                                  setActiveTab("description");
+                                }}
+                                className="flex items-center gap-4 p-4 w-full text-left text-slate-300 hover:bg-slate-700/30 transition-colors rounded-lg"
+                            >
+                              <FileText className="w-5 h-5 text-orange-400 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-white">{a.title}</p>
+                                {a.description && (
+                                    <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{a.description}</p>
+                                )}
+                              </div>
+                              {/* Green submitted icon */}
+                              {submissions[a.id] && (
+                                  <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                              )}
+                            </button>
+                        ))
+                    )}
+                  </div>
+                </section>
+              </>
+          )}
+        </div>
 
-            {/* Tab Content */}
-            <div className="p-6">
-              {activeTab === "description" ? (
-                <div>
-                  {selectedAssignment.description ? (
-                    <p className="text-slate-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
-                  ) : (
-                    <p className="text-slate-400 text-sm">No description provided.</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("upload")}
-                    className="mt-6 w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
-                  >
-                    Go to Upload Solution
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  {existingSubmission && !submitted ? (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-teal-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8 text-teal-400" />
-                      </div>
-                      <p className="text-teal-400 font-semibold text-lg">Already submitted</p>
-                      <p className="text-slate-400 text-sm mt-2">{existingSubmission.fileName}</p>
-                      <p className="text-slate-500 text-xs mt-1">You can resubmit to replace your current submission.</p>
-                      <div
-                        onDrop={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-6 border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-orange-500/50 transition-colors"
-                      >
-                        <Upload className="w-8 h-8 text-slate-500 mx-auto mb-3" />
-                        {selectedFile ? (
-                          <p className="text-white font-medium">{selectedFile.name}</p>
-                        ) : (
-                          <p className="text-slate-400 text-sm">Drag and drop or click to resubmit</p>
-                        )}
-                        <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
-                      </div>
-                      {selectedFile && (
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={submitting}
-                          className="mt-4 w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors disabled:opacity-50"
-                        >
-                          {submitting ? "Submitting..." : "Resubmit"}
-                        </button>
+        {/* Assignment Modal */}
+        {selectedAssignment && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl">
+
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-600/20 rounded-xl flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-orange-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">{selectedAssignment.title}</h2>
+                      {existingSubmission?.score !== null && existingSubmission?.score !== undefined && (
+                          <p className="text-sm mt-1">
+                            <span className="text-slate-400">Score: </span>
+                            <span className="text-orange-400 font-semibold">{existingSubmission.score} / 100</span>
+                          </p>
                       )}
                     </div>
-                  ) : submitted ? (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8 text-green-400" />
-                      </div>
-                      <p className="text-green-400 font-semibold text-lg">Submitted successfully!</p>
-                      <p className="text-slate-400 text-sm mt-2">{selectedFile?.name}</p>
-                      <button
-                        type="button"
-                        onClick={closeModal}
-                        className="mt-6 px-6 py-2 text-sm font-medium text-white bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        onDrop={handleDrop}
-                        onDragOver={(e) => e.preventDefault()}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-slate-600 rounded-xl p-12 text-center cursor-pointer hover:border-orange-500/50 transition-colors"
-                      >
-                        <Upload className="w-10 h-10 text-slate-500 mx-auto mb-4" />
-                        {selectedFile ? (
-                          <p className="text-white font-medium">{selectedFile.name}</p>
+                  </div>
+                  <button
+                      type="button"
+                      onClick={closeModal}
+                      className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex border-b border-slate-700">
+                  <button
+                      type="button"
+                      onClick={() => setActiveTab("description")}
+                      className={`px-6 py-3 text-sm font-medium transition-colors ${
+                          activeTab === "description"
+                              ? "text-orange-400 border-b-2 border-orange-400"
+                              : "text-slate-400 hover:text-white"
+                      }`}
+                  >
+                    Description
+                  </button>
+                  <button
+                      type="button"
+                      onClick={() => setActiveTab("upload")}
+                      className={`px-6 py-3 text-sm font-medium transition-colors ${
+                          activeTab === "upload"
+                              ? "text-orange-400 border-b-2 border-orange-400"
+                              : "text-slate-400 hover:text-white"
+                      }`}
+                  >
+                    Upload Solution
+                  </button>
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">
+                  {activeTab === "description" ? (
+                      <div>
+                        {selectedAssignment.description ? (
+                            <p className="text-slate-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
                         ) : (
-                          <>
-                            <p className="text-white font-semibold text-lg">Ready to submit?</p>
-                            <p className="text-slate-400 text-sm mt-2">Drag and drop your file here or click to browse</p>
-                          </>
+                            <p className="text-slate-400 text-sm">No description provided.</p>
                         )}
-                        <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
-                      </div>
-                      <div className="flex gap-3 mt-4">
                         <button
-                          type="button"
-                          onClick={closeModal}
-                          className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+                            type="button"
+                            onClick={() => setActiveTab("upload")}
+                            className="mt-6 w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
                         >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSubmit}
-                          disabled={!selectedFile || submitting}
-                          className="flex-1 py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {submitting ? "Submitting..." : "Submit"}
+                          Go to Upload Solution
                         </button>
                       </div>
-                    </>
+                  ) : (
+                      <div>
+                        {submitted ? (
+                            // Just submitted this session
+                            <div className="text-center py-8">
+                              <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle className="w-8 h-8 text-green-400" />
+                              </div>
+                              <p className="text-green-400 font-semibold text-lg">Submitted successfully!</p>
+                              <p className="text-slate-400 text-sm mt-2">{selectedFile?.name}</p>
+                              <button
+                                  type="button"
+                                  onClick={closeModal}
+                                  className="mt-6 px-6 py-2 text-sm font-medium text-white bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+                              >
+                                Close
+                              </button>
+                            </div>
+                        ) : existingSubmission && !newAttempt ? (
+                            // Already has a submission — show file info and New Attempt button
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3 p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
+                                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-green-400 font-medium text-sm">Submitted</p>
+                                  <p className="text-slate-300 text-sm truncate">{existingSubmission.fileName}</p>
+                                </div>
+                              </div>
+                              <button
+                                  type="button"
+                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); }}
+                                  className="w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
+                              >
+                                New Attempt
+                              </button>
+                            </div>
+                        ) : (
+                            // No submission yet or new attempt
+                            <>
+                              {newAttempt && (
+                                  <p className="text-slate-400 text-sm mb-4">
+                                    Submitting a new file will replace your current submission.
+                                  </p>
+                              )}
+                              <div
+                                  onDrop={handleDrop}
+                                  onDragOver={(e) => e.preventDefault()}
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="border-2 border-dashed border-slate-600 rounded-xl p-12 text-center cursor-pointer hover:border-orange-500/50 transition-colors"
+                              >
+                                <Upload className="w-10 h-10 text-slate-500 mx-auto mb-4" />
+                                {selectedFile ? (
+                                    <p className="text-white font-medium">{selectedFile.name}</p>
+                                ) : (
+                                    <>
+                                      <p className="text-white font-semibold text-lg">Ready to submit?</p>
+                                      <p className="text-slate-400 text-sm mt-2">Drag and drop your file here or click to browse</p>
+                                    </>
+                                )}
+                                <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
+                              </div>
+                              <div className="flex gap-3 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={newAttempt ? () => setNewAttempt(false) : closeModal}
+                                    className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={!selectedFile || submitting}
+                                    className="flex-1 py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {submitting ? "Submitting..." : "Submit"}
+                                </button>
+                              </div>
+                            </>
+                        )}
+                      </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
   );
 }

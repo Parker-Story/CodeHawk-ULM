@@ -5,15 +5,19 @@ import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Course;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import com.womm.backend.repository.SubmissionRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AssignmentServiceImpl implements AssignmentService {
     AssignmentRepository assignmentRepository;
     CourseRepository courseRepository;
+    SubmissionRepository submissionRepository;
 
-    public AssignmentServiceImpl(AssignmentRepository assignmentRepository, CourseRepository courseRepository) {
+    public AssignmentServiceImpl(AssignmentRepository assignmentRepository, CourseRepository courseRepository, SubmissionRepository submissionRepository) {
         this.assignmentRepository = assignmentRepository;
         this.courseRepository = courseRepository;
+        this.submissionRepository = submissionRepository;
     }
 
     @Override
@@ -37,7 +41,9 @@ public class AssignmentServiceImpl implements AssignmentService {
     }
 
     @Override
+    @Transactional
     public void deleteAssignment(Long id) {
+        submissionRepository.deleteByAssignmentId(id);
         assignmentRepository.deleteById(id);
     }
 

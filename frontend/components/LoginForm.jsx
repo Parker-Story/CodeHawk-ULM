@@ -3,7 +3,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, UserCog, ArrowLeft } from "lucide-react";
+import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, ArrowLeft } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 
 export default function LoginForm() {
@@ -55,6 +55,7 @@ export default function LoginForm() {
       firstName: data.firstName,
       lastName: data.lastName,
       role: data.role,
+      email: data.email,
     });
     const role = data.role?.toUpperCase();
     if (role === "STUDENT") router.push("/students/dashboard");
@@ -169,29 +170,28 @@ export default function LoginForm() {
           {/* ROLE SELECTION */}
           {mode === "role-select" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { role: "student", label: "Student", desc: "Access courses & assignments", Icon: GraduationCap, color: "orange" },
                   { role: "faculty", label: "Faculty", desc: "Manage courses & grade", Icon: BookOpen, color: "teal" },
-                  { role: "ta", label: "TA", desc: "Assist with grading", Icon: UserCog, color: "violet" },
                 ].map(({ role, label, desc, Icon: RoleIcon, color }) => (
-                  <div
-                    key={role}
-                    onClick={() => setSelectedRole(role)}
-                    className={`flex flex-col items-center gap-3 p-4 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
-                      selectedRole === role
-                        ? `border-${color}-500 bg-slate-800`
-                        : `border-slate-700 hover:border-${color}-500/50 hover:bg-slate-800`
-                    }`}
-                  >
-                    <div className={`w-12 h-12 flex items-center justify-center rounded-xl bg-${color}-600/20`}>
-                      <RoleIcon className={`w-6 h-6 text-${color}-400`} />
+                    <div
+                        key={role}
+                        onClick={() => setSelectedRole(role)}
+                        className={`flex flex-col items-center gap-3 p-6 bg-slate-900/80 border-2 rounded-xl cursor-pointer transition-all group ${
+                            selectedRole === role
+                                ? `border-${color}-500 bg-slate-800`
+                                : `border-slate-700 hover:border-${color}-500/50 hover:bg-slate-800`
+                        }`}
+                    >
+                      <div className={`w-14 h-14 flex items-center justify-center rounded-xl bg-${color}-600/20`}>
+                        <RoleIcon className={`w-7 h-7 text-${color}-400`} />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-white">{label}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="font-semibold text-white text-sm">{label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
-                    </div>
-                  </div>
                 ))}
               </div>
               <button

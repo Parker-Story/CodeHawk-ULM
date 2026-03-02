@@ -21,7 +21,7 @@ export default function AccountView({
   onEditProfile,
   variant = "student",
 }) {
-  const { institution = "", universityId = "", email = "" } = academicInfo;
+  const { institution = "", cwid, email = "" } = academicInfo;
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
 
@@ -54,10 +54,12 @@ export default function AccountView({
               <dt className="text-sm font-medium text-slate-400">Institution</dt>
               <dd className="mt-1 text-white">{institution}</dd>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-slate-400">University ID</dt>
-              <dd className="mt-1 text-white font-mono">{universityId}</dd>
-            </div>
+            {cwid !== undefined && (
+                <div>
+                  <dt className="text-sm font-medium text-slate-400">CWID</dt>
+                  <dd className="mt-1 text-white font-mono">{cwid}</dd>
+                </div>
+            )}
             <div>
               <dt className="text-sm font-medium text-slate-400">Email</dt>
               <dd className="mt-1 text-white">{email}</dd>
