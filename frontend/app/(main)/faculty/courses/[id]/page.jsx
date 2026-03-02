@@ -263,7 +263,7 @@ export default function CourseDetailPage() {
                                     <div className="absolute right-0 top-8 z-10 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden w-40">
                                       <button
                                           type="button"
-                                          onClick={() => { setEditAssignment({ ...a }); setActiveMenu(null); }}
+                                          onClick={(e) => { e.stopPropagation(); setEditAssignment({ ...a }); setActiveMenu(null); }}
                                           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
                                       >
                                         <Pencil className="w-4 h-4" />
@@ -271,7 +271,7 @@ export default function CourseDetailPage() {
                                       </button>
                                       <button
                                           type="button"
-                                          onClick={() => { setDeleteAssignmentConfirm({ isOpen: true, assignment: a }); setActiveMenu(null); }}
+                                          onClick={(e) => { e.stopPropagation(); setDeleteAssignmentConfirm({ isOpen: true, assignment: a }); setActiveMenu(null); }}
                                           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
                                       >
                                         <Trash2 className="w-4 h-4" />
