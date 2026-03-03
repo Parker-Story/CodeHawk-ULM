@@ -1,9 +1,9 @@
 "use client";
 
 import { API_BASE } from "@/lib/apiBase";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog, Upload } from "lucide-react";
 import Link from "next/link";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import NewAssignmentDialog from "@/components/faculty/NewAssignmentDialog";
@@ -34,9 +34,12 @@ export default function CourseDetailPage() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [editAssignment, setEditAssignment] = useState(null);
   const [deleteAssignmentConfirm, setDeleteAssignmentConfirm] = useState({ isOpen: false, assignment: null });
+  const [promoteTaConfirm, setPromoteTaConfirm] = useState({ isOpen: false, courseUser: null });
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState(null);
+  const csvInputRef = useRef(null);
   const router = useRouter();
   const { user } = useAuth();
-  const [promoteTaConfirm, setPromoteTaConfirm] = useState({ isOpen: false, courseUser: null });
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -87,6 +90,79 @@ export default function CourseDetailPage() {
     } catch (error) {
       console.error("Error adding student:", error);
       alert("Failed to add student. Please check the CWID and try again.");
+    }
+  };
+
+  const handleCsvImport = async (file) => {
+    if (!file) return;
+    setCsvImporting(true);
+    setCsvResult(null);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (lines.length < 2) throw new Error("CSV appears empty");
+
+      // Parse a CSV line respecting quoted fields
+      const parseLine = (line) => {
+        const result = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === "," && !inQuotes) {
+            result.push(current.trim());
+            current = "";
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
+      const headers = parseLine(lines[0]);
+      const sisIndex = headers.findIndex((h) => h === "SIS User ID");
+      if (sisIndex === -1) throw new Error("Could not find 'SIS User ID' column");
+
+      // Extract CWIDs, skip "Points Possible" row and blank/null values
+      const cwids = lines.slice(1).map((line) => {
+        const cols = parseLine(line);
+        return cols[sisIndex];
+      }).filter((cwid) => cwid && cwid.toLowerCase() !== "null" && cwid !== "" && isNaN(Number(cwid)) === false && cwid.length > 4);
+
+      if (cwids.length === 0) {
+        setCsvResult({ success: 0, failed: 0, errors: ["No valid CWIDs found in CSV"] });
+        setCsvImporting(false);
+        return;
+      }
+
+      let success = 0;
+      let failed = 0;
+      const errors = [];
+      await Promise.all(
+          cwids.map(async (cwid) => {
+            try {
+              const res = await fetch(`${API_BASE}/courseUser/add/${crn}/${cwid}`, { method: "POST" });
+              if (res.ok) {
+                success++;
+              } else {
+                failed++;
+                errors.push(cwid);
+              }
+            } catch {
+              failed++;
+              errors.push(cwid);
+            }
+          })
+      );
+      setCsvResult({ success, failed, errors });
+    } catch (error) {
+      console.error("CSV import error:", error);
+      setCsvResult({ success: 0, failed: 0, errors: [error.message] });
+    } finally {
+      setCsvImporting(false);
     }
   };
 
@@ -315,7 +391,7 @@ export default function CourseDetailPage() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => setAddStudentOpen(true)}
+                        onClick={() => { setAddStudentOpen(true); setCsvResult(null); }}
                         className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
                     >
                       <Plus className="w-5 h-5" />
@@ -413,35 +489,87 @@ export default function CourseDetailPage() {
         </Dialog>
 
         {/* Add Student Dialog */}
-        <Dialog isOpen={addStudentOpen} onClose={() => setAddStudentOpen(false)} title="Add Student">
-          <div className="space-y-4">
-            <p className="text-slate-400 text-sm">Enter the student's CWID to add them to this course.</p>
-            <div>
-              <label className="text-sm font-medium text-slate-300 block mb-2">Student CWID</label>
-              <input
-                  type="text"
-                  value={studentCwid}
-                  onChange={(e) => setStudentCwid(e.target.value)}
-                  placeholder="e.g. 12345678"
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                  type="button"
-                  onClick={() => setAddStudentOpen(false)}
-                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-              >
-                Cancel
-              </button>
+        <Dialog isOpen={addStudentOpen} onClose={() => { setAddStudentOpen(false); setCsvResult(null); setStudentCwid(""); }} title="Add Student">
+          <div className="space-y-6">
+            {/* Manual add */}
+            <div className="space-y-3">
+              <p className="text-slate-400 text-sm">Enter a student's CWID to add them individually.</p>
+              <div>
+                <label className="text-sm font-medium text-slate-300 block mb-2">Student CWID</label>
+                <input
+                    type="text"
+                    value={studentCwid}
+                    onChange={(e) => setStudentCwid(e.target.value)}
+                    placeholder="e.g. 12345678"
+                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+              </div>
               <button
                   type="button"
                   onClick={handleAddStudent}
-                  className="flex-1 py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors"
+                  disabled={!studentCwid}
+                  className="w-full py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Student
               </button>
             </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span className="text-slate-500 text-xs">or import from Canvas</span>
+              <div className="flex-1 h-px bg-slate-700" />
+            </div>
+
+            {/* CSV import */}
+            <div className="space-y-3">
+              <p className="text-slate-400 text-sm">Upload a Canvas grade export CSV to bulk enroll students.</p>
+              <div
+                  onClick={() => csvInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center cursor-pointer hover:border-teal-500/50 transition-colors"
+              >
+                <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm">Click to upload CSV</p>
+                <p className="text-slate-600 text-xs mt-1">Must contain a "SIS User ID" column</p>
+                <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) handleCsvImport(file);
+                      e.target.value = "";
+                    }}
+                />
+              </div>
+
+              {/* Import status */}
+              {csvImporting && (
+                  <p className="text-slate-400 text-sm text-center">Importing students...</p>
+              )}
+              {csvResult && (
+                  <div className={`p-4 rounded-xl border ${csvResult.failed === 0 ? "bg-green-600/10 border-green-600/20" : "bg-yellow-600/10 border-yellow-600/20"}`}>
+                    <p className={`text-sm font-medium ${csvResult.failed === 0 ? "text-green-400" : "text-yellow-400"}`}>
+                      {csvResult.success} student{csvResult.success !== 1 ? "s" : ""} added successfully
+                      {csvResult.failed > 0 && `, ${csvResult.failed} failed`}
+                    </p>
+                    {csvResult.errors.length > 0 && csvResult.failed > 0 && (
+                        <p className="text-slate-400 text-xs mt-1">
+                          Failed CWIDs: {csvResult.errors.join(", ")}
+                        </p>
+                    )}
+                  </div>
+              )}
+            </div>
+
+            <button
+                type="button"
+                onClick={() => { setAddStudentOpen(false); setCsvResult(null); setStudentCwid(""); }}
+                className="w-full py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+            >
+              Close
+            </button>
           </div>
         </Dialog>
 
@@ -458,9 +586,9 @@ export default function CourseDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-teal-600/20 rounded-full flex items-center justify-center shrink-0">
-              <span className="text-teal-400 text-xs font-medium">
-                {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
-              </span>
+                    <span className="text-teal-400 text-xs font-medium">
+                      {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
+                    </span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -480,7 +608,6 @@ export default function CourseDetailPage() {
                         </div>
                       </div>
 
-                      {/* Three dot menu - only for non-faculty */}
                       {courseUser.courseRole !== "FACULTY" && (
                           <div className="relative">
                             <button
@@ -495,10 +622,7 @@ export default function CourseDetailPage() {
                                   {courseUser.courseRole === "STUDENT" && (
                                       <button
                                           type="button"
-                                          onClick={() => {
-                                            setPromoteTaConfirm({ isOpen: true, courseUser });
-                                            setActiveMenu(null);
-                                          }}
+                                          onClick={() => { setPromoteTaConfirm({ isOpen: true, courseUser }); setActiveMenu(null); }}
                                           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-violet-400 hover:bg-slate-700 transition-colors"
                                       >
                                         <UserCog className="w-4 h-4" />
@@ -508,10 +632,7 @@ export default function CourseDetailPage() {
                                   {courseUser.courseRole === "TA" && (
                                       <button
                                           type="button"
-                                          onClick={() => {
-                                            handleDemoteFromTa(courseUser);
-                                            setActiveMenu(null);
-                                          }}
+                                          onClick={() => { handleDemoteFromTa(courseUser); setActiveMenu(null); }}
                                           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
                                       >
                                         <UserCog className="w-4 h-4" />
@@ -520,10 +641,7 @@ export default function CourseDetailPage() {
                                   )}
                                   <button
                                       type="button"
-                                      onClick={() => {
-                                        setRemoveConfirm({ isOpen: true, student: courseUser });
-                                        setActiveMenu(null);
-                                      }}
+                                      onClick={() => { setRemoveConfirm({ isOpen: true, student: courseUser }); setActiveMenu(null); }}
                                       className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -545,8 +663,8 @@ export default function CourseDetailPage() {
             <p className="text-slate-300">
               Are you sure you want to make{" "}
               <span className="font-semibold text-white">
-        {promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}
-      </span>{" "}
+              {promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}
+            </span>{" "}
               a TA for this course?
             </p>
             <p className="text-slate-400 text-sm">
