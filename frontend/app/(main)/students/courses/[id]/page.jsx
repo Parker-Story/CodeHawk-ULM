@@ -162,6 +162,25 @@ export default function StudentCourseDetailPage() {
     }
   };
 
+  const handleRemoveSubmission = async () => {
+    if (!user?.id || !selectedAssignment) return;
+    try {
+      const response = await fetch(`${API_BASE}/submission/${user.id}/${selectedAssignment.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to remove submission");
+      setSubmissions((prev) => {
+        const updated = { ...prev };
+        delete updated[selectedAssignment.id];
+        return updated;
+      });
+      setTestResults([]);
+      setActiveTab("upload");
+    } catch (error) {
+      console.error("Error removing submission:", error);
+    }
+  };
+
   const closeModal = () => {
     setSelectedAssignment(null);
     setSelectedFile(null);
@@ -373,22 +392,29 @@ export default function StudentCourseDetailPage() {
                               </button>
                             </div>
                         ) : existingSubmission && !newAttempt ? (
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3 p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
-                                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="text-green-400 font-medium text-sm">Submitted</p>
-                                  <p className="text-slate-300 text-sm truncate">{existingSubmission.fileName}</p>
-                                </div>
-                              </div>
-                              <button
-                                  type="button"
-                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); }}
-                                  className="w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
-                              >
-                                New Attempt
-                              </button>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
+                            <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-green-400 font-medium text-sm">Submitted</p>
+                              <p className="text-slate-300 text-sm truncate">{existingSubmission.fileName}</p>
                             </div>
+                          </div>
+                          <button
+                              type="button"
+                              onClick={() => { setNewAttempt(true); setSelectedFile(null); }}
+                              className="w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
+                          >
+                            New Attempt
+                          </button>
+                          <button
+                              type="button"
+                              onClick={handleRemoveSubmission}
+                              className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
+                          >
+                            Remove Submission
+                          </button>
+                        </div>
                         ) : (
                             <>
                               {newAttempt && (

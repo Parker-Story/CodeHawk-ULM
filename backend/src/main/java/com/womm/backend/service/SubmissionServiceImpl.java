@@ -6,9 +6,11 @@ import com.womm.backend.id.SubmissionId;
 import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.SubmissionRepository;
 import com.womm.backend.repository.TestCaseRepository;
+import com.womm.backend.repository.TestResultRepository;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
@@ -17,6 +19,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     UserRepository userRepository;
     AssignmentRepository assignmentRepository;
     TestCaseRepository testCaseRepository;
+    TestResultRepository testResultRepository;
     TestCaseService testCaseService;
 
     public SubmissionServiceImpl(
@@ -24,11 +27,13 @@ public class SubmissionServiceImpl implements SubmissionService {
             AssignmentRepository assignmentRepository,
             UserRepository userRepository,
             TestCaseRepository testCaseRepository,
+            TestResultRepository testResultRepository,
             @Lazy TestCaseService testCaseService) {
         this.submissionRepository = submissionRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
         this.testCaseRepository = testCaseRepository;
+        this.testResultRepository = testResultRepository;
         this.testCaseService = testCaseService;
     }
 
@@ -53,7 +58,9 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
+    @Transactional
     public void deleteSubmission(String userId, Long assignmentId) {
+        testResultRepository.deleteBySubmission(assignmentId, userId);
         submissionRepository.deleteById(new SubmissionId(userId, assignmentId));
     }
 
@@ -68,7 +75,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setSubmissionId(new SubmissionId(userId, assignmentId));
         Submission saved = submissionRepository.save(submission);
 
-        // Auto-run tests if test cases exist for this assignment
         if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {
             testCaseService.runTestsForSubmission(assignmentId, userId);
         }
