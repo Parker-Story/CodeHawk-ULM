@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +27,15 @@ export default function GradingWorkspacePage() {
   const [importSuiteOpen, setImportSuiteOpen] = useState(false);
   const [availableSuites, setAvailableSuites] = useState([]);
 
+  // Rubric state
+  const [assignedRubric, setAssignedRubric] = useState(null);
+  const [attachRubricOpen, setAttachRubricOpen] = useState(false);
+  const [availableRubrics, setAvailableRubrics] = useState([]);
+  const [gradingStudent, setGradingStudent] = useState(null);
+  const [rubricScores, setRubricScores] = useState({});
+  const [savingRubricScore, setSavingRubricScore] = useState(false);
+  const [rubricTotals, setRubricTotals] = useState({});
+
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
         .then((res) => res.json())
@@ -42,16 +51,11 @@ export default function GradingWorkspacePage() {
           const list = Array.isArray(data) ? data : [];
           setSubmissions(list);
           const inputs = {};
-          list.forEach((s) => {
-            inputs[s.submissionId.userId] = s.score ?? "";
-          });
+          list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
           setScoreInputs(inputs);
           setLoading(false);
         })
-        .catch((err) => {
-          console.error(err);
-          setLoading(false);
-        });
+        .catch((err) => { console.error(err); setLoading(false); });
 
     fetch(`${API_BASE}/testcase/assignment/${assignmentId}`)
         .then((res) => res.json())
@@ -62,6 +66,14 @@ export default function GradingWorkspacePage() {
         .then((res) => res.json())
         .then((data) => setTestResults(Array.isArray(data) ? data : []))
         .catch((err) => console.error(err));
+
+    fetch(`${API_BASE}/rubric/assignment/${assignmentId}`)
+        .then((res) => {
+          if (!res.ok || res.status === 204) return null;
+          return res.text().then((text) => text ? JSON.parse(text) : null);
+        })
+        .then((data) => { if (data) setAssignedRubric(data); })
+        .catch((err) => console.error(err));
   }, [assignmentId]);
 
   useEffect(() => {
@@ -71,6 +83,34 @@ export default function GradingWorkspacePage() {
         .then((data) => setAvailableSuites(Array.isArray(data) ? data : []))
         .catch((err) => console.error(err));
   }, [importSuiteOpen, user?.id]);
+
+  useEffect(() => {
+    if (!attachRubricOpen || !user?.id) return;
+    fetch(`${API_BASE}/rubric/user/${user.id}`)
+        .then((res) => res.json())
+        .then((data) => setAvailableRubrics(Array.isArray(data) ? data : []))
+        .catch((err) => console.error(err));
+  }, [attachRubricOpen, user?.id]);
+
+  // Load rubric scores when grading panel opens
+  useEffect(() => {
+    if (!gradingStudent || !assignedRubric) return;
+    fetch(`${API_BASE}/rubric/scores/${assignmentId}/${gradingStudent}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const map = {};
+          if (Array.isArray(data)) {
+            data.forEach((rs) => { map[rs.rubricItem.id] = rs.awardedPoints; });
+          }
+          setRubricScores(map);
+        })
+        .catch((err) => console.error(err));
+
+    fetch(`${API_BASE}/rubric/totalscore/${assignmentId}/${gradingStudent}`)
+        .then((res) => res.json())
+        .then((data) => setRubricTotals((prev) => ({ ...prev, [gradingStudent]: data })))
+        .catch((err) => console.error(err));
+  }, [gradingStudent, assignedRubric, assignmentId]);
 
   const handleScoreSave = async (userId) => {
     const score = scoreInputs[userId];
@@ -84,9 +124,7 @@ export default function GradingWorkspacePage() {
       });
       if (!response.ok) throw new Error("Failed to save score");
       const updated = await response.json();
-      setSubmissions((prev) =>
-          prev.map((s) => (s.submissionId.userId === userId ? updated : s))
-      );
+      setSubmissions((prev) => prev.map((s) => (s.submissionId.userId === userId ? updated : s)));
     } catch (error) {
       console.error("Error saving score:", error);
     } finally {
@@ -124,24 +162,19 @@ export default function GradingWorkspacePage() {
 
   const handleRerunTests = async (userId) => {
     try {
-      const response = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${userId}`, {
-        method: "POST",
-      });
+      const response = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${userId}`, { method: "POST" });
       if (!response.ok) throw new Error("Failed to run tests");
       const results = await response.json();
       setTestResults((prev) => [
         ...prev.filter((r) => r.submission?.submissionId?.userId !== userId),
         ...results,
       ]);
-      // Refresh score
       const subRes = await fetch(`${API_BASE}/submission/assignment/${assignmentId}`);
       const subData = await subRes.json();
       const list = Array.isArray(subData) ? subData : [];
       setSubmissions(list);
       const inputs = {};
-      list.forEach((s) => {
-        inputs[s.submissionId.userId] = s.score ?? "";
-      });
+      list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
       setScoreInputs(inputs);
     } catch (error) {
       console.error("Error running tests:", error);
@@ -150,17 +183,77 @@ export default function GradingWorkspacePage() {
 
   const handleImportSuite = async (suiteId) => {
     try {
-      const res = await fetch(`${API_BASE}/testsuite/${suiteId}/import/${assignmentId}`, {
-        method: "POST",
-      });
+      const res = await fetch(`${API_BASE}/testsuite/${suiteId}/import/${assignmentId}`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to import suite");
-      // Refresh test cases
       const tcRes = await fetch(`${API_BASE}/testcase/assignment/${assignmentId}`);
       const tcData = await tcRes.json();
       setTestCases(Array.isArray(tcData) ? tcData : []);
       setImportSuiteOpen(false);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleAttachRubric = async (rubricId) => {
+    try {
+      const res = await fetch(`${API_BASE}/rubric/assign/${rubricId}/assignment/${assignmentId}`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to attach rubric");
+      const rubricRes = await fetch(`${API_BASE}/rubric/assignment/${assignmentId}`);
+      const data = await rubricRes.json();
+      setAssignedRubric(data);
+      setAttachRubricOpen(false);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDetachRubric = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/rubric/assign/assignment/${assignmentId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to detach rubric");
+      setAssignedRubric(null);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleRubricScoreChange = (itemId, value) => {
+    setRubricScores((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  const handleSaveRubricScores = async () => {
+    if (!gradingStudent || !assignedRubric) return;
+    setSavingRubricScore(true);
+    try {
+      const items = assignedRubric.criteria?.flatMap((c) => c.items || []) || [];
+      await Promise.all(items.map(async (item) => {
+        const awarded = parseFloat(rubricScores[item.id] ?? 0);
+        await fetch(`${API_BASE}/rubric/scores/${assignmentId}/${gradingStudent}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rubricItemId: item.id, awardedPoints: awarded }),
+        });
+      }));
+
+      // Recalculate total and update submission score
+      const totalRes = await fetch(`${API_BASE}/rubric/totalscore/${assignmentId}/${gradingStudent}`);
+      const totalData = await totalRes.json();
+      setRubricTotals((prev) => ({ ...prev, [gradingStudent]: totalData }));
+
+      // Save percentage as submission score
+      await fetch(`${API_BASE}/submission/score/${assignmentId}/${gradingStudent}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score: totalData.percentage }),
+      });
+
+      // Refresh submissions
+      const subRes = await fetch(`${API_BASE}/submission/assignment/${assignmentId}`);
+      const subData = await subRes.json();
+      const list = Array.isArray(subData) ? subData : [];
+      setSubmissions(list);
+      const inputs = {};
+      list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
+      setScoreInputs(inputs);
+      setGradingStudent(null);
     } catch (err) {
       console.error(err);
+    } finally {
+      setSavingRubricScore(false);
     }
   };
 
@@ -208,15 +301,14 @@ export default function GradingWorkspacePage() {
                 <tbody>
                 {submissions.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 px-4 text-center text-slate-400">
-                        No submissions yet.
-                      </td>
+                      <td colSpan={4} className="py-8 px-4 text-center text-slate-400">No submissions yet.</td>
                     </tr>
                 ) : (
                     submissions.map((s) => {
                       const userId = s.submissionId.userId;
                       const studentResults = getResultsForStudent(userId);
                       const isExpanded = expandedStudent === userId;
+                      const rubricTotal = rubricTotals[userId];
                       return (
                           <React.Fragment key={userId}>
                             <tr className="border-b border-slate-700/50">
@@ -258,7 +350,7 @@ export default function GradingWorkspacePage() {
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <button
                                       type="button"
                                       onClick={() => setOpenSolution(s)}
@@ -291,20 +383,36 @@ export default function GradingWorkspacePage() {
                                         )}
                                       </>
                                   )}
+                                  {assignedRubric && (
+                                      <>
+                                        <span className="text-slate-600">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setGradingStudent(userId)}
+                                            className="text-teal-400 hover:text-teal-300 font-medium text-sm flex items-center gap-1"
+                                        >
+                                          <ClipboardList className="w-3.5 h-3.5" />
+                                          Grade Rubric
+                                          {rubricTotal && (
+                                              <span className="text-slate-400 font-normal">
+                                        ({rubricTotal.awarded}/{rubricTotal.possible} pts)
+                                      </span>
+                                          )}
+                                        </button>
+                                      </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
                             {isExpanded && studentResults.length > 0 && (
-                                <tr key={`${userId}-results`} className="border-b border-slate-700/50 bg-slate-900/50">
+                                <tr className="border-b border-slate-700/50 bg-slate-900/50">
                                   <td colSpan={4} className="px-4 py-3">
                                     <div className="space-y-2">
                                       {studentResults.map((r) => (
                                           <div key={r.id} className="flex items-center gap-3 text-xs">
                                             <span className={`w-2 h-2 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
                                             <span className="text-slate-400 w-24">{r.testCase?.label || `Test ${r.testCase?.id}`}</span>
-                                            {r.testCase?.hidden && (
-                                                <span className="text-slate-500 text-xs">(hidden)</span>
-                                            )}
+                                            {r.testCase?.hidden && <span className="text-slate-500 text-xs">(hidden)</span>}
                                             <span className="text-slate-500">Expected: <span className="text-slate-300 font-mono">{r.testCase?.expectedOutput}</span></span>
                                             <span className="text-slate-500">Got: <span className={`font-mono ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.actualOutput || "no output"}</span></span>
                                           </div>
@@ -320,6 +428,79 @@ export default function GradingWorkspacePage() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          {/* Rubric Section */}
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Rubric</h2>
+                <p className="text-slate-400 text-xs mt-0.5">Attach a rubric to enable structured grading for this assignment.</p>
+              </div>
+              {assignedRubric ? (
+                  <button
+                      type="button"
+                      onClick={handleDetachRubric}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-lg hover:bg-red-600/20 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Remove Rubric
+                  </button>
+              ) : (
+                  <button
+                      type="button"
+                      onClick={() => setAttachRubricOpen(true)}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    Attach Rubric
+                  </button>
+              )}
+            </div>
+
+            {assignedRubric ? (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-teal-600/20 rounded-xl flex items-center justify-center shrink-0">
+                        <ClipboardList className="w-4 h-4 text-teal-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{assignedRubric.name}</p>
+                        <p className="text-slate-400 text-xs mt-0.5">{assignedRubric.totalPoints} total points</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {assignedRubric.visible
+                          ? <span className="text-xs text-teal-400 flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Visible to students</span>
+                          : <span className="text-xs text-slate-500 flex items-center gap-1"><EyeOff className="w-3.5 h-3.5" /> Hidden from students</span>
+                      }
+                    </div>
+                  </div>
+                  {(assignedRubric.criteria || []).map((criteria) => (
+                      <div key={criteria.id} className="border-b border-slate-700/50 last:border-0">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-700/20">
+                          <p className="text-white text-sm font-medium">{criteria.title}</p>
+                          <p className="text-slate-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</p>
+                        </div>
+                        {(criteria.items || []).map((item) => (
+                            <div key={item.id} className="flex items-center justify-between px-4 py-2 border-t border-slate-700/30">
+                              <div className="flex items-center gap-2">
+                                {item.autoGrade && <span className="text-xs px-1.5 py-0.5 bg-teal-600/20 text-teal-400 rounded font-medium">auto</span>}
+                                <span className="text-slate-300 text-sm">{item.label}</span>
+                              </div>
+                              <span className="text-slate-400 text-xs">{item.maxPoints} pts</span>
+                            </div>
+                        ))}
+                      </div>
+                  ))}
+                </div>
+            ) : (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
+                  <ClipboardList className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">No rubric attached. Attach one to enable structured grading.</p>
+                </div>
+            )}
           </section>
 
           {/* Test Cases Section */}
@@ -349,7 +530,6 @@ export default function GradingWorkspacePage() {
               </div>
             </div>
 
-            {/* Add test case form */}
             {addingTestCase && (
                 <div className="bg-slate-800/50 border border-teal-600/30 rounded-xl p-4 mb-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
@@ -417,7 +597,6 @@ export default function GradingWorkspacePage() {
                 </div>
             )}
 
-            {/* Test cases list */}
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
               {testCases.length === 0 ? (
                   <p className="text-slate-400 text-sm p-4">No test cases yet. Add one to enable auto-grading.</p>
@@ -426,22 +605,15 @@ export default function GradingWorkspacePage() {
                       <div key={tc.id} className="flex items-start justify-between gap-4 p-4">
                         <div className="flex items-start gap-3 min-w-0">
                           <div className="flex items-center gap-2 shrink-0 mt-0.5">
-                            {tc.hidden
-                                ? <EyeOff className="w-4 h-4 text-slate-500" />
-                                : <Eye className="w-4 h-4 text-teal-400" />
-                            }
+                            {tc.hidden ? <EyeOff className="w-4 h-4 text-slate-500" /> : <Eye className="w-4 h-4 text-teal-400" />}
                           </div>
                           <div className="min-w-0">
                             <p className="text-white text-sm font-medium">
                               {tc.label || `Test Case ${tc.id}`}
                               {tc.hidden && <span className="ml-2 text-xs text-slate-500">(hidden)</span>}
                             </p>
-                            <p className="text-slate-400 text-xs mt-1">
-                              Input: <span className="font-mono text-slate-300">{tc.input || "(none)"}</span>
-                            </p>
-                            <p className="text-slate-400 text-xs mt-0.5">
-                              Expected: <span className="font-mono text-slate-300">{tc.expectedOutput}</span>
-                            </p>
+                            <p className="text-slate-400 text-xs mt-1">Input: <span className="font-mono text-slate-300">{tc.input || "(none)"}</span></p>
+                            <p className="text-slate-400 text-xs mt-0.5">Expected: <span className="font-mono text-slate-300">{tc.expectedOutput}</span></p>
                           </div>
                         </div>
                         <button
@@ -477,15 +649,145 @@ export default function GradingWorkspacePage() {
                 </div>
                 <div className="p-6 overflow-auto flex-1">
               <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono bg-slate-800/50 rounded-xl p-4">
-                {openSolution.fileContent
-                    ? atob(openSolution.fileContent)
-                    : "No file content available."}
+                {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
               </pre>
                 </div>
               </div>
             </div>
         )}
 
+        {/* Rubric Grading Panel */}
+        {gradingStudent && assignedRubric && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+                <div className="flex items-center justify-between p-6 border-b border-slate-700 shrink-0">
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
+                    <p className="text-slate-400 text-sm mt-0.5">
+                      {submissions.find(s => s.submissionId.userId === gradingStudent)?.user?.firstName}{" "}
+                      {submissions.find(s => s.submissionId.userId === gradingStudent)?.user?.lastName}
+                      {" • "}{assignedRubric.name}
+                    </p>
+                  </div>
+                  <button
+                      type="button"
+                      onClick={() => setGradingStudent(null)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="overflow-auto flex-1 p-6 space-y-5">
+                  {(assignedRubric.criteria || []).map((criteria) => (
+                      <div key={criteria.id}>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-white font-semibold text-sm">{criteria.title}</p>
+                          <p className="text-slate-400 text-xs">
+                            {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)}
+                            {" / "}
+                            {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                          </p>
+                        </div>
+                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
+                          {(criteria.items || []).map((item) => (
+                              <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {item.autoGrade && <span className="text-xs px-1.5 py-0.5 bg-teal-600/20 text-teal-400 rounded font-medium shrink-0">auto</span>}
+                                    <span className="text-slate-300 text-sm">{item.label}</span>
+                                  </div>
+                                  <p className="text-slate-500 text-xs mt-0.5">Max: {item.maxPoints} pts</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <input
+                                      type="number"
+                                      min="0"
+                                      max={item.maxPoints}
+                                      step="0.25"
+                                      value={rubricScores[item.id] ?? ""}
+                                      onChange={(e) => handleRubricScoreChange(item.id, e.target.value)}
+                                      placeholder="0"
+                                      disabled={item.autoGrade}
+                                      className="w-20 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  />
+                                  <span className="text-slate-500 text-xs">/ {item.maxPoints}</span>
+                                </div>
+                              </div>
+                          ))}
+                        </div>
+                      </div>
+                  ))}
+                </div>
+
+                <div className="p-6 border-t border-slate-700 shrink-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-slate-300 text-sm font-medium">Total Score</p>
+                    <p className="text-white font-bold">
+                      {(assignedRubric.criteria || [])
+                          .flatMap((c) => c.items || [])
+                          .reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0)
+                          .toFixed(2)}
+                      {" / "}{assignedRubric.totalPoints} pts
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setGradingStudent(null)}
+                        className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSaveRubricScores}
+                        disabled={savingRubricScore}
+                        className="flex-1 py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      {savingRubricScore ? "Saving..." : "Save & Apply Score"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+        )}
+
+        {/* Attach Rubric Dialog */}
+        <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
+          <div className="space-y-3">
+            {availableRubrics.length === 0 ? (
+                <p className="text-slate-400 text-sm">No rubrics available. Create one from the Rubrics page.</p>
+            ) : (
+                availableRubrics.map((rubric) => (
+                    <button
+                        key={rubric.id}
+                        type="button"
+                        onClick={() => handleAttachRubric(rubric.id)}
+                        className="w-full flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-teal-500/50 hover:bg-slate-700/50 transition-colors text-left"
+                    >
+                      <div className="w-9 h-9 bg-teal-600/20 rounded-xl flex items-center justify-center shrink-0">
+                        <ClipboardList className="w-4 h-4 text-teal-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{rubric.name}</p>
+                        <p className="text-slate-400 text-xs mt-0.5">{rubric.totalPoints} pts{rubric.description && ` • ${rubric.description}`}</p>
+                      </div>
+                    </button>
+                ))
+            )}
+            <button
+                type="button"
+                onClick={() => setAttachRubricOpen(false)}
+                className="w-full py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </Dialog>
+
+        {/* Import Suite Dialog */}
         <Dialog isOpen={importSuiteOpen} onClose={() => setImportSuiteOpen(false)} title="Import from Suite">
           <div className="space-y-3">
             {availableSuites.length === 0 ? (
@@ -503,9 +805,7 @@ export default function GradingWorkspacePage() {
                       </div>
                       <div>
                         <p className="text-white font-medium text-sm">{suite.name}</p>
-                        {suite.description && (
-                            <p className="text-slate-400 text-xs mt-0.5">{suite.description}</p>
-                        )}
+                        {suite.description && <p className="text-slate-400 text-xs mt-0.5">{suite.description}</p>}
                       </div>
                     </button>
                 ))

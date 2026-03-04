@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import com.womm.backend.repository.RubricScoreRepository;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -21,6 +22,8 @@ public class SubmissionServiceImpl implements SubmissionService {
     TestCaseRepository testCaseRepository;
     TestResultRepository testResultRepository;
     TestCaseService testCaseService;
+    RubricService rubricService;
+    RubricScoreRepository rubricScoreRepository;
 
     public SubmissionServiceImpl(
             SubmissionRepository submissionRepository,
@@ -28,13 +31,17 @@ public class SubmissionServiceImpl implements SubmissionService {
             UserRepository userRepository,
             TestCaseRepository testCaseRepository,
             TestResultRepository testResultRepository,
-            @Lazy TestCaseService testCaseService) {
+            RubricScoreRepository rubricScoreRepository,
+            @Lazy TestCaseService testCaseService,
+            @Lazy RubricService rubricService) {
         this.submissionRepository = submissionRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
         this.testCaseRepository = testCaseRepository;
         this.testResultRepository = testResultRepository;
         this.testCaseService = testCaseService;
+        this.rubricService = rubricService;
+        this.rubricScoreRepository = rubricScoreRepository;
     }
 
     @Override
@@ -60,6 +67,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Override
     @Transactional
     public void deleteSubmission(String userId, Long assignmentId) {
+        rubricScoreRepository.deleteBySubmission(assignmentId, userId);
         testResultRepository.deleteBySubmission(assignmentId, userId);
         submissionRepository.deleteById(new SubmissionId(userId, assignmentId));
     }
@@ -77,6 +85,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {
             testCaseService.runTestsForSubmission(assignmentId, userId);
+            rubricService.autoGradeSubmission(assignmentId, userId);
         }
 
         return saved;

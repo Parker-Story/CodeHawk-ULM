@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutDashboard, Calendar, User, Archive } from "lucide-react";
+import { LayoutDashboard, Calendar, User, Archive, FlaskConical, ClipboardList } from "lucide-react";
+const ICON_MAP = { LayoutDashboard, Calendar, User, Archive, FlaskConical, ClipboardList };
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import { PORTAL_CONFIG } from "@/lib/portals";
 
-const ICON_MAP = { LayoutDashboard, Calendar, User, Archive };
 
 function sidebarItemsWithIcons(items) {
   return items.map((item) => ({
