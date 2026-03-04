@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import Dialog from "@/components/Dialog";
 
 export default function GradingWorkspacePage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const { id: crn, assignmentId } = params;
   const [assignment, setAssignment] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -21,6 +24,8 @@ export default function GradingWorkspacePage() {
   const [newTestCase, setNewTestCase] = useState({ input: "", expectedOutput: "", hidden: false, label: "" });
   const [addingTestCase, setAddingTestCase] = useState(false);
   const [expandedStudent, setExpandedStudent] = useState(null);
+  const [importSuiteOpen, setImportSuiteOpen] = useState(false);
+  const [availableSuites, setAvailableSuites] = useState([]);
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
@@ -58,6 +63,14 @@ export default function GradingWorkspacePage() {
         .then((data) => setTestResults(Array.isArray(data) ? data : []))
         .catch((err) => console.error(err));
   }, [assignmentId]);
+
+  useEffect(() => {
+    if (!importSuiteOpen || !user?.id) return;
+    fetch(`${API_BASE}/testsuite/user/${user.id}`)
+        .then((res) => res.json())
+        .then((data) => setAvailableSuites(Array.isArray(data) ? data : []))
+        .catch((err) => console.error(err));
+  }, [importSuiteOpen, user?.id]);
 
   const handleScoreSave = async (userId) => {
     const score = scoreInputs[userId];
@@ -132,6 +145,22 @@ export default function GradingWorkspacePage() {
       setScoreInputs(inputs);
     } catch (error) {
       console.error("Error running tests:", error);
+    }
+  };
+
+  const handleImportSuite = async (suiteId) => {
+    try {
+      const res = await fetch(`${API_BASE}/testsuite/${suiteId}/import/${assignmentId}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to import suite");
+      // Refresh test cases
+      const tcRes = await fetch(`${API_BASE}/testcase/assignment/${assignmentId}`);
+      const tcData = await tcRes.json();
+      setTestCases(Array.isArray(tcData) ? tcData : []);
+      setImportSuiteOpen(false);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -300,14 +329,24 @@ export default function GradingWorkspacePage() {
                 <h2 className="text-lg font-semibold text-white">Test Cases</h2>
                 <p className="text-slate-400 text-xs mt-0.5">Test cases run automatically when a student submits.</p>
               </div>
-              <button
-                  type="button"
-                  onClick={() => setAddingTestCase(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Test Case
-              </button>
+              <div className="flex gap-2">
+                <button
+                    type="button"
+                    onClick={() => setImportSuiteOpen(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-teal-400 bg-teal-600/10 border border-teal-600/20 rounded-lg hover:bg-teal-600/20 transition-colors"
+                >
+                  <FlaskConical className="w-4 h-4" />
+                  Import Suite
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setAddingTestCase(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Test Case
+                </button>
+              </div>
             </div>
 
             {/* Add test case form */}
@@ -446,6 +485,40 @@ export default function GradingWorkspacePage() {
               </div>
             </div>
         )}
+
+        <Dialog isOpen={importSuiteOpen} onClose={() => setImportSuiteOpen(false)} title="Import from Suite">
+          <div className="space-y-3">
+            {availableSuites.length === 0 ? (
+                <p className="text-slate-400 text-sm">No suites available. Create one from the Test Suites page.</p>
+            ) : (
+                availableSuites.map((suite) => (
+                    <button
+                        key={suite.id}
+                        type="button"
+                        onClick={() => handleImportSuite(suite.id)}
+                        className="w-full flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-xl hover:border-teal-500/50 hover:bg-slate-700/50 transition-colors text-left"
+                    >
+                      <div className="w-9 h-9 bg-teal-600/20 rounded-xl flex items-center justify-center shrink-0">
+                        <FlaskConical className="w-4 h-4 text-teal-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{suite.name}</p>
+                        {suite.description && (
+                            <p className="text-slate-400 text-xs mt-0.5">{suite.description}</p>
+                        )}
+                      </div>
+                    </button>
+                ))
+            )}
+            <button
+                type="button"
+                onClick={() => setImportSuiteOpen(false)}
+                className="w-full py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </Dialog>
       </div>
   );
 }
