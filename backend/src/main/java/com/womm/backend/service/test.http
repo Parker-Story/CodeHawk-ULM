@@ -1,0 +1,9 @@
+POST http://localhost:8080/testcase/assignment/10
+Content-Type: application/json
+
+{
+  "input": "5",
+  "expectedOutput": "25",
+  "hidden": false,
+  "label": "Test 1"
+}
