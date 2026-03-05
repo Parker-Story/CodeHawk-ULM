@@ -5,6 +5,7 @@ import com.womm.backend.service.RubricService;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
+import com.womm.backend.entity.AssignmentRubricItemTestCase;
 
 @RestController
 @RequestMapping("/rubric")
@@ -81,9 +82,19 @@ public class RubricController {
         );
     }
 
-    @PutMapping("/item/{itemId}/testcases")
-    public RubricItem linkTestCases(@PathVariable Long itemId, @RequestBody List<Long> testCaseIds) {
-        return rubricService.linkTestCases(itemId, testCaseIds);
+    @GetMapping("/item-testcases/{itemId}/{assignmentId}")
+    public List<AssignmentRubricItemTestCase> getLinkedTestCases(
+            @PathVariable Long itemId,
+            @PathVariable Long assignmentId) {
+        return rubricService.getLinkedTestCases(assignmentId, itemId);
+    }
+
+    @PutMapping("/item-testcases/{itemId}/{assignmentId}")
+    public void linkTestCases(
+            @PathVariable Long itemId,
+            @PathVariable Long assignmentId,
+            @RequestBody List<Long> testCaseIds) {
+        rubricService.linkTestCasesToItem(assignmentId, itemId, testCaseIds);
     }
 
     @DeleteMapping("/item/{itemId}")

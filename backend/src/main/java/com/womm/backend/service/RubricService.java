@@ -6,6 +6,7 @@ import com.womm.backend.entity.RubricItem;
 import com.womm.backend.entity.RubricScore;
 import java.util.List;
 import java.util.Map;
+import com.womm.backend.entity.AssignmentRubricItemTestCase;
 
 public interface RubricService {
     Rubric createRubric(String name, String description, boolean visible, String userId);
@@ -19,7 +20,9 @@ public interface RubricService {
     void deleteCriteria(Long criteriaId);
 
     RubricItem addItem(Long criteriaId, String label, double maxPoints, boolean autoGrade, int displayOrder);
-    RubricItem linkTestCases(Long itemId, List<Long> testCaseIds);
+    List<AssignmentRubricItemTestCase> getLinkedTestCases(Long assignmentId, Long rubricItemId);
+    void linkTestCasesToItem(Long assignmentId, Long rubricItemId, List<Long> testCaseIds);
+
     void deleteItem(Long itemId);
 
     void attachRubricToAssignment(Long rubricId, Long assignmentId);

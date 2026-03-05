@@ -17,9 +17,9 @@ public class RubricServiceImpl implements RubricService {
     private final AssignmentRubricRepository assignmentRubricRepository;
     private final AssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
-    private final TestCaseRepository testCaseRepository;
     private final TestResultRepository testResultRepository;
     private final SubmissionRepository submissionRepository;
+    private final AssignmentRubricItemTestCaseRepository articRepository;
 
     public RubricServiceImpl(
             RubricRepository rubricRepository,
@@ -29,7 +29,7 @@ public class RubricServiceImpl implements RubricService {
             AssignmentRubricRepository assignmentRubricRepository,
             AssignmentRepository assignmentRepository,
             UserRepository userRepository,
-            TestCaseRepository testCaseRepository,
+            AssignmentRubricItemTestCaseRepository articRepository,
             TestResultRepository testResultRepository,
             SubmissionRepository submissionRepository) {
         this.rubricRepository = rubricRepository;
@@ -39,7 +39,7 @@ public class RubricServiceImpl implements RubricService {
         this.assignmentRubricRepository = assignmentRubricRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
-        this.testCaseRepository = testCaseRepository;
+        this.articRepository = articRepository;
         this.testResultRepository = testResultRepository;
         this.submissionRepository = submissionRepository;
     }
@@ -111,7 +111,6 @@ public class RubricServiceImpl implements RubricService {
                 newItem.setMaxPoints(origItem.getMaxPoints());
                 newItem.setAutoGrade(origItem.isAutoGrade());
                 newItem.setDisplayOrder(origItem.getDisplayOrder());
-                newItem.setTestCases(new ArrayList<>(origItem.getTestCases()));
                 rubricItemRepository.save(newItem);
             }
         }
@@ -151,7 +150,6 @@ public class RubricServiceImpl implements RubricService {
         item.setMaxPoints(maxPoints);
         item.setAutoGrade(autoGrade);
         item.setDisplayOrder(displayOrder);
-        item.setTestCases(new ArrayList<>());
         RubricItem saved = rubricItemRepository.save(item);
         Rubric rubric = criteria.getRubric();
         rubric.setTotalPoints(rubric.getTotalPoints() + maxPoints);
@@ -160,12 +158,27 @@ public class RubricServiceImpl implements RubricService {
     }
 
     @Override
-    public RubricItem linkTestCases(Long itemId, List<Long> testCaseIds) {
-        RubricItem item = rubricItemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
-        List<TestCase> testCases = testCaseRepository.findAllById(testCaseIds);
-        item.setTestCases(testCases);
-        return rubricItemRepository.save(item);
+    public List<AssignmentRubricItemTestCase> getLinkedTestCases(Long assignmentId, Long rubricItemId) {
+        return articRepository.findByAssignmentAndRubricItem(assignmentId, rubricItemId);
+    }
+
+    @Override
+    @Transactional
+    public void linkTestCasesToItem(Long assignmentId, Long rubricItemId, List<Long> testCaseIds) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
+        RubricItem item = rubricItemRepository.findById(rubricItemId)
+                .orElseThrow(() -> new RuntimeException("Item not found: " + rubricItemId));
+        articRepository.deleteByAssignmentAndRubricItem(assignmentId, rubricItemId);
+        for (Long testCaseId : testCaseIds) {
+            TestCase tc = new TestCase();
+            tc.setId(testCaseId);
+            AssignmentRubricItemTestCase link = new AssignmentRubricItemTestCase();
+            link.setAssignment(assignment);
+            link.setRubricItem(item);
+            link.setTestCase(tc);
+            articRepository.save(link);
+        }
     }
 
     @Override
@@ -240,13 +253,15 @@ public class RubricServiceImpl implements RubricService {
 
         for (RubricCriteria criteria : rubric.getCriteria()) {
             for (RubricItem item : criteria.getItems()) {
-                if (!item.isAutoGrade() || item.getTestCases().isEmpty()) continue;
-                List<Long> linkedIds = item.getTestCases().stream().map(TestCase::getId).toList();
-                long total = linkedIds.size();
+                if (!item.isAutoGrade()) continue;
+                List<AssignmentRubricItemTestCase> links = articRepository.findByAssignmentAndRubricItem(assignmentId, item.getId());
+                if (links.isEmpty()) continue;
+                List<Long> linkedTestCaseIds = links.stream().map(l -> l.getTestCase().getId()).toList();
+                long total = linkedTestCaseIds.size();
                 long passed = studentResults.stream()
-                        .filter(r -> linkedIds.contains(r.getTestCase().getId()) && r.isPassed())
+                        .filter(r -> linkedTestCaseIds.contains(r.getTestCase().getId()) && r.isPassed())
                         .count();
-                double awarded = (total > 0) ? ((double) passed / total) * item.getMaxPoints() : 0;
+                double awarded = (double) passed / total * item.getMaxPoints();
                 saveScore(item.getId(), assignmentId, userId, awarded);
             }
         }

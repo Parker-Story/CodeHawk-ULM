@@ -29,14 +29,6 @@ public class RubricItem {
     @Column(name = "display_order", nullable = false)
     private int displayOrder = 0;
 
-    @ManyToMany
-    @JoinTable(
-            name = "rubric_item_test_cases",
-            joinColumns = @JoinColumn(name = "rubric_item_id"),
-            inverseJoinColumns = @JoinColumn(name = "test_case_id")
-    )
-    private List<TestCase> testCases;
-
     public RubricItem() {}
 
     public Long getId() { return id; }
@@ -51,6 +43,4 @@ public class RubricItem {
     public void setAutoGrade(boolean autoGrade) { this.autoGrade = autoGrade; }
     public int getDisplayOrder() { return displayOrder; }
     public void setDisplayOrder(int displayOrder) { this.displayOrder = displayOrder; }
-    public List<TestCase> getTestCases() { return testCases; }
-    public void setTestCases(List<TestCase> testCases) { this.testCases = testCases; }
 }

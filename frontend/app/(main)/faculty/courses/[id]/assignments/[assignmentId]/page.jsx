@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,13 @@ export default function GradingWorkspacePage() {
   const [rubricScores, setRubricScores] = useState({});
   const [savingRubricScore, setSavingRubricScore] = useState(false);
   const [rubricTotals, setRubricTotals] = useState({});
+
+  // Test case linking state
+  const [linkingItem, setLinkingItem] = useState(null); // { id, label }
+  const [linkedTestCaseIds, setLinkedTestCaseIds] = useState([]);
+  const [savingLinks, setSavingLinks] = useState(false);
+  // Map of itemId -> linked test case ids for display in rubric preview
+  const [itemLinkMap, setItemLinkMap] = useState({});
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
@@ -76,6 +83,27 @@ export default function GradingWorkspacePage() {
         .catch((err) => console.error(err));
   }, [assignmentId]);
 
+  // Load existing links for all auto-grade items when rubric loads
+  useEffect(() => {
+    if (!assignedRubric) return;
+    const autoItems = (assignedRubric.criteria || [])
+        .flatMap((c) => c.items || [])
+        .filter((i) => i.autoGrade);
+    autoItems.forEach((item) => {
+      fetch(`${API_BASE}/rubric/item-testcases/${item.id}/${assignmentId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (Array.isArray(data)) {
+              setItemLinkMap((prev) => ({
+                ...prev,
+                [item.id]: data.map((l) => l.testCase.id),
+              }));
+            }
+          })
+          .catch((err) => console.error(err));
+    });
+  }, [assignedRubric, assignmentId]);
+
   useEffect(() => {
     if (!importSuiteOpen || !user?.id) return;
     fetch(`${API_BASE}/testsuite/user/${user.id}`)
@@ -102,6 +130,11 @@ export default function GradingWorkspacePage() {
           if (Array.isArray(data)) {
             data.forEach((rs) => { map[rs.rubricItem.id] = rs.awardedPoints; });
           }
+          (assignedRubric.criteria || []).flatMap((c) => c.items || []).forEach((item) => {
+            if (!item.autoGrade && map[item.id] === undefined) {
+              map[item.id] = item.maxPoints;
+            }
+          });
           setRubricScores(map);
         })
         .catch((err) => console.error(err));
@@ -111,6 +144,36 @@ export default function GradingWorkspacePage() {
         .then((data) => setRubricTotals((prev) => ({ ...prev, [gradingStudent]: data })))
         .catch((err) => console.error(err));
   }, [gradingStudent, assignedRubric, assignmentId]);
+
+  const handleOpenLinkDialog = (item) => {
+    setLinkingItem(item);
+    setLinkedTestCaseIds(itemLinkMap[item.id] || []);
+  };
+
+  const handleToggleTestCaseLink = (tcId) => {
+    setLinkedTestCaseIds((prev) =>
+        prev.includes(tcId) ? prev.filter((id) => id !== tcId) : [...prev, tcId]
+    );
+  };
+
+  const handleSaveLinks = async () => {
+    if (!linkingItem) return;
+    setSavingLinks(true);
+    try {
+      const res = await fetch(`${API_BASE}/rubric/item-testcases/${linkingItem.id}/${assignmentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(linkedTestCaseIds),
+      });
+      if (!res.ok) throw new Error("Failed to save links");
+      setItemLinkMap((prev) => ({ ...prev, [linkingItem.id]: linkedTestCaseIds }));
+      setLinkingItem(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingLinks(false);
+    }
+  };
 
   const handleScoreSave = async (userId) => {
     const score = scoreInputs[userId];
@@ -208,6 +271,7 @@ export default function GradingWorkspacePage() {
       const res = await fetch(`${API_BASE}/rubric/assign/assignment/${assignmentId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to detach rubric");
       setAssignedRubric(null);
+      setItemLinkMap({});
     } catch (err) { console.error(err); }
   };
 
@@ -228,20 +292,14 @@ export default function GradingWorkspacePage() {
           body: JSON.stringify({ rubricItemId: item.id, awardedPoints: awarded }),
         });
       }));
-
-      // Recalculate total and update submission score
       const totalRes = await fetch(`${API_BASE}/rubric/totalscore/${assignmentId}/${gradingStudent}`);
       const totalData = await totalRes.json();
       setRubricTotals((prev) => ({ ...prev, [gradingStudent]: totalData }));
-
-      // Save percentage as submission score
       await fetch(`${API_BASE}/submission/score/${assignmentId}/${gradingStudent}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ score: totalData.percentage }),
       });
-
-      // Refresh submissions
       const subRes = await fetch(`${API_BASE}/submission/assignment/${assignmentId}`);
       const subData = await subRes.json();
       const list = Array.isArray(subData) ? subData : [];
@@ -484,12 +542,29 @@ export default function GradingWorkspacePage() {
                           <p className="text-slate-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</p>
                         </div>
                         {(criteria.items || []).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between px-4 py-2 border-t border-slate-700/30">
-                              <div className="flex items-center gap-2">
-                                {item.autoGrade && <span className="text-xs px-1.5 py-0.5 bg-teal-600/20 text-teal-400 rounded font-medium">auto</span>}
+                            <div key={item.id} className="flex items-center justify-between px-4 py-2.5 border-t border-slate-700/30">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {item.autoGrade && <span className="text-xs px-1.5 py-0.5 bg-teal-600/20 text-teal-400 rounded font-medium shrink-0">auto</span>}
                                 <span className="text-slate-300 text-sm">{item.label}</span>
+                                {item.autoGrade && itemLinkMap[item.id]?.length > 0 && (
+                                    <span className="text-xs text-slate-500">
+                            ({itemLinkMap[item.id].length} test{itemLinkMap[item.id].length !== 1 ? "s" : ""} linked)
+                          </span>
+                                )}
                               </div>
-                              <span className="text-slate-400 text-xs">{item.maxPoints} pts</span>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-slate-400 text-xs">{item.maxPoints} pts</span>
+                                {item.autoGrade && testCases.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenLinkDialog(item)}
+                                        className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-teal-400 bg-teal-600/10 border border-teal-600/20 rounded-lg hover:bg-teal-600/20 transition-colors"
+                                    >
+                                      <Link className="w-3 h-3" />
+                                      Link Tests
+                                    </button>
+                                )}
+                              </div>
                             </div>
                         ))}
                       </div>
@@ -677,7 +752,6 @@ export default function GradingWorkspacePage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-
                 <div className="overflow-auto flex-1 p-6 space-y-5">
                   {(assignedRubric.criteria || []).map((criteria) => (
                       <div key={criteria.id}>
@@ -719,7 +793,6 @@ export default function GradingWorkspacePage() {
                       </div>
                   ))}
                 </div>
-
                 <div className="p-6 border-t border-slate-700 shrink-0">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-slate-300 text-sm font-medium">Total Score</p>
@@ -753,6 +826,53 @@ export default function GradingWorkspacePage() {
               </div>
             </div>
         )}
+
+        {/* Link Test Cases Dialog */}
+        <Dialog isOpen={!!linkingItem} onClose={() => setLinkingItem(null)} title={`Link Test Cases — ${linkingItem?.label}`}>
+          <div className="space-y-3">
+            <p className="text-slate-400 text-sm">Select which test cases count toward this rubric item. The score will be calculated as (passed / total) × max points.</p>
+            {testCases.length === 0 ? (
+                <p className="text-slate-400 text-sm">No test cases on this assignment yet.</p>
+            ) : (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
+                  {testCases.map((tc) => (
+                      <label key={tc.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={linkedTestCaseIds.includes(tc.id)}
+                            onChange={() => handleToggleTestCaseLink(tc.id)}
+                            className="w-4 h-4 accent-teal-500 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-slate-300 text-sm font-medium">{tc.label || `Test Case ${tc.id}`}</p>
+                          <p className="text-slate-500 text-xs font-mono truncate">
+                            {tc.input ? `in: ${tc.input}` : "no input"} → {tc.expectedOutput}
+                          </p>
+                        </div>
+                        {tc.hidden && <span className="text-xs text-slate-500 shrink-0">(hidden)</span>}
+                      </label>
+                  ))}
+                </div>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button
+                  type="button"
+                  onClick={() => setLinkingItem(null)}
+                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                  type="button"
+                  onClick={handleSaveLinks}
+                  disabled={savingLinks}
+                  className="flex-1 py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors disabled:opacity-50"
+              >
+                {savingLinks ? "Saving..." : "Save Links"}
+              </button>
+            </div>
+          </div>
+        </Dialog>
 
         {/* Attach Rubric Dialog */}
         <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
