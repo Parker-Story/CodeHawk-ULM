@@ -35,6 +35,50 @@ function VisibleTestCases({ assignmentId }) {
   );
 }
 
+function AssignmentRubric({ assignmentId }) {
+  const [rubric, setRubric] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/rubric/assignment/${assignmentId}`)
+        .then((res) => {
+          if (!res.ok || res.status === 204) return null;
+          return res.text().then((text) => text ? JSON.parse(text) : null);
+        })
+        .then((data) => { if (data?.visible) setRubric(data); })
+        .catch((err) => console.error(err));
+  }, [assignmentId]);
+
+  if (!rubric) return null;
+
+  return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-slate-300">Grading Rubric</p>
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+          {(rubric.criteria || []).map((criteria) => (
+              <div key={criteria.id} className="border-b border-slate-700/50 last:border-0">
+                <div className="flex items-center justify-between px-3 py-2 bg-slate-700/20">
+                  <p className="text-white text-xs font-medium">{criteria.title}</p>
+                  <p className="text-slate-400 text-xs">
+                    {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                  </p>
+                </div>
+                {(criteria.items || []).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between px-3 py-2 border-t border-slate-700/30">
+                      <span className="text-slate-300 text-xs">{item.label}</span>
+                      <span className="text-slate-400 text-xs">{item.maxPoints} pts</span>
+                    </div>
+                ))}
+              </div>
+          ))}
+          <div className="flex items-center justify-between px-3 py-2 bg-slate-700/30 border-t border-slate-700">
+            <p className="text-white text-xs font-semibold">Total</p>
+            <p className="text-white text-xs font-semibold">{rubric.totalPoints} pts</p>
+          </div>
+        </div>
+      </div>
+  );
+}
+
 export default function StudentCourseDetailPage() {
   const params = useParams();
   const crn = params.id;
@@ -348,24 +392,24 @@ export default function StudentCourseDetailPage() {
                 <div className="p-6">
                   {activeTab === "description" && (
                       <div className="space-y-4">
-                      {selectedAssignment.description ? (
-                          <p className="text-slate-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
-                      ) : (
-                          <p className="text-slate-400 text-sm">No description provided.</p>
-                      )}
+                        {selectedAssignment.description ? (
+                            <p className="text-slate-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
+                        ) : (
+                            <p className="text-slate-400 text-sm">No description provided.</p>
+                        )}
 
-                      {/* Visible test cases */}
-                      <VisibleTestCases assignmentId={selectedAssignment.id} />
+                        <AssignmentRubric assignmentId={selectedAssignment.id} />
+                        <VisibleTestCases assignmentId={selectedAssignment.id} />
 
-                      <button
-                          type="button"
-                          onClick={() => setActiveTab("upload")}
-                          className="mt-2 w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
-                      >
-                        Go to Upload Solution
-                      </button>
-                    </div>
-                )}
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("upload")}
+                            className="mt-2 w-full py-3 text-sm font-medium text-white bg-orange-600 rounded-xl hover:bg-orange-500 transition-colors"
+                        >
+                          Go to Upload Solution
+                        </button>
+                      </div>
+                  )}
 
                   {activeTab === "upload" && (
                       <div>
