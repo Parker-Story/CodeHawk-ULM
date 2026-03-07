@@ -43,26 +43,14 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Course not found");
-          return res.json();
-        })
-        .then((data) => {
-          setClassItem({ ...data, days: data.days ? data.days.split(",") : [] });
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setLoading(false);
-        });
+        .then((res) => { if (!res.ok) throw new Error("Course not found"); return res.json(); })
+        .then((data) => { setClassItem({ ...data, days: data.days ? data.days.split(",") : [] }); setLoading(false); })
+        .catch((err) => { console.error(err); setLoading(false); });
   }, [crn]);
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/course/${crn}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch assignments");
-          return res.json();
-        })
+        .then((res) => { if (!res.ok) throw new Error("Failed to fetch assignments"); return res.json(); })
         .then((data) => setAssignments(Array.isArray(data) ? data : []))
         .catch((err) => console.error("Error loading assignments:", err));
   }, [crn]);
@@ -80,9 +68,7 @@ export default function CourseDetailPage() {
 
   const handleAddStudent = async () => {
     try {
-      const response = await fetch(`${API_BASE}/courseUser/add/${crn}/${studentCwid}`, {
-        method: "POST",
-      });
+      const response = await fetch(`${API_BASE}/courseUser/add/${crn}/${studentCwid}`, { method: "POST" });
       if (!response.ok) throw new Error("Failed to add student");
       setStudentCwid("");
       setAddStudentOpen(false);
@@ -101,62 +87,30 @@ export default function CourseDetailPage() {
       const text = await file.text();
       const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
       if (lines.length < 2) throw new Error("CSV appears empty");
-
-      // Parse a CSV line respecting quoted fields
       const parseLine = (line) => {
-        const result = [];
-        let current = "";
-        let inQuotes = false;
+        const result = []; let current = ""; let inQuotes = false;
         for (let i = 0; i < line.length; i++) {
           const char = line[i];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === "," && !inQuotes) {
-            result.push(current.trim());
-            current = "";
-          } else {
-            current += char;
-          }
+          if (char === '"') { inQuotes = !inQuotes; }
+          else if (char === "," && !inQuotes) { result.push(current.trim()); current = ""; }
+          else { current += char; }
         }
         result.push(current.trim());
         return result;
       };
-
       const headers = parseLine(lines[0]);
       const sisIndex = headers.findIndex((h) => h === "SIS User ID");
       if (sisIndex === -1) throw new Error("Could not find 'SIS User ID' column");
-
-      // Extract CWIDs, skip "Points Possible" row and blank/null values
-      const cwids = lines.slice(1).map((line) => {
-        const cols = parseLine(line);
-        return cols[sisIndex];
-      }).filter((cwid) => cwid && cwid.toLowerCase() !== "null" && cwid !== "" && isNaN(Number(cwid)) === false && cwid.length > 4);
-
-      if (cwids.length === 0) {
-        setCsvResult({ success: 0, failed: 0, errors: ["No valid CWIDs found in CSV"] });
-        setCsvImporting(false);
-        return;
-      }
-
-      let success = 0;
-      let failed = 0;
-      const errors = [];
-      await Promise.all(
-          cwids.map(async (cwid) => {
-            try {
-              const res = await fetch(`${API_BASE}/courseUser/add/${crn}/${cwid}`, { method: "POST" });
-              if (res.ok) {
-                success++;
-              } else {
-                failed++;
-                errors.push(cwid);
-              }
-            } catch {
-              failed++;
-              errors.push(cwid);
-            }
-          })
-      );
+      const cwids = lines.slice(1).map((line) => { const cols = parseLine(line); return cols[sisIndex]; })
+          .filter((cwid) => cwid && cwid.toLowerCase() !== "null" && cwid !== "" && isNaN(Number(cwid)) === false && cwid.length > 4);
+      if (cwids.length === 0) { setCsvResult({ success: 0, failed: 0, errors: ["No valid CWIDs found in CSV"] }); setCsvImporting(false); return; }
+      let success = 0; let failed = 0; const errors = [];
+      await Promise.all(cwids.map(async (cwid) => {
+        try {
+          const res = await fetch(`${API_BASE}/courseUser/add/${crn}/${cwid}`, { method: "POST" });
+          if (res.ok) { success++; } else { failed++; errors.push(cwid); }
+        } catch { failed++; errors.push(cwid); }
+      }));
       setCsvResult({ success, failed, errors });
     } catch (error) {
       console.error("CSV import error:", error);
@@ -173,50 +127,36 @@ export default function CourseDetailPage() {
       const data = await response.json();
       setRoster(Array.isArray(data) ? data : []);
       setRosterOpen(true);
-    } catch (error) {
-      console.error("Error fetching roster:", error);
-    }
+    } catch (error) { console.error("Error fetching roster:", error); }
   };
 
   const handleRemoveStudent = async () => {
     try {
-      const response = await fetch(`${API_BASE}/courseUser/${removeConfirm.student.user.id}/${crn}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(`${API_BASE}/courseUser/${removeConfirm.student.user.id}/${crn}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to remove student");
       setRoster((prev) => prev.filter((s) => s.user.id !== removeConfirm.student.user.id));
       setRemoveConfirm({ isOpen: false, student: null });
-    } catch (error) {
-      console.error("Error removing student:", error);
-    }
+    } catch (error) { console.error("Error removing student:", error); }
   };
 
   const handlePromoteToTa = async () => {
     const courseUser = promoteTaConfirm.courseUser;
     try {
-      const response = await fetch(`${API_BASE}/courseUser/promote-ta/${crn}/${courseUser.user.id}`, {
-        method: "PUT",
-      });
+      const response = await fetch(`${API_BASE}/courseUser/promote-ta/${crn}/${courseUser.user.id}`, { method: "PUT" });
       if (!response.ok) throw new Error("Failed to promote to TA");
       const updated = await response.json();
       setRoster((prev) => prev.map((s) => s.user.id === courseUser.user.id ? updated : s));
       setPromoteTaConfirm({ isOpen: false, courseUser: null });
-    } catch (error) {
-      console.error("Error promoting to TA:", error);
-    }
+    } catch (error) { console.error("Error promoting to TA:", error); }
   };
 
   const handleDemoteFromTa = async (courseUser) => {
     try {
-      const response = await fetch(`${API_BASE}/courseUser/demote-ta/${crn}/${courseUser.user.id}`, {
-        method: "PUT",
-      });
+      const response = await fetch(`${API_BASE}/courseUser/demote-ta/${crn}/${courseUser.user.id}`, { method: "PUT" });
       if (!response.ok) throw new Error("Failed to demote TA");
       const updated = await response.json();
       setRoster((prev) => prev.map((s) => s.user.id === courseUser.user.id ? updated : s));
-    } catch (error) {
-      console.error("Error demoting TA:", error);
-    }
+    } catch (error) { console.error("Error demoting TA:", error); }
   };
 
   const handleEditAssignment = async (e) => {
@@ -231,75 +171,59 @@ export default function CourseDetailPage() {
       const updated = await response.json();
       setAssignments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
       setEditAssignment(null);
-    } catch (error) {
-      console.error("Error updating assignment:", error);
-    }
+    } catch (error) { console.error("Error updating assignment:", error); }
   };
 
   const handleDeleteAssignment = async () => {
     try {
-      const response = await fetch(`${API_BASE}/assignment/${deleteAssignmentConfirm.assignment.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(`${API_BASE}/assignment/${deleteAssignmentConfirm.assignment.id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete assignment");
       setAssignments((prev) => prev.filter((a) => a.id !== deleteAssignmentConfirm.assignment.id));
       setDeleteAssignmentConfirm({ isOpen: false, assignment: null });
-    } catch (error) {
-      console.error("Error deleting assignment:", error);
-    }
+    } catch (error) { console.error("Error deleting assignment:", error); }
   };
 
   if (loading) {
-    return (
-        <div className="p-8">
-          <p className="text-slate-400">Loading...</p>
-        </div>
-    );
+    return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
   }
 
-  const inputClass = "w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent";
-  const labelClass = "text-sm font-medium text-slate-300 block mb-1.5";
+  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2.5 px-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent";
+  const labelClass = "text-sm font-medium text-zinc-300 block mb-1.5";
 
   return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <Link
-              href="/faculty/dashboard"
-              className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
-          >
+          <Link href="/faculty/dashboard" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
 
           {!classItem ? (
-              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-                <p className="text-slate-400">Course not found.</p>
+              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
+                <p className="text-zinc-400">Course not found.</p>
               </div>
           ) : (
               <>
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+                <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-8">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="shrink-0 w-16 h-16 bg-teal-600/20 rounded-xl flex items-center justify-center">
-                        <BookOpen className="w-8 h-8 text-teal-400" />
+                      <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#7C1D2E33" }}>
+                        <BookOpen className="w-8 h-8" style={{ color: "#c0a080" }} />
                       </div>
                       <div>
                         <h1 className="text-2xl font-bold text-white">{classItem.courseName}</h1>
-                        <p className="text-teal-400 font-medium mt-1">{classItem.courseAbbreviation}</p>
+                        <p className="font-medium mt-1" style={{ color: "#C9A84C" }}>{classItem.courseAbbreviation}</p>
                         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                      <span className="text-slate-300">
-                        <span className="text-slate-500">CRN:</span> {classItem.crn}
-                      </span>
-                          <span className="text-teal-400 font-medium">
-                        <span className="text-slate-500">Class code:</span> {classItem.code}
-                      </span>
+                          <span className="text-zinc-300"><span className="text-zinc-500">CRN:</span> {classItem.crn}</span>
+                          <span className="font-medium" style={{ color: "#C9A84C" }}><span className="text-zinc-500">Class code:</span> {classItem.code}</span>
                         </div>
                       </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => setNewAssignmentOpen(true)}
-                        className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
+                        className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                        style={{ background: "#7C1D2E" }}
                     >
                       <Plus className="w-4 h-4" />
                       New Assignment
@@ -310,48 +234,44 @@ export default function CourseDetailPage() {
                 {/* Course Assignments */}
                 <section className="mb-8">
                   <h2 className="text-lg font-semibold text-white mb-4">Course Assignments</h2>
-                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
+                  <div className="bg-zinc-900 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
                     {assignments.length === 0 ? (
-                        <p className="text-slate-400 p-4">No assignments yet.</p>
+                        <p className="text-zinc-400 p-4">No assignments yet.</p>
                     ) : (
                         assignments.map((a) => (
                             <div
                                 key={a.id}
-                                className="group flex items-center gap-4 p-4 text-slate-300 cursor-pointer hover:bg-slate-700/30 transition-colors rounded-lg"
+                                className="group flex items-center gap-4 p-4 text-zinc-300 cursor-pointer hover:bg-zinc-700/30 transition-colors rounded-lg"
                                 onClick={() => router.push(`/faculty/courses/${crn}/assignments/${a.id}`)}
                             >
-                              <FileText className="w-5 h-5 text-teal-400 shrink-0" />
+                              <FileText className="w-5 h-5 shrink-0" style={{ color: "#C9A84C" }} />
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-white">{a.title}</p>
-                                {a.description && (
-                                    <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{a.description}</p>
-                                )}
+                                {a.description && <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>}
                               </div>
                               <div className="relative shrink-0">
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === a.id ? null : a.id); }}
-                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                                 >
                                   <MoreVertical className="w-4 h-4" />
                                 </button>
                                 {activeMenu === a.id && (
-                                    <div className="absolute right-0 top-8 z-10 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden w-40">
+                                    <div className="absolute right-0 top-8 z-10 bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg overflow-hidden w-40">
                                       <button
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); setEditAssignment({ ...a }); setActiveMenu(null); }}
-                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
                                       >
-                                        <Pencil className="w-4 h-4" />
-                                        Edit
+                                        <Pencil className="w-4 h-4" /> Edit
                                       </button>
                                       <button
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); setDeleteAssignmentConfirm({ isOpen: true, assignment: a }); setActiveMenu(null); }}
-                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-zinc-700 transition-colors"
                                       >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
+                                        <Trash2 className="w-4 h-4" /> Delete
                                       </button>
                                     </div>
                                 )}
@@ -366,41 +286,25 @@ export default function CourseDetailPage() {
                 <section>
                   <h2 className="text-lg font-semibold text-white mb-4">Course Administration</h2>
                   <div className="flex flex-col gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setGradeReportOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                      Generate Grade Report
-                    </button>
-                    <button
-                        type="button"
-                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
-                    >
-                      <FileDown className="w-5 h-5" />
-                      Export Grades
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleViewRoster}
-                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
-                    >
-                      <BookOpen className="w-5 h-5" />
-                      View Roster
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => { setAddStudentOpen(true); setCsvResult(null); }}
-                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors"
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add Student
-                    </button>
+                    {[
+                      { label: "View Roster", icon: BookOpen, onClick: handleViewRoster },
+                      { label: "Add Student", icon: Plus, onClick: () => { setAddStudentOpen(true); setCsvResult(null); } },
+                    ].map(({ label, icon: Icon, onClick }) => (
+                        <button
+                            key={label}
+                            type="button"
+                            onClick={onClick}
+                            className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-white rounded-lg hover:opacity-90 transition-colors"
+                            style={{ background: "#7C1D2E" }}
+                        >
+                          <Icon className="w-5 h-5" />
+                          {label}
+                        </button>
+                    ))}
                     <button
                         type="button"
                         onClick={() => setArchiveConfirmOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-slate-300 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                        className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-zinc-300 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors"
                     >
                       <Archive className="w-5 h-5" />
                       Archive Class
@@ -411,241 +315,130 @@ export default function CourseDetailPage() {
           )}
         </div>
 
-        <NewAssignmentDialog
-            isOpen={newAssignmentOpen}
-            onClose={() => setNewAssignmentOpen(false)}
-            crn={crn}
-            onAssignmentCreated={(newAssignment) => setAssignments((prev) => [...prev, newAssignment])}
-        />
+        <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(a) => setAssignments((prev) => [...prev, a])} />
         <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} />
 
-        {/* Edit Assignment Dialog */}
+        {/* Edit Assignment */}
         <Dialog isOpen={!!editAssignment} onClose={() => setEditAssignment(null)} title="Edit Assignment">
           {editAssignment && (
               <form className="space-y-4" onSubmit={handleEditAssignment}>
                 <div>
                   <label className={labelClass}>Assignment Title</label>
-                  <input
-                      type="text"
-                      value={editAssignment.title}
-                      onChange={(e) => setEditAssignment((prev) => ({ ...prev, title: e.target.value }))}
-                      className={inputClass}
-                      required
-                  />
+                  <input type="text" value={editAssignment.title} onChange={(e) => setEditAssignment((prev) => ({ ...prev, title: e.target.value }))} className={inputClass} required />
                 </div>
                 <div>
                   <label className={labelClass}>Description</label>
-                  <textarea
-                      rows={4}
-                      value={editAssignment.description || ""}
-                      onChange={(e) => setEditAssignment((prev) => ({ ...prev, description: e.target.value }))}
-                      className={inputClass}
-                  />
+                  <textarea rows={4} value={editAssignment.description || ""} onChange={(e) => setEditAssignment((prev) => ({ ...prev, description: e.target.value }))} className={inputClass} />
                 </div>
-                <div className="flex gap-3 pt-4 border-t border-slate-700">
-                  <button
-                      type="button"
-                      onClick={() => setEditAssignment(null)}
-                      className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                      type="submit"
-                      className="flex-1 py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors"
-                  >
-                    Save Changes
-                  </button>
+                <div className="flex gap-3 pt-4 border-t border-zinc-700">
+                  <button type="button" onClick={() => setEditAssignment(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Save Changes</button>
                 </div>
               </form>
           )}
         </Dialog>
 
-        {/* Delete Assignment Confirmation */}
+        {/* Delete Assignment */}
         <Dialog isOpen={deleteAssignmentConfirm.isOpen} onClose={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} title="Delete Assignment" size="sm">
           <div className="space-y-4">
-            <p className="text-slate-300">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-white">{deleteAssignmentConfirm.assignment?.title}</span>?
-              This action cannot be undone.
-            </p>
+            <p className="text-zinc-300">Are you sure you want to delete <span className="font-semibold text-white">{deleteAssignmentConfirm.assignment?.title}</span>? This action cannot be undone.</p>
             <div className="flex gap-3 pt-2">
-              <button
-                  type="button"
-                  onClick={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })}
-                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                  type="button"
-                  onClick={handleDeleteAssignment}
-                  className="flex-1 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-500 transition-colors"
-              >
-                Delete
-              </button>
+              <button type="button" onClick={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+              <button type="button" onClick={handleDeleteAssignment} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors">Delete</button>
             </div>
           </div>
         </Dialog>
 
-        {/* Add Student Dialog */}
+        {/* Add Student */}
         <Dialog isOpen={addStudentOpen} onClose={() => { setAddStudentOpen(false); setCsvResult(null); setStudentCwid(""); }} title="Add Student">
           <div className="space-y-6">
-            {/* Manual add */}
             <div className="space-y-3">
-              <p className="text-slate-400 text-sm">Enter a student's CWID to add them individually.</p>
+              <p className="text-zinc-400 text-sm">Enter a student's CWID to add them individually.</p>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Student CWID</label>
-                <input
-                    type="text"
-                    value={studentCwid}
-                    onChange={(e) => setStudentCwid(e.target.value)}
-                    placeholder="e.g. 12345678"
-                    className="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
+                <label className="text-sm font-medium text-zinc-300 block mb-2">Student CWID</label>
+                <input type="text" value={studentCwid} onChange={(e) => setStudentCwid(e.target.value)} placeholder="e.g. 12345678" className={inputClass} />
               </div>
-              <button
-                  type="button"
-                  onClick={handleAddStudent}
-                  disabled={!studentCwid}
-                  className="w-full py-3 text-sm font-medium text-white bg-teal-600 rounded-xl hover:bg-teal-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="button" onClick={handleAddStudent} disabled={!studentCwid} className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: "#7C1D2E" }}>
                 Add Student
               </button>
             </div>
-
-            {/* Divider */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-slate-700" />
-              <span className="text-slate-500 text-xs">or import from Canvas</span>
-              <div className="flex-1 h-px bg-slate-700" />
+              <div className="flex-1 h-px bg-zinc-700" />
+              <span className="text-zinc-500 text-xs">or import from Canvas</span>
+              <div className="flex-1 h-px bg-zinc-700" />
             </div>
-
-            {/* CSV import */}
             <div className="space-y-3">
-              <p className="text-slate-400 text-sm">Upload a Canvas grade export CSV to bulk enroll students.</p>
-              <div
-                  onClick={() => csvInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center cursor-pointer hover:border-teal-500/50 transition-colors"
-              >
-                <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2" />
-                <p className="text-slate-400 text-sm">Click to upload CSV</p>
-                <p className="text-slate-600 text-xs mt-1">Must contain a "SIS User ID" column</p>
-                <input
-                    ref={csvInputRef}
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) handleCsvImport(file);
-                      e.target.value = "";
-                    }}
-                />
+              <p className="text-zinc-400 text-sm">Upload a Canvas grade export CSV to bulk enroll students.</p>
+              <div onClick={() => csvInputRef.current?.click()} className="border-2 border-dashed border-zinc-600 rounded-xl p-6 text-center cursor-pointer hover:border-zinc-400 transition-colors">
+                <Upload className="w-6 h-6 text-zinc-500 mx-auto mb-2" />
+                <p className="text-zinc-400 text-sm">Click to upload CSV</p>
+                <p className="text-zinc-600 text-xs mt-1">Must contain a "SIS User ID" column</p>
+                <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => { const file = e.target.files[0]; if (file) handleCsvImport(file); e.target.value = ""; }} />
               </div>
-
-              {/* Import status */}
-              {csvImporting && (
-                  <p className="text-slate-400 text-sm text-center">Importing students...</p>
-              )}
+              {csvImporting && <p className="text-zinc-400 text-sm text-center">Importing students...</p>}
               {csvResult && (
                   <div className={`p-4 rounded-xl border ${csvResult.failed === 0 ? "bg-green-600/10 border-green-600/20" : "bg-yellow-600/10 border-yellow-600/20"}`}>
                     <p className={`text-sm font-medium ${csvResult.failed === 0 ? "text-green-400" : "text-yellow-400"}`}>
-                      {csvResult.success} student{csvResult.success !== 1 ? "s" : ""} added successfully
-                      {csvResult.failed > 0 && `, ${csvResult.failed} failed`}
+                      {csvResult.success} student{csvResult.success !== 1 ? "s" : ""} added successfully{csvResult.failed > 0 && `, ${csvResult.failed} failed`}
                     </p>
-                    {csvResult.errors.length > 0 && csvResult.failed > 0 && (
-                        <p className="text-slate-400 text-xs mt-1">
-                          Failed CWIDs: {csvResult.errors.join(", ")}
-                        </p>
-                    )}
+                    {csvResult.errors.length > 0 && csvResult.failed > 0 && <p className="text-zinc-400 text-xs mt-1">Failed CWIDs: {csvResult.errors.join(", ")}</p>}
                   </div>
               )}
             </div>
-
-            <button
-                type="button"
-                onClick={() => { setAddStudentOpen(false); setCsvResult(null); setStudentCwid(""); }}
-                className="w-full py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-            >
-              Close
-            </button>
+            <button type="button" onClick={() => { setAddStudentOpen(false); setCsvResult(null); setStudentCwid(""); }} className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Close</button>
           </div>
         </Dialog>
 
-        {/* Roster Dialog */}
+        {/* Roster */}
         <Dialog isOpen={rosterOpen} onClose={() => setRosterOpen(false)} title="Course Roster">
           <div className="space-y-3">
             {roster.length === 0 ? (
-                <p className="text-slate-400 text-sm">No students enrolled yet.</p>
+                <p className="text-zinc-400 text-sm">No students enrolled yet.</p>
             ) : (
                 roster.map((courseUser) => (
-                    <div
-                        key={courseUser.user.id}
-                        className="group flex items-center justify-between gap-3 p-3 bg-slate-800/50 border border-slate-700 rounded-xl"
-                    >
+                    <div key={courseUser.user.id} className="group flex items-center justify-between gap-3 p-3 bg-zinc-800 border border-zinc-700 rounded-xl">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-teal-600/20 rounded-full flex items-center justify-center shrink-0">
-                    <span className="text-teal-400 text-xs font-medium">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}>
+                    <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
                       {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
                     </span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm font-medium">
-                              {courseUser.user.firstName} {courseUser.user.lastName}
-                            </p>
+                            <p className="text-white text-sm font-medium">{courseUser.user.firstName} {courseUser.user.lastName}</p>
                             {courseUser.courseRole === "TA" && (
-                                <span className="text-xs font-medium text-violet-400 bg-violet-400/10 px-2 py-0.5 rounded-full">TA</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: "#C9A84C", background: "#C9A84C22" }}>TA</span>
                             )}
                             {courseUser.courseRole === "FACULTY" && (
-                                <span className="text-xs font-medium text-teal-400 bg-teal-400/10 px-2 py-0.5 rounded-full">Faculty</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: "#c0a080", background: "#7C1D2E33" }}>Faculty</span>
                             )}
                           </div>
-                          <p className="text-slate-400 text-xs">
-                            {courseUser.user.cwid ? `CWID: ${courseUser.user.cwid}` : courseUser.user.email}
-                          </p>
+                          <p className="text-zinc-400 text-xs">{courseUser.user.cwid ? `CWID: ${courseUser.user.cwid}` : courseUser.user.email}</p>
                         </div>
                       </div>
-
                       {courseUser.courseRole !== "FACULTY" && (
                           <div className="relative">
                             <button
                                 type="button"
                                 onClick={() => setActiveMenu(activeMenu === courseUser.user.id ? null : courseUser.user.id)}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                             >
                               <MoreVertical className="w-4 h-4" />
                             </button>
                             {activeMenu === courseUser.user.id && (
-                                <div className="absolute right-0 top-8 z-10 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden w-44">
+                                <div className="absolute right-0 top-8 z-10 bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg overflow-hidden w-44">
                                   {courseUser.courseRole === "STUDENT" && (
-                                      <button
-                                          type="button"
-                                          onClick={() => { setPromoteTaConfirm({ isOpen: true, courseUser }); setActiveMenu(null); }}
-                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-violet-400 hover:bg-slate-700 transition-colors"
-                                      >
-                                        <UserCog className="w-4 h-4" />
-                                        Promote to TA
+                                      <button type="button" onClick={() => { setPromoteTaConfirm({ isOpen: true, courseUser }); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors">
+                                        <UserCog className="w-4 h-4" /> Promote to TA
                                       </button>
                                   )}
                                   {courseUser.courseRole === "TA" && (
-                                      <button
-                                          type="button"
-                                          onClick={() => { handleDemoteFromTa(courseUser); setActiveMenu(null); }}
-                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
-                                      >
-                                        <UserCog className="w-4 h-4" />
-                                        Revoke TA
+                                      <button type="button" onClick={() => { handleDemoteFromTa(courseUser); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 transition-colors">
+                                        <UserCog className="w-4 h-4" /> Revoke TA
                                       </button>
                                   )}
-                                  <button
-                                      type="button"
-                                      onClick={() => { setRemoveConfirm({ isOpen: true, student: courseUser }); setActiveMenu(null); }}
-                                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-slate-700 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Remove
+                                  <button type="button" onClick={() => { setRemoveConfirm({ isOpen: true, student: courseUser }); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-zinc-700 transition-colors">
+                                    <Trash2 className="w-4 h-4" /> Remove
                                   </button>
                                 </div>
                             )}
@@ -657,82 +450,34 @@ export default function CourseDetailPage() {
           </div>
         </Dialog>
 
-        {/* Promote to TA Confirmation */}
+        {/* Promote to TA */}
         <Dialog isOpen={promoteTaConfirm.isOpen} onClose={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })} title="Promote to TA" size="sm">
           <div className="space-y-4">
-            <p className="text-slate-300">
-              Are you sure you want to make{" "}
-              <span className="font-semibold text-white">
-              {promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}
-            </span>{" "}
-              a TA for this course?
-            </p>
-            <p className="text-slate-400 text-sm">
-              They will have additional permissions such as viewing and grading student assignments.
-            </p>
+            <p className="text-zinc-300">Are you sure you want to make <span className="font-semibold text-white">{promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}</span> a TA for this course?</p>
+            <p className="text-zinc-400 text-sm">They will have additional permissions such as viewing and grading student assignments.</p>
             <div className="flex gap-3 pt-2">
-              <button
-                  type="button"
-                  onClick={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })}
-                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                  type="button"
-                  onClick={handlePromoteToTa}
-                  className="flex-1 py-3 text-sm font-medium text-white bg-violet-600 rounded-xl hover:bg-violet-500 transition-colors"
-              >
-                Promote to TA
-              </button>
+              <button type="button" onClick={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+              <button type="button" onClick={handlePromoteToTa} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Promote to TA</button>
             </div>
           </div>
         </Dialog>
 
-        {/* Remove Student Confirmation */}
+        {/* Remove Student */}
         <Dialog isOpen={removeConfirm.isOpen} onClose={() => setRemoveConfirm({ isOpen: false, student: null })} title="Remove Student" size="sm">
           <div className="space-y-4">
-            <p className="text-slate-300">
-              Are you sure you want to remove{" "}
-              <span className="font-semibold text-white">
-              {removeConfirm.student?.user?.firstName} {removeConfirm.student?.user?.lastName}
-            </span>{" "}
-              from this course?
-            </p>
+            <p className="text-zinc-300">Are you sure you want to remove <span className="font-semibold text-white">{removeConfirm.student?.user?.firstName} {removeConfirm.student?.user?.lastName}</span> from this course?</p>
             <div className="flex gap-3 pt-2">
-              <button
-                  type="button"
-                  onClick={() => setRemoveConfirm({ isOpen: false, student: null })}
-                  className="flex-1 py-3 text-sm font-medium text-slate-300 bg-slate-700 rounded-xl hover:bg-slate-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                  type="button"
-                  onClick={handleRemoveStudent}
-                  className="flex-1 py-3 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-500 transition-colors"
-              >
-                Remove
-              </button>
+              <button type="button" onClick={() => setRemoveConfirm({ isOpen: false, student: null })} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+              <button type="button" onClick={handleRemoveStudent} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors">Remove</button>
             </div>
           </div>
         </Dialog>
 
         {selectedAssignment && (
-            <GradingWorkspaceDialog
-                isOpen={gradingWorkspaceOpen}
-                onClose={() => { setGradingWorkspaceOpen(false); setSelectedAssignment(null); }}
-                assignmentTitle={selectedAssignment.title}
-                submissionCount={3}
-            />
+            <GradingWorkspaceDialog isOpen={gradingWorkspaceOpen} onClose={() => { setGradingWorkspaceOpen(false); setSelectedAssignment(null); }} assignmentTitle={selectedAssignment.title} submissionCount={3} />
         )}
         {classItem && (
-            <ArchiveClassDialog
-                isOpen={archiveConfirmOpen}
-                onClose={() => setArchiveConfirmOpen(false)}
-                courseName={classItem.courseName}
-                onConfirm={handleArchiveConfirm}
-            />
+            <ArchiveClassDialog isOpen={archiveConfirmOpen} onClose={() => setArchiveConfirmOpen(false)} courseName={classItem.courseName} onConfirm={handleArchiveConfirm} />
         )}
       </div>
   );

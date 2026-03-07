@@ -1,7 +1,12 @@
 "use client";
 
-import PortalCalendarPage from "@/components/shared/PortalCalendarPage";
+import { eventsFromConfig, PORTAL_CONFIG } from "@/lib/portals";
+import CalendarView from "@/components/shared/CalendarView";
 
-export default function StudentCalendarPage() {
-  return <PortalCalendarPage variant="student" />;
+export default function PortalCalendarPage({ variant = "student" }) {
+  const config = PORTAL_CONFIG[variant];
+  const events = eventsFromConfig(config?.calendar?.events);
+  const title = config?.calendar?.title ?? "Calendar";
+
+  return <CalendarView title={title} events={events} />;
 }

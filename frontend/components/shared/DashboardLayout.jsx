@@ -15,7 +15,7 @@ export default function DashboardLayout({ title, headerAction, sidebar, children
         {children}
       </div>
       {sidebar != null && (
-        <aside className="w-72 shrink-0 pl-6 border-l border-slate-700/50">
+          <aside className="w-72 shrink-0 pl-6 border-l border-zinc-700/50">
           {sidebar}
         </aside>
       )}

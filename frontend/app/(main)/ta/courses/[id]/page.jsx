@@ -24,10 +24,7 @@ export default function TACourseDetailPage() {
                 setClassItem({ ...data, days: data.days ? data.days.split(",") : [] });
                 setLoading(false);
             })
-            .catch((err) => {
-                console.error(err);
-                setLoading(false);
-            });
+            .catch((err) => { console.error(err); setLoading(false); });
     }, [crn]);
 
     useEffect(() => {
@@ -45,7 +42,7 @@ export default function TACourseDetailPage() {
     };
 
     if (loading) {
-        return <div className="p-8"><p className="text-slate-400">Loading...</p></div>;
+        return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
     }
 
     return (
@@ -53,64 +50,63 @@ export default function TACourseDetailPage() {
             <div className="max-w-5xl mx-auto">
                 <Link
                     href="/ta/dashboard"
-                    className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6"
+                    className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Dashboard
                 </Link>
 
                 {!classItem ? (
-                    <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-                        <p className="text-slate-400">Course not found.</p>
+                    <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
+                        <p className="text-zinc-400">Course not found.</p>
                     </div>
                 ) : (
                     <>
-                        {/* Course Header */}
-                        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+                        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="shrink-0 w-16 h-16 bg-violet-600/20 rounded-xl flex items-center justify-center">
-                                    <BookOpen className="w-8 h-8 text-violet-400" />
+                                <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C22" }}>
+                                    <BookOpen className="w-8 h-8" style={{ color: "#C9A84C" }} />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h1 className="text-2xl font-bold text-white">{classItem.courseName}</h1>
-                                        <span className="text-xs font-medium text-violet-400 bg-violet-400/10 px-2 py-0.5 rounded-full">TA</span>
+                                        <span
+                                            className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                            style={{ color: "#C9A84C", background: "#C9A84C22" }}
+                                        >
+                      TA
+                    </span>
                                     </div>
-                                    <p className="text-violet-400 font-medium mt-1">{classItem.courseAbbreviation}</p>
+                                    <p className="font-medium mt-1" style={{ color: "#C9A84C" }}>{classItem.courseAbbreviation}</p>
                                     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                    <span className="text-slate-300">
-                      <span className="text-slate-500">CRN:</span> {classItem.crn}
-                    </span>
-                                        <span className="text-slate-300">
-                      <span className="text-slate-500">Semester:</span> {classItem.semester?.charAt(0).toUpperCase() + classItem.semester?.slice(1)} {classItem.year}
-                    </span>
+                                        <span className="text-zinc-300"><span className="text-zinc-500">CRN:</span> {classItem.crn}</span>
+                                        <span className="text-zinc-300"><span className="text-zinc-500">Semester:</span> {classItem.semester?.charAt(0).toUpperCase() + classItem.semester?.slice(1)} {classItem.year}</span>
                                     </div>
                                 </div>
                             </div>
                             {classItem.courseDescription && (
-                                <p className="mt-4 text-slate-400 text-sm">{classItem.courseDescription}</p>
+                                <p className="mt-4 text-zinc-400 text-sm">{classItem.courseDescription}</p>
                             )}
                         </div>
 
-                        {/* Assignments */}
                         <section>
                             <h2 className="text-lg font-semibold text-white mb-4">Assignments</h2>
-                            <div className="bg-slate-800/50 border border-slate-700 rounded-xl divide-y divide-slate-700/50">
+                            <div className="bg-zinc-900 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
                                 {assignments.length === 0 ? (
-                                    <p className="text-slate-400 p-4">No assignments yet.</p>
+                                    <p className="text-zinc-400 p-4">No assignments yet.</p>
                                 ) : (
                                     assignments.map((a) => (
                                         <button
                                             key={a.id}
                                             type="button"
                                             onClick={() => handleSelectAssignment(a)}
-                                            className="flex items-center gap-4 p-4 w-full text-left text-slate-300 hover:bg-slate-700/30 transition-colors rounded-lg"
+                                            className="flex items-center gap-4 p-4 w-full text-left text-zinc-300 hover:bg-zinc-700/30 transition-colors rounded-lg"
                                         >
-                                            <FileText className="w-5 h-5 shrink-0 text-violet-400" />
+                                            <FileText className="w-5 h-5 shrink-0" style={{ color: "#C9A84C" }} />
                                             <div className="min-w-0 flex-1">
                                                 <p className="font-medium text-white">{a.title}</p>
                                                 {a.description && (
-                                                    <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{a.description}</p>
+                                                    <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>
                                                 )}
                                             </div>
                                         </button>

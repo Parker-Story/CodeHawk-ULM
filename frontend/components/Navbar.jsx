@@ -3,9 +3,9 @@
 import Link from "next/link";
 
 const variantConfig = {
-  student: { bg: "bg-orange-600", shadow: "shadow-orange-900/50", href: "/students", label: "Student" },
-  faculty: { bg: "bg-teal-600", shadow: "shadow-teal-900/50", href: "/faculty", label: "Faculty" },
-  ta: { bg: "bg-violet-600", shadow: "shadow-violet-900/50", href: "/ta", label: "TA" },
+  student: { href: "/students", label: "Student" },
+  faculty: { href: "/faculty", label: "Faculty" },
+  ta: { href: "/ta", label: "TA" },
 };
 
 export default function Navbar({ variant = "student", onMenuClick }) {
@@ -13,32 +13,33 @@ export default function Navbar({ variant = "student", onMenuClick }) {
   const showHamburger = typeof onMenuClick === "function";
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 shadow-lg ${config.bg} ${config.shadow}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center h-16">
-          {showHamburger && (
-            <button
-              type="button"
-              onClick={onMenuClick}
-              className="p-2 -ml-2 rounded-lg text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30"
-              aria-label="Toggle sidebar menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          )}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-900 border-b border-zinc-700 shadow-md">
+        <div className="px-4 flex items-center h-16">
+            {showHamburger && (
+                <button
+                    type="button"
+                    onClick={onMenuClick}
+                    className="p-2 -ml-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 focus:outline-none transition-colors"
+                    aria-label="Toggle sidebar menu"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+            )}
 
-          <Link href={config.href} className="flex items-center gap-2 ml-2">
-            <span className="text-2xl font-bold text-white tracking-tight">
-              CodeHawk
+            <Link href={config.href} className="flex items-center gap-3 ml-2">
+            <span className="text-xl font-bold text-white tracking-tight">
+              Code<span style={{ color: "#C9A84C" }}>Hawk</span>
             </span>
-            <span className="text-xs font-medium text-white/70 bg-white/10 px-2 py-0.5 rounded">
+              <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded"
+                  style={{ background: "#7C1D2E", color: "#F5E6C8" }}
+              >
               {config.label}
             </span>
-          </Link>
-        </div>
-      </div>
-    </nav>
+            </Link>
+          </div>
+      </nav>
   );
 }
