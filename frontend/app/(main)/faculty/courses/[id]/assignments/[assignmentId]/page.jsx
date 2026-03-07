@@ -43,6 +43,12 @@ export default function GradingWorkspacePage() {
   // Map of itemId -> linked test case ids for display in rubric preview
   const [itemLinkMap, setItemLinkMap] = useState({});
 
+  // Plagiarism state
+  const [plagiarismResults, setPlagiarismResults] = useState(null);
+  const [plagiarismOpen, setPlagiarismOpen] = useState(false);
+  const [runningPlagiarism, setRunningPlagiarism] = useState(false);
+  const [expandedPair, setExpandedPair] = useState(null);
+
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
         .then((res) => res.json())
@@ -315,6 +321,41 @@ export default function GradingWorkspacePage() {
     }
   };
 
+  const handleCheckPlagiarism = async () => {
+    setRunningPlagiarism(true);
+    try {
+      const res = await fetch(`${API_BASE}/plagiarism/check/${assignmentId}`);
+      if (!res.ok) throw new Error("Failed to run plagiarism check");
+      const data = await res.json();
+      setPlagiarismResults(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRunningPlagiarism(false);
+    }
+  };
+
+  const handleDownloadPlagiarismCSV = () => {
+    if (!plagiarismResults) return;
+    const rows = [
+      ["Student A", "Student B", "Similarity %", "Flagged"],
+      ...plagiarismResults.map((r) => [
+        r.studentAName,
+        r.studentBName,
+        r.similarity,
+        r.similarity >= 70 ? "Yes" : "No",
+      ]),
+    ];
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plagiarism_${assignmentId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getResultsForStudent = (userId) =>
       testResults.filter((r) => r.submission?.submissionId?.userId === userId);
 
@@ -345,7 +386,28 @@ export default function GradingWorkspacePage() {
 
           {/* Submissions Table */}
           <section className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4">Submissions</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">Submissions</h2>
+              <div className="flex items-center gap-2">
+                {plagiarismResults && (
+                    <button
+                        type="button"
+                        onClick={() => setPlagiarismOpen(true)}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-teal-400 bg-teal-600/10 border border-teal-600/20 rounded-lg hover:bg-teal-600/20 transition-colors"
+                    >
+                      View Results
+                    </button>
+                )}
+                <button
+                    type="button"
+                    onClick={handleCheckPlagiarism}
+                    disabled={runningPlagiarism || submissions.length < 2}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-500 transition-colors disabled:opacity-50"
+                >
+                  {runningPlagiarism ? "Running..." : plagiarismResults ? "Re-run Check" : "Check Plagiarism"}
+                </button>
+              </div>
+            </div>
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -873,6 +935,119 @@ export default function GradingWorkspacePage() {
             </div>
           </div>
         </Dialog>
+
+        {/* Plagiarism Results Modal */}
+        {plagiarismOpen && plagiarismResults && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between p-6 border-b border-slate-700 shrink-0">
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Plagiarism Check Results</h2>
+                    <p className="text-slate-400 text-sm mt-0.5">
+                      {plagiarismResults.length} pair{plagiarismResults.length !== 1 ? "s" : ""} compared
+                      {" • "}
+                      {plagiarismResults.filter(r => r.similarity >= 70).length} flagged
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleDownloadPlagiarismCSV}
+                        className="px-3 py-2 text-sm font-medium text-teal-400 bg-teal-600/10 border border-teal-600/20 rounded-lg hover:bg-teal-600/20 transition-colors"
+                    >
+                      Download CSV
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => { setPlagiarismOpen(false); setExpandedPair(null); }}
+                        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-auto flex-1">
+                  {plagiarismResults.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400">
+                        Not enough submissions to compare.
+                      </div>
+                  ) : (
+                      plagiarismResults.map((r, idx) => {
+                        const isExpanded = expandedPair === idx;
+                        const color = r.similarity >= 70
+                            ? "text-red-400"
+                            : r.similarity >= 50
+                                ? "text-yellow-400"
+                                : "text-green-400";
+                        const bg = r.similarity >= 70
+                            ? "bg-red-500/10 border-red-500/20"
+                            : r.similarity >= 50
+                                ? "bg-yellow-500/10 border-yellow-500/20"
+                                : "bg-slate-800/50 border-slate-700";
+
+                        return (
+                            <div key={idx} className="border-b border-slate-700/50 last:border-0">
+                              <button
+                                  type="button"
+                                  onClick={() => setExpandedPair(isExpanded ? null : idx)}
+                                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-800/50 transition-colors text-left"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`text-2xl font-bold ${color}`}>
+                                    {r.similarity}%
+                                  </div>
+                                  <div>
+                                    <p className="text-white text-sm font-medium">
+                                      {r.studentAName} &amp; {r.studentBName}
+                                    </p>
+                                    {r.similarity >= 70 && (
+                                        <span className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
+                          Flagged
+                        </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                    <span className="text-slate-400 text-sm">
+                      {isExpanded ? "Hide" : "Compare"}
+                    </span>
+                                  {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                </div>
+                              </button>
+
+                              {isExpanded && (
+                                  <div className="px-6 pb-5">
+                                    <div className={`border rounded-xl overflow-hidden ${bg}`}>
+                                      <div className="grid grid-cols-2 divide-x divide-slate-700">
+                                        <div>
+                                          <div className="px-4 py-2 border-b border-slate-700 bg-slate-800/50">
+                                            <p className="text-sm font-semibold text-white">{r.studentAName}</p>
+                                          </div>
+                                          <pre className="text-xs text-slate-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">
+                            {r.fileContentA || "No content"}
+                          </pre>
+                                        </div>
+                                        <div>
+                                          <div className="px-4 py-2 border-b border-slate-700 bg-slate-800/50">
+                                            <p className="text-sm font-semibold text-white">{r.studentBName}</p>
+                                          </div>
+                                          <pre className="text-xs text-slate-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">
+                            {r.fileContentB || "No content"}
+                          </pre>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                              )}
+                            </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
+            </div>
+        )}
 
         {/* Attach Rubric Dialog */}
         <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
