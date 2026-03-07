@@ -7,7 +7,7 @@ export const PORTAL_VARIANTS = ["student", "faculty", "ta"];
 export const PORTAL_CONFIG = {
   student: {
     basePath: "/students",
-    activeClassName: "bg-orange-600 text-white",
+    activeClassName: "text-amber-100",
     ariaLabel: "Student navigation",
     sidebarItems: [
       { href: "/students/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -39,7 +39,7 @@ export const PORTAL_CONFIG = {
   },
   faculty: {
     basePath: "/faculty",
-    activeClassName: "bg-teal-600 text-white",
+    activeClassName: "text-amber-100",
     ariaLabel: "Faculty navigation",
     sidebarItems: [
       { href: "/faculty/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -68,7 +68,7 @@ export const PORTAL_CONFIG = {
   },
   ta: {
     basePath: "/ta",
-    activeClassName: "bg-violet-600 text-white",
+    activeClassName: "text-amber-100",
     ariaLabel: "TA navigation",
     sidebarItems: [
       { href: "/ta/dashboard", label: "Dashboard", icon: "LayoutDashboard" },

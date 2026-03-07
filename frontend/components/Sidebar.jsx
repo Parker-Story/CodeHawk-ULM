@@ -15,53 +15,54 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
   };
 
   return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          aria-hidden="true"
-        />
-      )}
-      <aside
-        className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-slate-900 border-r border-slate-700/50 shadow-xl transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        aria-label={ariaLabel}
-      >
-        <div className="flex flex-col h-full pt-4 px-4 pb-6">
-          <nav className="flex flex-col gap-1">
-            {items.map(({ href, label, icon: Icon }) => {
-              const isActive = pathname === href || pathname.startsWith(href + "/");
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? activeClassName || "bg-slate-700 text-white"
-                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  {Icon && <Icon className="w-5 h-5 shrink-0" />}
-                  {label}
-                </Link>
-              );
-            })}
-          </nav>
-          {showSignOut && (
-            <div className="mt-auto pt-4 border-t border-slate-700/50">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-              >
-                <LogOut className="w-5 h-5 shrink-0" />
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      </aside>
-    </>
+      <>
+        {isOpen && (
+            <div
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                aria-hidden="true"
+            />
+        )}
+        <aside
+            className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-zinc-900 border-r border-zinc-700 shadow-xl transition-transform duration-300 ease-in-out ${
+                isOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+            aria-label={ariaLabel}
+        >
+          <div className="flex flex-col h-full pt-4 px-4 pb-6">
+            <nav className="flex flex-col gap-1">
+              {items.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href || pathname.startsWith(href + "/");
+                return (
+                    <Link
+                        key={href}
+                        href={href}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                            isActive
+                                ? activeClassName || ""
+                                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                        }`}
+                        style={isActive && !activeClassName ? { background: "#7C1D2E", color: "#F5E6C8" } : {}}
+                    >
+                      {Icon && <Icon className="w-5 h-5 shrink-0" />}
+                      {label}
+                    </Link>
+                );
+              })}
+            </nav>
+            {showSignOut && (
+                <div className="mt-auto pt-4 border-t border-zinc-700">
+                  <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                  >
+                    <LogOut className="w-5 h-5 shrink-0" />
+                    Sign out
+                  </button>
+                </div>
+            )}
+          </div>
+        </aside>
+      </>
   );
 }
