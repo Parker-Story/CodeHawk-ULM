@@ -8,6 +8,8 @@ import com.womm.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import com.womm.backend.enums.CourseRole;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 public class CourseServiceImpl implements CourseService {
@@ -23,9 +25,14 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public Course createCourse(Course course, String userId) {
+        courseRepository.findById(course.getCrn()).ifPresent(existing -> {
+            if (!existing.isArchived()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "An active course exists with this CRN. Please try again.");
+            }
+        });
         Course savedCourse = courseRepository.save(course);
         User faculty = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         CourseUser courseUser = new CourseUser(faculty, savedCourse, CourseRole.FACULTY);
         courseUserRepository.save(courseUser);
         return savedCourse;

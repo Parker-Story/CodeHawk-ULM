@@ -9,17 +9,24 @@ import com.womm.backend.repository.CourseUserRepository;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import com.womm.backend.repository.SubmissionRepository;
+import org.springframework.transaction.annotation.Transactional;
+import com.womm.backend.repository.TestResultRepository;
 
 @Service
 public class CourseUserServiceImpl implements CourseUserService {
     CourseUserRepository courseUserRepository;
     UserRepository userRepository;
     CourseRepository courseRepository;
+    SubmissionRepository submissionRepository;
+    TestResultRepository testResultRepository;
 
-    public CourseUserServiceImpl(CourseUserRepository courseUserRepository, UserRepository userRepository, CourseRepository courseRepository) {
+    public CourseUserServiceImpl(CourseUserRepository courseUserRepository, UserRepository userRepository, CourseRepository courseRepository, SubmissionRepository submissionRepository, TestResultRepository testResultRepository) {
         this.courseUserRepository = courseUserRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
+        this.submissionRepository = submissionRepository;
+        this.testResultRepository = testResultRepository;
     }
 
     @Override
@@ -43,7 +50,10 @@ public class CourseUserServiceImpl implements CourseUserService {
     }
 
     @Override
+    @Transactional
     public void deleteCourseUser(String userId, String courseCrn) {
+        testResultRepository.deleteByUserIdAndCourseCrn(userId, courseCrn);
+        submissionRepository.deleteByUserIdAndCourseCrn(userId, courseCrn);
         courseUserRepository.deleteById(new CourseUserId(userId, courseCrn));
     }
 
@@ -74,7 +84,11 @@ public class CourseUserServiceImpl implements CourseUserService {
     @Override
     public CourseUser promoteToTa(String crn, String userId) {
         CourseUser courseUser = courseUserRepository.findById(new CourseUserId(userId, crn))
-            .orElseThrow(() -> new RuntimeException("CourseUser not found"));
+                .orElseThrow(() -> new RuntimeException("CourseUser not found"));
+        long submissionCount = submissionRepository.countByUserIdAndCourseCrn(userId, crn);
+        if (submissionCount > 0) {
+            throw new RuntimeException("Cannot promote to TA: student has existing submissions in this course.");
+        }
         courseUser.setCourseRole(CourseRole.TA);
         return courseUserRepository.save(courseUser);
     }

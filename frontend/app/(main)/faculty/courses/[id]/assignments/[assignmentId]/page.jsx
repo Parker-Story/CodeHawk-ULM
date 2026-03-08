@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link, MoreVertical } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
+
 
 export default function GradingWorkspacePage() {
   const params = useParams();
@@ -41,6 +42,9 @@ export default function GradingWorkspacePage() {
   const [plagiarismOpen, setPlagiarismOpen] = useState(false);
   const [runningPlagiarism, setRunningPlagiarism] = useState(false);
   const [expandedPair, setExpandedPair] = useState(null);
+  const [openMenuUserId, setOpenMenuUserId] = useState(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
+
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
@@ -75,6 +79,12 @@ export default function GradingWorkspacePage() {
         .then((data) => { if (data) setAssignedRubric(data); })
         .catch((err) => console.error(err));
   }, [assignmentId]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuUserId(null);
+    if (openMenuUserId) document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [openMenuUserId]);
 
   useEffect(() => {
     if (!assignedRubric) return;
@@ -155,6 +165,16 @@ export default function GradingWorkspacePage() {
       const updated = await response.json();
       setSubmissions((prev) => prev.map((s) => (s.submissionId.userId === userId ? updated : s)));
     } catch (error) { console.error("Error saving score:", error); } finally { setSavingScore((prev) => ({ ...prev, [userId]: false })); }
+  };
+
+  const handleDeleteSubmission = async (userId) => {
+    try {
+      const res = await fetch(`${API_BASE}/submission/${userId}/${assignmentId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete submission");
+      setSubmissions((prev) => prev.filter((s) => s.submissionId.userId !== userId));
+      setTestResults((prev) => prev.filter((r) => r.submission?.submissionId?.userId !== userId));
+      setConfirmDeleteUserId(null);
+    } catch (err) { console.error(err); }
   };
 
   const handleAddTestCase = async () => {
@@ -265,6 +285,19 @@ export default function GradingWorkspacePage() {
     } catch (err) { console.error(err); } finally { setRunningPlagiarism(false); }
   };
 
+  const handleToggleScoresVisible = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/assignment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...assignment, scoresVisible: !assignment.scoresVisible }),
+      });
+      if (!res.ok) throw new Error("Failed to update assignment");
+      const updated = await res.json();
+      setAssignment(updated);
+    } catch (err) { console.error(err); }
+  };
+
   const handleDownloadPlagiarismCSV = () => {
     if (!plagiarismResults) return;
     const rows = [["Student A", "Student B", "Similarity %", "Flagged"], ...plagiarismResults.map((r) => [r.studentAName, r.studentBName, r.similarity, r.similarity >= 70 ? "Yes" : "No"])];
@@ -294,11 +327,25 @@ export default function GradingWorkspacePage() {
             <p className="text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
           </div>
 
+
           {/* Submissions Table */}
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Submissions</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                {/* Scores visible toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-400">Show scores to students</span>
+                  <button
+                      type="button"
+                      onClick={handleToggleScoresVisible}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors`}
+                      style={assignment?.scoresVisible ? { background: "#7C1D2E" } : { background: "#52525b" }}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${assignment?.scoresVisible ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+                <div className="w-px h-5 bg-zinc-700" />
                 {plagiarismResults && (
                     <button type="button" onClick={() => setPlagiarismOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
                       View Results
@@ -309,25 +356,27 @@ export default function GradingWorkspacePage() {
                 </button>
               </div>
             </div>
-            <div className="bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden">
+            <div className="bg-zinc-900 border border-zinc-700 rounded-xl" style={{ minHeight: "280px" }}>
               <table className="w-full text-sm">
                 <thead>
                 <tr className="bg-zinc-700/50 border-b border-zinc-700">
                   <th className="text-left py-3 px-4 font-semibold text-white">Student</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
+                  <th className="text-left py-3 px-4 font-semibold text-white">Test Results</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {submissions.length === 0 ? (
-                    <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                    <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                 ) : (
                     submissions.map((s) => {
                       const userId = s.submissionId.userId;
                       const studentResults = getResultsForStudent(userId);
                       const isExpanded = expandedStudent === userId;
                       const rubricTotal = rubricTotals[userId];
+                      const menuOpen = openMenuUserId === userId;
                       return (
                           <React.Fragment key={userId}>
                             <tr className="border-b border-zinc-700/50">
@@ -354,45 +403,56 @@ export default function GradingWorkspacePage() {
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <button type="button" onClick={() => setOpenSolution(s)} className="font-medium text-sm hover:opacity-80" style={{ color: "#C9A84C" }}>Open Solution</button>
-                                  {testCases.length > 0 && (
-                                      <>
-                                        <span className="text-zinc-600">|</span>
-                                        <button type="button" onClick={() => handleRerunTests(userId)} className="font-medium text-sm hover:opacity-80" style={{ color: "#C9A84C" }}>Run Tests</button>
-                                        {studentResults.length > 0 && (
-                                            <>
-                                              <span className="text-zinc-600">|</span>
-                                              <button type="button" onClick={() => setExpandedStudent(isExpanded ? null : userId)} className="flex items-center gap-1 text-zinc-400 hover:text-white text-sm">
-                                                {studentResults.filter(r => r.passed).length}/{studentResults.length} passed
-                                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                              </button>
-                                            </>
-                                        )}
-                                      </>
-                                  )}
-                                  {assignedRubric && (
-                                      <>
-                                        <span className="text-zinc-600">|</span>
-                                        <button type="button" onClick={() => setGradingStudent(userId)} className="font-medium text-sm flex items-center gap-1 hover:opacity-80" style={{ color: "#C9A84C" }}>
-                                          <ClipboardList className="w-3.5 h-3.5" />
-                                          Grade Rubric
-                                          {rubricTotal && <span className="text-zinc-400 font-normal">({rubricTotal.awarded}/{rubricTotal.possible} pts)</span>}
+                                {studentResults.length > 0 ? (
+                                    <button type="button" onClick={() => setExpandedStudent(isExpanded ? null : userId)} className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors">
+                        <span className={studentResults.filter(r => r.passed).length === studentResults.length ? "text-green-400" : "text-red-400"}>
+                          {studentResults.filter(r => r.passed).length}/{studentResults.length} passed
+                        </span>
+                                      {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                    </button>
+                                ) : (
+                                    <span className="text-zinc-600 text-sm">—</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="relative">
+                                  <button
+                                      type="button"
+                                      onClick={() => setOpenMenuUserId(menuOpen ? null : userId)}
+                                      className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </button>
+                                  {menuOpen && (
+                                      <div className="absolute right-0 top-8 z-20 w-48 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl overflow-hidden">
+                                        <button type="button" onClick={() => { setOpenSolution(s); setOpenMenuUserId(null); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-left">
+                                          <FileText className="w-4 h-4 shrink-0" /> Open Submission
                                         </button>
-                                      </>
+                                        {assignedRubric && (
+                                            <button type="button" onClick={() => { setGradingStudent(userId); setOpenMenuUserId(null); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors text-left">
+                                              <ClipboardList className="w-4 h-4 shrink-0" />
+                                              Grade Rubric
+                                              {rubricTotal && <span className="text-zinc-500 text-xs ml-auto">({rubricTotal.awarded}/{rubricTotal.possible})</span>}
+                                            </button>
+                                        )}
+                                        <div className="border-t border-zinc-700 mt-1" />
+                                        <button type="button" onClick={() => { setConfirmDeleteUserId(userId); setOpenMenuUserId(null); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left">
+                                          <Trash2 className="w-4 h-4 shrink-0" /> Remove Submission
+                                        </button>
+                                      </div>
                                   )}
                                 </div>
                               </td>
                             </tr>
                             {isExpanded && studentResults.length > 0 && (
                                 <tr className="border-b border-zinc-700/50 bg-zinc-900/80">
-                                  <td colSpan={4} className="px-4 py-3">
+                                  <td colSpan={5} className="px-4 py-3">
                                     <div className="space-y-2">
                                       {studentResults.map((r) => (
                                           <div key={r.id} className="flex items-center gap-3 text-xs">
                                             <span className={`w-2 h-2 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
                                             <span className="text-zinc-400 w-24">{r.testCase?.label || `Test ${r.testCase?.id}`}</span>
-                                            {r.testCase?.hidden && <span className="text-zinc-500 text-xs">(hidden)</span>}
+                                            {r.testCase?.hidden && <span className="text-zinc-500">(hidden)</span>}
                                             <span className="text-zinc-500">Expected: <span className="text-zinc-300 font-mono">{r.testCase?.expectedOutput}</span></span>
                                             <span className="text-zinc-500">Got: <span className={`font-mono ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.actualOutput || "no output"}</span></span>
                                           </div>
@@ -575,68 +635,123 @@ export default function GradingWorkspacePage() {
             </div>
         )}
 
-        {/* Rubric Grading Panel */}
-        {gradingStudent && assignedRubric && (
+        {/* Confirm Delete Submission */}
+        {confirmDeleteUserId && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-                <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
-                    <p className="text-zinc-400 text-sm mt-0.5">
-                      {submissions.find(s => s.submissionId.userId === gradingStudent)?.user?.firstName}{" "}
-                      {submissions.find(s => s.submissionId.userId === gradingStudent)?.user?.lastName}
-                      {" • "}{assignedRubric.name}
-                    </p>
-                  </div>
-                  <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
-                </div>
-                <div className="overflow-auto flex-1 p-6 space-y-5">
-                  {(assignedRubric.criteria || []).map((criteria) => (
-                      <div key={criteria.id}>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-white font-semibold text-sm">{criteria.title}</p>
-                          <p className="text-zinc-400 text-xs">
-                            {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
-                          </p>
-                        </div>
-                        <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
-                          {(criteria.items || []).map((item) => (
-                              <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
-                                    <span className="text-zinc-300 text-sm">{item.label}</span>
-                                  </div>
-                                  <p className="text-zinc-500 text-xs mt-0.5">Max: {item.maxPoints} pts</p>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <input type="number" min="0" max={item.maxPoints} step="0.25" value={rubricScores[item.id] ?? ""} onChange={(e) => handleRubricScoreChange(item.id, e.target.value)} placeholder="0" disabled={item.autoGrade} className="w-20 bg-zinc-700 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40 disabled:opacity-50 disabled:cursor-not-allowed" />
-                                  <span className="text-zinc-500 text-xs">/ {item.maxPoints}</span>
-                                </div>
-                              </div>
-                          ))}
-                        </div>
-                      </div>
-                  ))}
-                </div>
-                <div className="p-6 border-t border-zinc-700 shrink-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-zinc-300 text-sm font-medium">Total Score</p>
-                    <p className="text-white font-bold">
-                      {(assignedRubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {assignedRubric.totalPoints} pts
-                    </p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
-                    <button type="button" onClick={handleSaveRubricScores} disabled={savingRubricScore} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2" style={{ background: "#7C1D2E" }}>
-                      <CheckCircle className="w-4 h-4" />
-                      {savingRubricScore ? "Saving..." : "Save & Apply Score"}
-                    </button>
-                  </div>
+              <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-6">
+                <h2 className="text-lg font-semibold text-white mb-2">Remove Submission?</h2>
+                <p className="text-zinc-400 text-sm mb-6">
+                  This will permanently delete{" "}
+                  <span className="text-white font-medium">
+          {submissions.find(s => s.submissionId.userId === confirmDeleteUserId)?.user?.firstName}{" "}
+                    {submissions.find(s => s.submissionId.userId === confirmDeleteUserId)?.user?.lastName}
+        </span>
+                  's submission, test results, and rubric scores. This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setConfirmDeleteUserId(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+                  <button type="button" onClick={() => handleDeleteSubmission(confirmDeleteUserId)} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
+                    Yes, Remove
+                  </button>
                 </div>
               </div>
             </div>
         )}
+
+        {/* Rubric Grading Panel */}
+        {gradingStudent && assignedRubric && (() => {
+          const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
+          return (
+              <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col">
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-5 border-b border-zinc-700 shrink-0">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
+                      <p className="text-zinc-400 text-sm mt-0.5">
+                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {assignedRubric.name}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex flex-1 overflow-hidden">
+
+                    {/* Left — Submission */}
+                    <div className="flex-1 flex flex-col border-r border-zinc-700 overflow-hidden">
+                      <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
+                        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Submission</p>
+                        <p className="text-sm text-zinc-300 mt-0.5">{gradingSubmission?.fileName || "Unnamed file"}</p>
+                      </div>
+                      <div className="flex-1 overflow-auto p-5">
+              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
+                {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
+              </pre>
+                      </div>
+                    </div>
+
+                    {/* Right — Rubric */}
+                    <div className="w-96 flex flex-col overflow-hidden shrink-0">
+                      <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
+                        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Rubric</p>
+                        <p className="text-sm text-zinc-300 mt-0.5">{assignedRubric.totalPoints} total points</p>
+                      </div>
+                      <div className="flex-1 overflow-auto p-5 space-y-5">
+                        {(assignedRubric.criteria || []).map((criteria) => (
+                            <div key={criteria.id}>
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-white font-semibold text-sm">{criteria.title}</p>
+                                <p className="text-zinc-400 text-xs">
+                                  {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                                </p>
+                              </div>
+                              <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
+                                {(criteria.items || []).map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
+                                          <span className="text-zinc-300 text-sm">{item.label}</span>
+                                        </div>
+                                        <p className="text-zinc-500 text-xs mt-0.5">Max: {item.maxPoints} pts</p>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <input type="number" min="0" max={item.maxPoints} step="0.25" value={rubricScores[item.id] ?? ""} onChange={(e) => handleRubricScoreChange(item.id, e.target.value)} placeholder="0" disabled={item.autoGrade} className="w-16 bg-zinc-700 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40 disabled:opacity-50 disabled:cursor-not-allowed" />
+                                        <span className="text-zinc-500 text-xs">/ {item.maxPoints}</span>
+                                      </div>
+                                    </div>
+                                ))}
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="p-5 border-t border-zinc-700 shrink-0">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-zinc-300 text-sm font-medium">Total Score</p>
+                          <p className="text-white font-bold">
+                            {(assignedRubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {assignedRubric.totalPoints} pts
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+                          <button type="button" onClick={handleSaveRubricScores} disabled={savingRubricScore} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2" style={{ background: "#7C1D2E" }}>
+                            <CheckCircle className="w-4 h-4" />
+                            {savingRubricScore ? "Saving..." : "Save & Apply Score"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          );
+        })()}
 
         {/* Link Test Cases Dialog */}
         <Dialog isOpen={!!linkingItem} onClose={() => setLinkingItem(null)} title={`Link Test Cases — ${linkingItem?.label}`}>

@@ -43,6 +43,7 @@ export default function FacultyDashboardPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, crn: null, className: "" });
   const [formData, setFormData] = useState(initialFormData);
+  const [courseError, setCourseError] = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -78,6 +79,7 @@ export default function FacultyDashboardPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setCourseError(null);
     const existingCodes = classes.map((c) => c.code).filter(Boolean);
     const code = generateUniqueCode(existingCodes);
     const newCourse = { ...formData, code, archived: false, days: formData.days.join(",") };
@@ -87,12 +89,22 @@ export default function FacultyDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCourse),
       });
-      if (!response.ok) throw new Error("Failed to create course");
+      if (!response.ok) {
+        const msg = response.status === 409
+            ? "An active course exists with this CRN. Please try again."
+            : "Failed to create course.";
+        setCourseError(msg);
+        return;
+      }
       const savedCourse = await response.json();
       setClasses((prev) => [...prev, { ...savedCourse, days: savedCourse.days ? savedCourse.days.split(",") : [] }]);
       setIsDialogOpen(false);
       setFormData(initialFormData);
-    } catch (error) { console.error("Error creating course:", error); }
+      setCourseError(null);
+    } catch (error) {
+      console.error("Error creating course:", error);
+      setCourseError("An unexpected error occurred.");
+    }
   };
 
   const activeClasses = classes.filter((c) => !c.archived);
@@ -152,7 +164,7 @@ export default function FacultyDashboardPage() {
           {dashboardContent}
         </DashboardView>
 
-        <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} title="Add Class">
+        <Dialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setCourseError(null); }} title="Add Class">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="courseName" className={labelStyles}>Course Name</label>
@@ -216,6 +228,11 @@ export default function FacultyDashboardPage() {
               <label htmlFor="courseDescription" className={labelStyles}>Course Description</label>
               <textarea id="courseDescription" name="courseDescription" value={formData.courseDescription} onChange={handleChange} placeholder="Brief description of the course..." rows={3} className={inputStyles} />
             </div>
+            {courseError && (
+                <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                  <p className="text-red-400 text-sm">{courseError}</p>
+                </div>
+            )}
             <div className="flex gap-3 pt-4">
               <button type="button" onClick={() => setIsDialogOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors duration-200">Cancel</button>
               <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors duration-200" style={{ background: "#7C1D2E" }}>Add Class</button>

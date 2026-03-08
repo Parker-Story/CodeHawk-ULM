@@ -19,4 +19,10 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
     @Transactional
     @Query("DELETE FROM TestResult tr WHERE tr.submission.submissionId.assignmentId = :assignmentId AND tr.submission.submissionId.userId = :userId")
     void deleteBySubmission(@Param("assignmentId") Long assignmentId, @Param("userId") String userId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM TestResult tr WHERE tr.submission.submissionId.userId = :userId AND tr.submission.assignment.course.crn = :crn")
+    void deleteByUserIdAndCourseCrn(@Param("userId") String userId, @Param("crn") String crn);
+
 }

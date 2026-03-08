@@ -40,6 +40,7 @@ export default function CourseDetailPage() {
   const csvInputRef = useRef(null);
   const router = useRouter();
   const { user } = useAuth();
+  const [promoteTaError, setPromoteTaError] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -141,13 +142,25 @@ export default function CourseDetailPage() {
 
   const handlePromoteToTa = async () => {
     const courseUser = promoteTaConfirm.courseUser;
+    setPromoteTaError(null);
     try {
       const response = await fetch(`${API_BASE}/courseUser/promote-ta/${crn}/${courseUser.user.id}`, { method: "PUT" });
-      if (!response.ok) throw new Error("Failed to promote to TA");
+      if (!response.ok) {
+        const text = await response.text();
+        const msg = text?.includes("existing submissions")
+            ? "This student has existing submissions and cannot be promoted to TA."
+            : "Failed to promote to TA. Students who have submissions in this course cannot be assigned the TA role.";
+        setPromoteTaError(msg);
+        return;
+      }
       const updated = await response.json();
       setRoster((prev) => prev.map((s) => s.user.id === courseUser.user.id ? updated : s));
       setPromoteTaConfirm({ isOpen: false, courseUser: null });
-    } catch (error) { console.error("Error promoting to TA:", error); }
+      setPromoteTaError(null);
+    } catch (error) {
+      console.error("Error promoting to TA:", error);
+      setPromoteTaError("An unexpected error occurred.");
+    }
   };
 
   const handleDemoteFromTa = async (courseUser) => {
@@ -451,10 +464,15 @@ export default function CourseDetailPage() {
         </Dialog>
 
         {/* Promote to TA */}
-        <Dialog isOpen={promoteTaConfirm.isOpen} onClose={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })} title="Promote to TA" size="sm">
+        <Dialog isOpen={promoteTaConfirm.isOpen} onClose={() => { setPromoteTaConfirm({ isOpen: false, courseUser: null }); setPromoteTaError(null); }} title="Promote to TA" size="sm">
           <div className="space-y-4">
             <p className="text-zinc-300">Are you sure you want to make <span className="font-semibold text-white">{promoteTaConfirm.courseUser?.user?.firstName} {promoteTaConfirm.courseUser?.user?.lastName}</span> a TA for this course?</p>
             <p className="text-zinc-400 text-sm">They will have additional permissions such as viewing and grading student assignments.</p>
+            {promoteTaError && (
+                <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                  <p className="text-red-400 text-sm">{promoteTaError}</p>
+                </div>
+            )}
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setPromoteTaConfirm({ isOpen: false, courseUser: null })} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
               <button type="button" onClick={handlePromoteToTa} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Promote to TA</button>
