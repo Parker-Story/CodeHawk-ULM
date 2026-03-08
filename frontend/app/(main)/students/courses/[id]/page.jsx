@@ -280,7 +280,14 @@ export default function StudentCourseDetailPage() {
                                 )}
                               </div>
                               {submissions[a.id] && (
-                                  <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {a.scoresVisible && submissions[a.id]?.score !== null && submissions[a.id]?.score !== undefined && (
+                                        <span className="text-sm font-semibold" style={{ color: "#C9A84C" }}>
+                                          {submissions[a.id].score}%
+                                        </span>
+                                    )}
+                                    <CheckCircle className="w-5 h-5 text-green-400" />
+                                  </div>
                               )}
                             </button>
                         ))
@@ -304,7 +311,7 @@ export default function StudentCourseDetailPage() {
                     </div>
                     <div>
                       <h2 className="text-lg font-semibold text-white">{selectedAssignment.title}</h2>
-                      {existingSubmission?.score !== null && existingSubmission?.score !== undefined && (
+                      {existingSubmission?.score !== null && existingSubmission?.score !== undefined && selectedAssignment?.scoresVisible && (
                           <p className="text-sm mt-1">
                             <span className="text-zinc-400">Score: </span>
                             <span className="font-semibold" style={{ color: "#C9A84C" }}>{existingSubmission.score} / 100</span>

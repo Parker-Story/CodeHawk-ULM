@@ -23,6 +23,9 @@ public class Assignment {
     @OneToMany(mappedBy = "assignment")
     private List<Submission> submissions;
 
+    @Column(name = "scores_visible", nullable = false)
+    private boolean scoresVisible = false;
+
     // ----- Constructors -----
     public Assignment() {}
     public Assignment(Course course, String title) {
@@ -39,4 +42,6 @@ public class Assignment {
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public boolean isScoresVisible() { return scoresVisible; }
+    public void setScoresVisible(boolean scoresVisible) { this.scoresVisible = scoresVisible; }
 }
