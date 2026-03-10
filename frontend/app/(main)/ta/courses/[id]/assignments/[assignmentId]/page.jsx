@@ -17,6 +17,8 @@ export default function TAGradingWorkspacePage() {
     const [savingScore, setSavingScore] = useState({});
     const [rubric, setRubric] = useState(null);
     const [rubricExpanded, setRubricExpanded] = useState(false);
+    const [feedbackInputs, setFeedbackInputs] = useState({});
+    const [savingFeedback, setSavingFeedback] = useState({});
 
     useEffect(() => {
         fetch(`${API_BASE}/assignment/${assignmentId}`)
@@ -45,7 +47,13 @@ export default function TAGradingWorkspacePage() {
                 const list = Array.isArray(data) ? data : [];
                 setSubmissions(list);
                 const inputs = {};
-                list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
+                const feedbacks = {}; // this line is missing
+                list.forEach((s) => {
+                    inputs[s.submissionId.userId] = s.score ?? "";
+                    feedbacks[s.submissionId.userId] = s.feedback ?? "";
+                });
+                setScoreInputs(inputs);
+                setFeedbackInputs(feedbacks);
                 setScoreInputs(inputs);
                 setLoading(false);
             })
@@ -67,6 +75,18 @@ export default function TAGradingWorkspacePage() {
             setSubmissions((prev) => prev.map((s) => (s.submissionId.userId === userId ? updated : s)));
         } catch (error) { console.error("Error saving score:", error); }
         finally { setSavingScore((prev) => ({ ...prev, [userId]: false })); }
+    };
+
+    const handleSaveFeedback = async (userId) => {
+        setSavingFeedback((prev) => ({ ...prev, [userId]: true }));
+        try {
+            await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ feedback: feedbackInputs[userId] ?? "" }),
+            });
+        } catch (err) { console.error(err); }
+        finally { setSavingFeedback((prev) => ({ ...prev, [userId]: false })); }
     };
 
     if (loading) return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
@@ -148,11 +168,12 @@ export default function TAGradingWorkspacePage() {
                             <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                             <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
                             <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
+                            <th className="text-left py-3 px-4 font-semibold text-white">Feedback</th>
                         </tr>
                         </thead>
                         <tbody>
                         {submissions.length === 0 ? (
-                            <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                            <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                         ) : (
                             submissions.map((s) => {
                                 const userId = s.submissionId.userId;
@@ -199,6 +220,28 @@ export default function TAGradingWorkspacePage() {
                                                 Open Solution
                                             </button>
                                         </td>
+
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={feedbackInputs[userId] ?? ""}
+                                                    onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [userId]: e.target.value }))}
+                                                    placeholder="Add feedback..."
+                                                    className="w-48 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40 placeholder-zinc-500"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSaveFeedback(userId)}
+                                                    disabled={savingFeedback[userId]}
+                                                    className="px-3 py-1 text-xs font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                                                    style={{ background: "#7C1D2E" }}
+                                                >
+                                                    {savingFeedback[userId] ? "..." : "Save"}
+                                                </button>
+                                            </div>
+                                        </td>
+
                                     </tr>
                                 );
                             })

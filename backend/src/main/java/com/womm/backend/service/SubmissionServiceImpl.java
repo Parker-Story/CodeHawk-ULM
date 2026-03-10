@@ -103,4 +103,12 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setScore(score);
         return submissionRepository.save(submission);
     }
+
+    @Override
+    public Submission saveFeedback(Long assignmentId, String userId, String feedback) {
+        Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+        submission.setFeedback(feedback);
+        return submissionRepository.save(submission);
+    }
 }

@@ -26,4 +26,9 @@ public interface AssignmentRubricItemTestCaseRepository extends JpaRepository<As
             @Param("assignmentId") Long assignmentId,
             @Param("rubricItemId") Long rubricItemId
     );
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM AssignmentRubricItemTestCase a WHERE a.assignment.id = :assignmentId")
+    void deleteByAssignmentId(@Param("assignmentId") Long assignmentId);
 }

@@ -26,6 +26,15 @@ public class Assignment {
     @Column(name = "scores_visible", nullable = false)
     private boolean scoresVisible = false;
 
+    @Column(name = "input_mode", nullable = false)
+    private String inputMode = "STDIN";
+
+    @Column(name = "input_file_name")
+    private String inputFileName;
+
+    @Column(name = "input_file_content", columnDefinition = "LONGTEXT")
+    private String inputFileContent;
+
     // ----- Constructors -----
     public Assignment() {}
     public Assignment(Course course, String title) {
@@ -44,4 +53,10 @@ public class Assignment {
     public void setDescription(String description) { this.description = description; }
     public boolean isScoresVisible() { return scoresVisible; }
     public void setScoresVisible(boolean scoresVisible) { this.scoresVisible = scoresVisible; }
+    public String getInputMode() { return inputMode; }
+    public void setInputMode(String inputMode) { this.inputMode = inputMode; }
+    public String getInputFileName() { return inputFileName; }
+    public void setInputFileName(String inputFileName) { this.inputFileName = inputFileName; }
+    public String getInputFileContent() { return inputFileContent; }
+    public void setInputFileContent(String inputFileContent) { this.inputFileContent = inputFileContent; }
 }

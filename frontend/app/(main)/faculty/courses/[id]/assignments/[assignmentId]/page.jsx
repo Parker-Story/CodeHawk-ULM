@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link, MoreVertical } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link, MoreVertical, FileInput } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +44,10 @@ export default function GradingWorkspacePage() {
   const [expandedPair, setExpandedPair] = useState(null);
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
+  const [feedbackInputs, setFeedbackInputs] = useState({});
+  const [savingFeedback, setSavingFeedback] = useState({});
 
+  const isFileMode = assignment?.inputMode === "FILE";
 
   useEffect(() => {
     fetch(`${API_BASE}/assignment/${assignmentId}`)
@@ -58,8 +61,13 @@ export default function GradingWorkspacePage() {
           const list = Array.isArray(data) ? data : [];
           setSubmissions(list);
           const inputs = {};
-          list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
+          const feedbacks = {};
+          list.forEach((s) => {
+            inputs[s.submissionId.userId] = s.score ?? "";
+            feedbacks[s.submissionId.userId] = s.feedback ?? "";
+          });
           setScoreInputs(inputs);
+          setFeedbackInputs(feedbacks);
           setLoading(false);
         })
         .catch((err) => { console.error(err); setLoading(false); });
@@ -309,6 +317,18 @@ export default function GradingWorkspacePage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleSaveFeedback = async (userId) => {
+    setSavingFeedback((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: feedbackInputs[userId] ?? "" }),
+      });
+    } catch (err) { console.error(err); }
+    finally { setSavingFeedback((prev) => ({ ...prev, [userId]: false })); }
+  };
+
   const getResultsForStudent = (userId) => testResults.filter((r) => r.submission?.submissionId?.userId === userId);
 
   if (loading) return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
@@ -323,23 +343,28 @@ export default function GradingWorkspacePage() {
           </button>
 
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-white">Grading Workspace</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-white">Grading Workspace</h1>
+              {isFileMode && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{ background: "#C9A84C22", color: "#C9A84C" }}>
+                  <FileInput className="w-3.5 h-3.5" /> File Input — {assignment.inputFileName}
+                </span>
+              )}
+            </div>
             <p className="text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
           </div>
-
 
           {/* Submissions Table */}
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Submissions</h2>
               <div className="flex items-center gap-3">
-                {/* Scores visible toggle */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-zinc-400">Show scores to students</span>
                   <button
                       type="button"
                       onClick={handleToggleScoresVisible}
-                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors`}
+                      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
                       style={assignment?.scoresVisible ? { background: "#7C1D2E" } : { background: "#52525b" }}
                   >
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${assignment?.scoresVisible ? "translate-x-6" : "translate-x-1"}`} />
@@ -405,9 +430,9 @@ export default function GradingWorkspacePage() {
                               <td className="py-3 px-4">
                                 {studentResults.length > 0 ? (
                                     <button type="button" onClick={() => setExpandedStudent(isExpanded ? null : userId)} className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors">
-                        <span className={studentResults.filter(r => r.passed).length === studentResults.length ? "text-green-400" : "text-red-400"}>
-                          {studentResults.filter(r => r.passed).length}/{studentResults.length} passed
-                        </span>
+                                      <span className={studentResults.filter(r => r.passed).length === studentResults.length ? "text-green-400" : "text-red-400"}>
+                                        {studentResults.filter(r => r.passed).length}/{studentResults.length} passed
+                                      </span>
                                       {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                     </button>
                                 ) : (
@@ -548,7 +573,12 @@ export default function GradingWorkspacePage() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-white">Test Cases</h2>
-                <p className="text-zinc-400 text-xs mt-0.5">Test cases run automatically when a student submits.</p>
+                <p className="text-zinc-400 text-xs mt-0.5">
+                  {isFileMode
+                      ? `Test cases check output only — input is read from ${assignment.inputFileName}.`
+                      : "Test cases run automatically when a student submits."
+                  }
+                </p>
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setImportSuiteOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
@@ -574,10 +604,18 @@ export default function GradingWorkspacePage() {
                       </label>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-zinc-400 block mb-1">Input (stdin)</label>
-                    <textarea rows={2} value={newTestCase.input} onChange={(e) => setNewTestCase((prev) => ({ ...prev, input: e.target.value }))} placeholder="Leave blank if program takes no input" className={inputClass} />
-                  </div>
+                  {!isFileMode && (
+                      <div>
+                        <label className="text-xs font-medium text-zinc-400 block mb-1">Input (stdin)</label>
+                        <textarea rows={2} value={newTestCase.input} onChange={(e) => setNewTestCase((prev) => ({ ...prev, input: e.target.value }))} placeholder="Leave blank if program takes no input" className={inputClass} />
+                      </div>
+                  )}
+                  {isFileMode && (
+                      <div className="flex items-center gap-2 p-3 bg-zinc-800 border border-zinc-700 rounded-lg">
+                        <FileInput className="w-4 h-4 shrink-0" style={{ color: "#C9A84C" }} />
+                        <p className="text-zinc-400 text-xs">Input will be read from <span className="text-zinc-300 font-medium">{assignment.inputFileName}</span> at runtime.</p>
+                      </div>
+                  )}
                   <div>
                     <label className="text-xs font-medium text-zinc-400 block mb-1">Expected Output</label>
                     <textarea rows={2} value={newTestCase.expectedOutput} onChange={(e) => setNewTestCase((prev) => ({ ...prev, expectedOutput: e.target.value }))} placeholder="Expected stdout output" className={inputClass} />
@@ -601,7 +639,9 @@ export default function GradingWorkspacePage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-white text-sm font-medium">{tc.label || `Test Case ${tc.id}`}{tc.hidden && <span className="ml-2 text-xs text-zinc-500">(hidden)</span>}</p>
-                            <p className="text-zinc-400 text-xs mt-1">Input: <span className="font-mono text-zinc-300">{tc.input || "(none)"}</span></p>
+                            {!isFileMode && (
+                                <p className="text-zinc-400 text-xs mt-1">Input: <span className="font-mono text-zinc-300">{tc.input || "(none)"}</span></p>
+                            )}
                             <p className="text-zinc-400 text-xs mt-0.5">Expected: <span className="font-mono text-zinc-300">{tc.expectedOutput}</span></p>
                           </div>
                         </div>
@@ -643,9 +683,9 @@ export default function GradingWorkspacePage() {
                 <p className="text-zinc-400 text-sm mb-6">
                   This will permanently delete{" "}
                   <span className="text-white font-medium">
-          {submissions.find(s => s.submissionId.userId === confirmDeleteUserId)?.user?.firstName}{" "}
+                    {submissions.find(s => s.submissionId.userId === confirmDeleteUserId)?.user?.firstName}{" "}
                     {submissions.find(s => s.submissionId.userId === confirmDeleteUserId)?.user?.lastName}
-        </span>
+                  </span>
                   's submission, test results, and rubric scores. This cannot be undone.
                 </p>
                 <div className="flex gap-3">
@@ -664,8 +704,6 @@ export default function GradingWorkspacePage() {
           return (
               <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                 <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col">
-
-                  {/* Header */}
                   <div className="flex items-center justify-between p-5 border-b border-zinc-700 shrink-0">
                     <div>
                       <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
@@ -677,24 +715,18 @@ export default function GradingWorkspacePage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-
-                  {/* Body */}
                   <div className="flex flex-1 overflow-hidden">
-
-                    {/* Left — Submission */}
                     <div className="flex-1 flex flex-col border-r border-zinc-700 overflow-hidden">
                       <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Submission</p>
                         <p className="text-sm text-zinc-300 mt-0.5">{gradingSubmission?.fileName || "Unnamed file"}</p>
                       </div>
                       <div className="flex-1 overflow-auto p-5">
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
-                {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
-              </pre>
+                        <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
+                          {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
+                        </pre>
                       </div>
                     </div>
-
-                    {/* Right — Rubric */}
                     <div className="w-96 flex flex-col overflow-hidden shrink-0">
                       <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Rubric</p>
@@ -729,8 +761,25 @@ export default function GradingWorkspacePage() {
                             </div>
                         ))}
                       </div>
-
-                      {/* Footer */}
+                      <div className="px-5 pb-3 border-t border-zinc-700 pt-4 shrink-0">
+                        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Feedback</p>
+                        <textarea
+                            rows={3}
+                            value={feedbackInputs[gradingStudent] ?? ""}
+                            onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [gradingStudent]: e.target.value }))}
+                            placeholder="Leave feedback for the student..."
+                            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => handleSaveFeedback(gradingStudent)}
+                            disabled={savingFeedback[gradingStudent]}
+                            className="mt-2 w-full py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50"
+                            style={{ background: "#3f3f46" }}
+                        >
+                          {savingFeedback[gradingStudent] ? "Saving..." : "Save Feedback"}
+                        </button>
+                      </div>
                       <div className="p-5 border-t border-zinc-700 shrink-0">
                         <div className="flex items-center justify-between mb-4">
                           <p className="text-zinc-300 text-sm font-medium">Total Score</p>

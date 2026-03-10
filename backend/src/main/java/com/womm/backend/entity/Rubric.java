@@ -31,6 +31,9 @@ public class Rubric {
     @OrderBy("displayOrder ASC")
     private List<RubricCriteria> criteria;
 
+    @Column(nullable = false)
+    private boolean weighted = false;
+
     public Rubric() {}
 
     public Long getId() { return id; }
@@ -47,4 +50,6 @@ public class Rubric {
     public void setTotalPoints(double totalPoints) { this.totalPoints = totalPoints; }
     public List<RubricCriteria> getCriteria() { return criteria; }
     public void setCriteria(List<RubricCriteria> criteria) { this.criteria = criteria; }
+    public boolean isWeighted() { return weighted; }
+    public void setWeighted(boolean weighted) { this.weighted = weighted; }
 }

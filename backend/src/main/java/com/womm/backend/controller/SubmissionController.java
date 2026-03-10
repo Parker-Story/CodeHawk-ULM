@@ -59,4 +59,12 @@ public class SubmissionController {
         @RequestBody Map<String, Integer> body) {
         return submissionService.scoreSubmission(assignmentId, userId, body.get("score"));
     }
+
+    @PutMapping("/feedback/{assignmentId}/{userId}")
+    public Submission saveFeedback(
+            @PathVariable Long assignmentId,
+            @PathVariable String userId,
+            @RequestBody Map<String, String> body) {
+        return submissionService.saveFeedback(assignmentId, userId, body.get("feedback"));
+    }
 }

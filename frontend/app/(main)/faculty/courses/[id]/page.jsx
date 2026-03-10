@@ -302,6 +302,7 @@ export default function CourseDetailPage() {
                     {[
                       { label: "View Roster", icon: BookOpen, onClick: handleViewRoster },
                       { label: "Add Student", icon: Plus, onClick: () => { setAddStudentOpen(true); setCsvResult(null); } },
+                      { label: "Grade Report", icon: BarChart3, onClick: () => setGradeReportOpen(true) },
                     ].map(({ label, icon: Icon, onClick }) => (
                         <button
                             key={label}
@@ -329,7 +330,7 @@ export default function CourseDetailPage() {
         </div>
 
         <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(a) => setAssignments((prev) => [...prev, a])} />
-        <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} />
+        <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} crn={crn} />
 
         {/* Edit Assignment */}
         <Dialog isOpen={!!editAssignment} onClose={() => setEditAssignment(null)} title="Edit Assignment">

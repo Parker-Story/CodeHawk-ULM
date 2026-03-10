@@ -9,14 +9,14 @@ import java.util.Map;
 import com.womm.backend.entity.AssignmentRubricItemTestCase;
 
 public interface RubricService {
-    Rubric createRubric(String name, String description, boolean visible, String userId);
+    Rubric createRubric(String name, String description, boolean visible, boolean weighted, String userId);
     List<Rubric> getRubricsByUser(String userId);
     Rubric getRubric(Long id);
     Rubric updateRubric(Long id, String name, String description, boolean visible);
     void deleteRubric(Long id);
     Rubric copyRubric(Long id);
 
-    RubricCriteria addCriteria(Long rubricId, String title, int displayOrder);
+    RubricCriteria addCriteria(Long rubricId, String title, double weight, int displayOrder);
     void deleteCriteria(Long criteriaId);
 
     RubricItem addItem(Long criteriaId, String label, double maxPoints, boolean autoGrade, int displayOrder);

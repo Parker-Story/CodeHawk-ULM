@@ -330,7 +330,7 @@ export default function StudentCourseDetailPage() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-zinc-700">
-                  {["description", "upload", ...(existingSubmission ? ["results"] : [])].map((tab) => (
+                  {["description", "upload", ...(existingSubmission ? ["results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
                           type="button"
@@ -343,7 +343,7 @@ export default function StudentCourseDetailPage() {
                           style={activeTab === tab ? { borderColor: "#C9A84C", color: "#C9A84C" } : {}}
                       >
                         {tab === "results" && <FlaskConical className="w-3.5 h-3.5" />}
-                        {tab === "description" ? "Description" : tab === "upload" ? "Upload Solution" : "Test Results"}
+                        {tab === "description" ? "Description" : tab === "upload" ? "Upload Solution" : tab === "results" ? "Test Results" : "Feedback"}
                       </button>
                   ))}
                 </div>
@@ -508,6 +508,15 @@ export default function StudentCourseDetailPage() {
                               ))}
                             </div>
                         )}
+                      </div>
+                  )}
+
+                  {activeTab === "feedback" && (
+                      <div className="p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
+                        <p className="text-sm font-medium text-zinc-300 mb-2">Instructor Feedback</p>
+                        <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                          {existingSubmission.feedback}
+                        </p>
                       </div>
                   )}
                 </div>

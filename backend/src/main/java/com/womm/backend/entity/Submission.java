@@ -27,6 +27,9 @@ public class Submission {
     @Column(name = "score")
     private Integer score;
 
+    @Column(name = "feedback", columnDefinition = "TEXT")
+    private String feedback;
+
     // ----- Constructors -----
     public Submission() {}
     public Submission(User user, Assignment assignment) {
@@ -47,4 +50,6 @@ public class Submission {
     public void setFileContent(String fileContent) { this.fileContent = fileContent; }
     public Integer getScore() { return score; }
     public void setScore(Integer score) { this.score = score; }
+    public String getFeedback() { return feedback; }
+    public void setFeedback(String feedback) { this.feedback = feedback; }
 }

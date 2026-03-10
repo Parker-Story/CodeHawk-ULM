@@ -12,7 +12,7 @@ public class CodeExecutionService {
 
     private static final int TIMEOUT_SECONDS = 10;
 
-    public ExecutionResult execute(String base64Code, String fileName, String input) {
+    public ExecutionResult execute(String base64Code, String fileName, String input, String inputFileBase64, String inputFileName) {
         String tempDir = System.getProperty("java.io.tmpdir");
         String uniqueId = UUID.randomUUID().toString().replace("-", "");
         Path workDir = Paths.get(tempDir, "codehawk_" + uniqueId);
@@ -24,6 +24,12 @@ public class CodeExecutionService {
             String extension = getExtension(fileName);
             Path codeFile = workDir.resolve(fileName);
             Files.writeString(codeFile, code);
+
+            // Write input file to work directory if provided
+            if (inputFileBase64 != null && !inputFileBase64.isEmpty() && inputFileName != null) {
+                byte[] fileBytes = Base64.getDecoder().decode(inputFileBase64);
+                Files.write(workDir.resolve(inputFileName), fileBytes);
+            }
 
             if (extension.equals("java")) {
                 return executeJava(workDir, fileName, input);
@@ -37,6 +43,11 @@ public class CodeExecutionService {
         } finally {
             deleteDirectory(workDir);
         }
+    }
+
+    // Keep old signature for backward compatibility
+    public ExecutionResult execute(String base64Code, String fileName, String input) {
+        return execute(base64Code, fileName, input, null, null);
     }
 
     private ExecutionResult executeJava(Path workDir, String fileName, String input) throws Exception {
