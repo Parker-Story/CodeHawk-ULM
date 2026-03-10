@@ -11,11 +11,12 @@ export default function RubricsPage() {
     const [rubrics, setRubrics] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newRubricOpen, setNewRubricOpen] = useState(false);
-    const [newRubric, setNewRubric] = useState({ name: "", description: "", visible: false });
+    const [newRubric, setNewRubric] = useState({ name: "", description: "", visible: false, weighted: false });
     const [expandedRubric, setExpandedRubric] = useState(null);
     const [rubricDetails, setRubricDetails] = useState({});
     const [addingCriteria, setAddingCriteria] = useState(null);
     const [newCriteriaTitle, setNewCriteriaTitle] = useState("");
+    const [newCriteriaWeight, setNewCriteriaWeight] = useState("");
     const [addingItem, setAddingItem] = useState(null);
     const [newItem, setNewItem] = useState({ label: "", maxPoints: "", autoGrade: false });
     const [editingRubric, setEditingRubric] = useState(null);
@@ -40,7 +41,7 @@ export default function RubricsPage() {
             if (!res.ok) throw new Error("Failed to create rubric");
             const created = await res.json();
             setRubrics((prev) => [...prev, created]);
-            setNewRubric({ name: "", description: "", visible: false });
+            setNewRubric({ name: "", description: "", visible: false, weighted: false });
             setNewRubricOpen(false);
         } catch (err) { console.error(err); }
     };
@@ -90,11 +91,21 @@ export default function RubricsPage() {
         if (!newCriteriaTitle) return;
         const currentCriteria = rubricDetails[rubricId]?.criteria || [];
         try {
-            const res = await fetch(`${API_BASE}/rubric/${rubricId}/criteria`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: newCriteriaTitle, displayOrder: currentCriteria.length }) });
+            const res = await fetch(`${API_BASE}/rubric/${rubricId}/criteria`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: newCriteriaTitle,
+                    weight: newCriteriaWeight ? parseFloat(newCriteriaWeight) : 0,
+                    displayOrder: currentCriteria.length
+                })
+            });
             if (!res.ok) throw new Error("Failed to add criteria");
             const created = await res.json();
             setRubricDetails((prev) => ({ ...prev, [rubricId]: { ...prev[rubricId], criteria: [...(prev[rubricId]?.criteria || []), { ...created, items: [] }] } }));
-            setNewCriteriaTitle(""); setAddingCriteria(null);
+            setNewCriteriaTitle("");
+            setNewCriteriaWeight("");
+            setAddingCriteria(null);
         } catch (err) { console.error(err); }
     };
 
@@ -198,8 +209,11 @@ export default function RubricsPage() {
                                                         : <EyeOff className="w-3.5 h-3.5 text-zinc-500" />
                                                     }
                                                 </div>
-                                                <p className="text-zinc-400 text-xs mt-0.5">
+                                                <p className="text-zinc-400 text-xs mt-0.5 flex items-center gap-1.5">
                                                     {rubric.totalPoints} point{rubric.totalPoints !== 1 ? "s" : ""}
+                                                    {rubric.weighted && (
+                                                        <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: "#C9A84C22", color: "#C9A84C" }}>weighted</span>
+                                                    )}
                                                     {rubric.description && ` • ${rubric.description}`}
                                                 </p>
                                             </div>
@@ -232,6 +246,9 @@ export default function RubricsPage() {
                                                     <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700/50">
                                                         <p className="text-white font-medium text-sm">{criteria.title}</p>
                                                         <div className="flex items-center gap-2">
+                                                            {rubricDetails[rubric.id]?.weighted && criteria.weight > 0 && (
+                                                                <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#C9A84C22", color: "#C9A84C" }}>{criteria.weight}%</span>
+                                                            )}
                                                             <span className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</span>
                                                             <button type="button" onClick={() => handleDeleteCriteria(rubric.id, criteria.id)} className="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -285,11 +302,14 @@ export default function RubricsPage() {
                                         {addingCriteria === rubric.id ? (
                                             <div className="flex gap-2">
                                                 <input type="text" value={newCriteriaTitle} onChange={(e) => setNewCriteriaTitle(e.target.value)} placeholder="Section title (e.g. Main function)" className={inputClass} />
-                                                <button type="button" onClick={() => { setAddingCriteria(null); setNewCriteriaTitle(""); }} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors shrink-0"><X className="w-4 h-4" /></button>
+                                                {rubricDetails[rubric.id]?.weighted && (
+                                                    <input type="number" value={newCriteriaWeight} onChange={(e) => setNewCriteriaWeight(e.target.value)} placeholder="Weight %" min="0" max="100" step="1" className="w-24 bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm shrink-0" />
+                                                )}
+                                                <button type="button" onClick={() => { setAddingCriteria(null); setNewCriteriaTitle(""); setNewCriteriaWeight(""); }} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors shrink-0"><X className="w-4 h-4" /></button>
                                                 <button type="button" onClick={() => handleAddCriteria(rubric.id)} disabled={!newCriteriaTitle} className="p-2 text-white rounded-lg transition-colors disabled:opacity-50 shrink-0" style={{ background: "#7C1D2E" }}><Check className="w-4 h-4" /></button>
                                             </div>
                                         ) : (
-                                            <button type="button" onClick={() => { setAddingCriteria(rubric.id); setNewCriteriaTitle(""); }} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors hover:opacity-80" style={{ color: "#C9A84C" }}>
+                                            <button type="button" onClick={() => { setAddingCriteria(rubric.id); setNewCriteriaTitle(""); setNewCriteriaWeight(""); }} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors hover:opacity-80" style={{ color: "#C9A84C" }}>
                                                 <Plus className="w-4 h-4" /> Add Section
                                             </button>
                                         )}
@@ -314,6 +334,10 @@ export default function RubricsPage() {
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={newRubric.visible} onChange={(e) => setNewRubric((p) => ({ ...p, visible: e.target.checked }))} className="w-4 h-4" />
                         <span className="text-sm text-zinc-300">Visible to students</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={newRubric.weighted} onChange={(e) => setNewRubric((p) => ({ ...p, weighted: e.target.checked }))} className="w-4 h-4" />
+                        <span className="text-sm text-zinc-300">Weighted criteria</span>
                     </label>
                     <div className="flex gap-3 pt-2">
                         <button type="button" onClick={() => setNewRubricOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>

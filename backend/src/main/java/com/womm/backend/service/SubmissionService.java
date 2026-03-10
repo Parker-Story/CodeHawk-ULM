@@ -11,4 +11,5 @@ public interface SubmissionService {
     Submission submitAssignment(Long assignmentId, String userId, Submission submission);
     List<Submission> getSubmissionsByAssignment(Long assignmentId);
     Submission scoreSubmission(Long assignmentId, String userId, Integer score);
+    Submission saveFeedback(Long assignmentId, String userId, String feedback);
 }

@@ -57,18 +57,26 @@ public class TestCaseServiceImpl implements TestCaseService {
         Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
 
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
         List<TestCase> testCases = testCaseRepository.findByAssignmentId(assignmentId);
         if (testCases.isEmpty()) return new ArrayList<>();
 
-        // Delete old results first
         testResultRepository.deleteBySubmission(assignmentId, userId);
+
+        boolean isFileMode = "FILE".equals(assignment.getInputMode());
+        String inputFileBase64 = isFileMode ? assignment.getInputFileContent() : null;
+        String inputFileName = isFileMode ? assignment.getInputFileName() : null;
 
         List<TestResult> results = new ArrayList<>();
         for (TestCase testCase : testCases) {
             CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
                     submission.getFileContent(),
                     submission.getFileName(),
-                    testCase.getInput()
+                    isFileMode ? null : testCase.getInput(),
+                    inputFileBase64,
+                    inputFileName
             );
 
             TestResult result = new TestResult();
@@ -83,7 +91,6 @@ public class TestCaseServiceImpl implements TestCaseService {
             results.add(testResultRepository.save(result));
         }
 
-        // Auto-score based on passed test cases
         long passed = results.stream().filter(TestResult::isPassed).count();
         int score = testCases.isEmpty() ? 0 : (int) Math.round((double) passed / testCases.size() * 100);
         submission.setScore(score);

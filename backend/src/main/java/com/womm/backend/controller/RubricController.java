@@ -23,6 +23,7 @@ public class RubricController {
                 (String) body.get("name"),
                 (String) body.get("description"),
                 body.get("visible") != null && (Boolean) body.get("visible"),
+                body.get("weighted") != null && (Boolean) body.get("weighted"),
                 userId
         );
     }
@@ -62,6 +63,7 @@ public class RubricController {
         return rubricService.addCriteria(
                 rubricId,
                 (String) body.get("title"),
+                body.get("weight") != null ? ((Number) body.get("weight")).doubleValue() : 0,
                 body.get("displayOrder") != null ? (Integer) body.get("displayOrder") : 0
         );
     }
