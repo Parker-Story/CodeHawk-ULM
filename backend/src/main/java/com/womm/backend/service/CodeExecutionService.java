@@ -50,6 +50,8 @@ public class CodeExecutionService {
         return execute(base64Code, fileName, input, null, null);
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CodeExecutionService.class);
+
     private ExecutionResult executeJava(Path workDir, String fileName, String input) throws Exception {
         // Compile
         ProcessBuilder compileBuilder = new ProcessBuilder("javac", fileName);
@@ -59,17 +61,17 @@ public class CodeExecutionService {
         String compileOutput = readStream(compileProcess.getInputStream());
         compileProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
+        log.info("CODEHAWK javac exit={} output={}", compileProcess.exitValue(), compileOutput);
+
         if (compileProcess.exitValue() != 0) {
             return new ExecutionResult("", "Compilation error:\n" + compileOutput, compileProcess.exitValue());
         }
 
-        // Run - class name is filename without .java
         String className = fileName.replace(".java", "");
         ProcessBuilder runBuilder = new ProcessBuilder("java", "-cp", ".", className);
         runBuilder.directory(workDir.toFile());
         Process runProcess = runBuilder.start();
 
-        // Feed input
         if (input != null && !input.isEmpty()) {
             try (OutputStream stdin = runProcess.getOutputStream()) {
                 stdin.write(input.getBytes());
@@ -80,6 +82,8 @@ public class CodeExecutionService {
         String stdout = readStream(runProcess.getInputStream());
         String stderr = readStream(runProcess.getErrorStream());
         boolean finished = runProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        log.info("CODEHAWK java exit={} stdout={} stderr={}", runProcess.exitValue(), stdout, stderr);
 
         if (!finished) {
             runProcess.destroyForcibly();

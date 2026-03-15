@@ -4,6 +4,7 @@ import com.womm.backend.service.SubmissionService;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping(path="/submission")
@@ -20,8 +21,10 @@ public class SubmissionController {
     }
 
     @GetMapping("/{userId}/{assignmentId}")
-    public Submission getSubmissionDetails(@PathVariable String userId, @PathVariable Long assignmentId) {
-        return submissionService.getSubmission(userId, assignmentId);
+    public ResponseEntity<Submission> getSubmissionDetails(@PathVariable String userId, @PathVariable Long assignmentId) {
+        Submission submission = submissionService.getSubmission(userId, assignmentId);
+        if (submission == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(submission);
     }
 
     @GetMapping

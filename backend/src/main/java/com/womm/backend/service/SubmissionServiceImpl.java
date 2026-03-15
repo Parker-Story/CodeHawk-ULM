@@ -51,7 +51,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     public Submission getSubmission(String userId, Long assignmentId) {
-        return submissionRepository.findById(new SubmissionId(userId, assignmentId)).get();
+        return submissionRepository.findById(new SubmissionId(userId, assignmentId)).orElse(null);
     }
 
     @Override
