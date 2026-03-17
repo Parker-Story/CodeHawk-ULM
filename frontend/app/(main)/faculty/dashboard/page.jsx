@@ -146,12 +146,11 @@ export default function FacultyDashboardPage() {
                   {" · "}{classItem.startTime} - {classItem.endTime}
             </span>
               </div>
-              <div className="mt-4 pt-4 border-t border-zinc-700 space-y-1">
-                <p className="text-zinc-500 text-xs">
+              <div className="mt-4 pt-4 border-t border-zinc-700">
+                <p className="text-zinc-400 text-sm font-medium">
                   {classItem.semester.charAt(0).toUpperCase() + classItem.semester.slice(1)} {classItem.year}
                   {" · "}CRN: {classItem.crn}
                 </p>
-                <p className="text-xs font-medium" style={{ color: "#C9A84C" }}>Class code: {classItem.code}</p>
               </div>
             </div>
         ))}

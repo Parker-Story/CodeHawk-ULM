@@ -1,9 +1,9 @@
 "use client";
 
 import { API_BASE } from "@/lib/apiBase";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef} from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog, Upload } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog, Upload, Eye, EyeOff, Maximize2 } from "lucide-react";
 import Link from "next/link";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import NewAssignmentDialog from "@/components/faculty/NewAssignmentDialog";
@@ -41,6 +41,8 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [promoteTaError, setPromoteTaError] = useState(null);
+  const [codeVisible, setCodeVisible] = useState(false);
+  const [codeDisplayOpen, setCodeDisplayOpen] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -228,7 +230,18 @@ export default function CourseDetailPage() {
                         <p className="font-medium mt-1" style={{ color: "#C9A84C" }}>{classItem.courseAbbreviation}</p>
                         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
                           <span className="text-zinc-300"><span className="text-zinc-500">CRN:</span> {classItem.crn}</span>
-                          <span className="font-medium" style={{ color: "#C9A84C" }}><span className="text-zinc-500">Class code:</span> {classItem.code}</span>
+                          <span className="text-zinc-500 text-sm">Class code:</span>
+                          <span className="inline-flex items-center gap-2 ml-1">
+                          <span className="font-medium" style={{ color: codeVisible ? "#C9A84C" : "transparent", textShadow: codeVisible ? "none" : "0 0 8px #C9A84C" }}>
+                            {codeVisible ? classItem.code : "••••••"}
+                          </span>
+                          <button type="button" onClick={() => setCodeVisible((v) => !v)} className="p-1 rounded text-zinc-400 hover:text-white transition-colors">
+                            {codeVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button type="button" onClick={() => setCodeDisplayOpen(true)} className="p-1 rounded text-zinc-400 hover:text-white transition-colors">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
                         </div>
                       </div>
                     </div>
@@ -328,6 +341,19 @@ export default function CourseDetailPage() {
               </>
           )}
         </div>
+
+        {/* Large Code Display */}
+        {codeDisplayOpen && (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setCodeDisplayOpen(false)}>
+              <div className="text-center" onClick={(e) => e.stopPropagation()}>
+                <p className="text-zinc-400 text-lg mb-6">Course Registration Code</p>
+                <p className="font-bold tracking-widest select-all" style={{ fontSize: "8rem", color: "#C9A84C", lineHeight: 1 }}>
+                  {classItem.code}
+                </p>
+                <p className="text-zinc-500 text-sm mt-8">Click anywhere outside to close</p>
+              </div>
+            </div>
+        )}
 
         <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(a) => setAssignments((prev) => [...prev, a])} />
         <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} crn={crn} />
