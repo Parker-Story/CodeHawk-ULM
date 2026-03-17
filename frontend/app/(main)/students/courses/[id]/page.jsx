@@ -196,6 +196,8 @@ export default function StudentCourseDetailPage() {
       if (!response.ok) throw new Error("Failed to remove submission");
       setSubmissions((prev) => { const u = { ...prev }; delete u[selectedAssignment.id]; return u; });
       setTestResults([]);
+      setSubmitted(false);
+      setSelectedFile(null);
       setActiveTab("upload");
     } catch (error) {
       console.error("Error removing submission:", error);
@@ -373,24 +375,41 @@ export default function StudentCourseDetailPage() {
                   {activeTab === "upload" && (
                       <div>
                         {submitted ? (
-                            <div className="text-center py-8">
-                              <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle className="w-8 h-8 text-green-400" />
+                            <div className="space-y-4">
+                              <div className="text-center py-6">
+                                <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <CheckCircle className="w-8 h-8 text-green-400" />
+                                </div>
+                                <p className="text-green-400 font-semibold text-lg">Submitted successfully!</p>
+                                <p className="text-zinc-400 text-sm mt-2">{selectedFile?.name}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab("results")}
+                                    className="mt-4 px-6 py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                    style={{ background: "#7C1D2E" }}
+                                >
+                                  View Test Results
+                                </button>
                               </div>
-                              <p className="text-green-400 font-semibold text-lg">Submitted successfully!</p>
-                              <p className="text-zinc-400 text-sm mt-2">{selectedFile?.name}</p>
                               <button
                                   type="button"
-                                  onClick={() => setActiveTab("results")}
-                                  className="mt-4 px-6 py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSubmitted(false); }}
+                                  className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
                                   style={{ background: "#7C1D2E" }}
                               >
-                                View Test Results
+                                New Attempt
+                              </button>
+                              <button
+                                  type="button"
+                                  onClick={handleRemoveSubmission}
+                                  className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
+                              >
+                                Remove Submission
                               </button>
                               <button
                                   type="button"
                                   onClick={closeModal}
-                                  className="mt-2 px-6 py-2 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors w-full"
+                                  className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
                               >
                                 Close
                               </button>
