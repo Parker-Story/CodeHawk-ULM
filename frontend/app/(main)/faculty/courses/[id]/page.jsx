@@ -128,7 +128,15 @@ export default function CourseDetailPage() {
       const response = await fetch(`${API_BASE}/courseUser/roster/${crn}`);
       if (!response.ok) throw new Error("Failed to fetch roster");
       const data = await response.json();
-      setRoster(Array.isArray(data) ? data : []);
+      const sorted = (Array.isArray(data) ? data : []).sort((a, b) => {
+        const roleOrder = { FACULTY: 0, TA: 1, STUDENT: 2 };
+        const roleDiff = (roleOrder[a.courseRole] ?? 2) - (roleOrder[b.courseRole] ?? 2);
+        if (roleDiff !== 0) return roleDiff;
+        const firstDiff = (a.user.firstName || "").localeCompare(b.user.firstName || "");
+        if (firstDiff !== 0) return firstDiff;
+        return (a.user.lastName || "").localeCompare(b.user.lastName || "");
+      });
+      setRoster(sorted);
       setRosterOpen(true);
     } catch (error) { console.error("Error fetching roster:", error); }
   };
