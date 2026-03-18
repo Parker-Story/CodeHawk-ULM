@@ -16,6 +16,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
   const [inputFile, setInputFile] = useState(null);
   const [inputFileContent, setInputFileContent] = useState(null);
   const fileInputRef = useRef(null);
+  const [dueDate, setDueDate] = useState("");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -33,6 +34,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
     setInputMode("STDIN");
     setInputFile(null);
     setInputFileContent(null);
+    setDueDate("");
     onClose();
   };
 
@@ -49,6 +51,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
           inputMode,
           inputFileName: inputFile?.name ?? null,
           inputFileContent: inputMode === "FILE" ? inputFileContent : null,
+          dueDate: dueDate ? `${dueDate}:00` : null,
         }),
       });
       if (!response.ok) throw new Error("Failed to create assignment");
@@ -68,6 +71,18 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
           <div>
             <label htmlFor="assignment-description" className={labelClass}>Description</label>
             <textarea id="assignment-description" rows={4} placeholder="Provide clear instructions for students..." className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+
+          <div>
+            <label htmlFor="due-date" className={labelClass}>Due Date <span className="text-zinc-500 font-normal">(optional)</span></label>
+            <input
+                id="due-date"
+                type="datetime-local"
+                className={inputClass}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                style={{ colorScheme: "dark" }}
+            />
           </div>
 
           {/* Input Mode */}
