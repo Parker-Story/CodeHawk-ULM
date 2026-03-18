@@ -267,6 +267,11 @@ export default function GradingWorkspacePage() {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rubricItemId: item.id, awardedPoints: awarded }),
         });
       }));
+      // Save feedback alongside score
+      await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${gradingStudent}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: feedbackInputs[gradingStudent] ?? "" }),
+      });
       const totalRes = await fetch(`${API_BASE}/rubric/totalscore/${assignmentId}/${gradingStudent}`);
       const totalData = await totalRes.json();
       setRubricTotals((prev) => ({ ...prev, [gradingStudent]: totalData }));
@@ -280,7 +285,7 @@ export default function GradingWorkspacePage() {
       const inputs = {};
       list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
       setScoreInputs(inputs);
-      setGradingStudent(null);
+      // Stay open — do NOT call setGradingStudent(null)
     } catch (err) { console.error(err); } finally { setSavingRubricScore(false); }
   };
 
@@ -327,6 +332,23 @@ export default function GradingWorkspacePage() {
       });
     } catch (err) { console.error(err); }
     finally { setSavingFeedback((prev) => ({ ...prev, [userId]: false })); }
+  };
+
+  const navigateStudent = (direction) => {
+    const currentIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
+    const nextIndex = currentIndex + direction;
+    if (nextIndex >= 0 && nextIndex < submissions.length) {
+      setGradingStudent(submissions[nextIndex].submissionId.userId);
+      setRubricScores({});
+    }
+  };
+
+  const navigateSolutionStudent = (direction) => {
+    const currentIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
+    const nextIndex = currentIndex + direction;
+    if (nextIndex >= 0 && nextIndex < submissions.length) {
+      setOpenSolution(submissions[nextIndex]);
+    }
   };
 
   const getResultsForStudent = (userId) => testResults.filter((r) => r.submission?.submissionId?.userId === userId);
@@ -656,24 +678,45 @@ export default function GradingWorkspacePage() {
         </div>
 
         {/* Solution Viewer */}
-        {openSolution && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
-                <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">{openSolution.fileName}</h2>
-                    <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}</p>
+        {openSolution && (() => {
+          const solutionIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
+          const solutionUserId = openSolution.submissionId.userId;
+          return (
+              <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col">
+                  <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">{openSolution.fileName}</h2>
+                      <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mr-3">
+                        <input type="number" min="0" max="100" value={scoreInputs[solutionUserId] ?? ""} onChange={(e) => setScoreInputs((prev) => ({ ...prev, [solutionUserId]: e.target.value }))} placeholder="Score" className="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40" />
+                        <button type="button" onClick={() => handleScoreSave(solutionUserId)} disabled={savingScore[solutionUserId]} className="px-4 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>
+                          {savingScore[solutionUserId] ? "Saving..." : "Save Score"}
+                        </button>
+                      </div>
+                      <div className="w-px h-5 bg-zinc-700" />
+                      <button type="button" onClick={() => navigateSolutionStudent(-1)} disabled={solutionIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                        <ChevronUp className="w-5 h-5" />
+                      </button>
+                      <span className="text-zinc-500 text-xs">{solutionIndex + 1} / {submissions.length}</span>
+                      <button type="button" onClick={() => navigateSolutionStudent(1)} disabled={solutionIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                      <div className="w-px h-5 bg-zinc-700 mx-1" />
+                      <button type="button" onClick={() => setOpenSolution(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setOpenSolution(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
-                </div>
-                <div className="p-6 overflow-auto flex-1">
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
-                {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
-              </pre>
+                  <div className="p-6 overflow-auto flex-1">
+          <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
+            {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
+          </pre>
+                  </div>
                 </div>
               </div>
-            </div>
-        )}
+          );
+        })()}
 
         {/* Confirm Delete Submission */}
         {confirmDeleteUserId && (
@@ -701,6 +744,7 @@ export default function GradingWorkspacePage() {
         {/* Rubric Grading Panel */}
         {gradingStudent && assignedRubric && (() => {
           const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
+          const gradingIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
           return (
               <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                 <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col">
@@ -711,9 +755,19 @@ export default function GradingWorkspacePage() {
                         {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {assignedRubric.name}
                       </p>
                     </div>
-                    <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
-                      <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => navigateStudent(-1)} disabled={gradingIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                        <ChevronUp className="w-5 h-5" />
+                      </button>
+                      <span className="text-zinc-500 text-xs">{gradingIndex + 1} / {submissions.length}</span>
+                      <button type="button" onClick={() => navigateStudent(1)} disabled={gradingIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                      <div className="w-px h-5 bg-zinc-700 mx-1" />
+                      <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-1 overflow-hidden">
                     <div className="flex-1 flex flex-col border-r border-zinc-700 overflow-hidden">
@@ -722,9 +776,9 @@ export default function GradingWorkspacePage() {
                         <p className="text-sm text-zinc-300 mt-0.5">{gradingSubmission?.fileName || "Unnamed file"}</p>
                       </div>
                       <div className="flex-1 overflow-auto p-5">
-                        <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
-                          {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
-                        </pre>
+              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
+                {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
+              </pre>
                       </div>
                     </div>
                     <div className="w-96 flex flex-col overflow-hidden shrink-0">
@@ -770,15 +824,6 @@ export default function GradingWorkspacePage() {
                             placeholder="Leave feedback for the student..."
                             className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
                         />
-                        <button
-                            type="button"
-                            onClick={() => handleSaveFeedback(gradingStudent)}
-                            disabled={savingFeedback[gradingStudent]}
-                            className="mt-2 w-full py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50"
-                            style={{ background: "#3f3f46" }}
-                        >
-                          {savingFeedback[gradingStudent] ? "Saving..." : "Save Feedback"}
-                        </button>
                       </div>
                       <div className="p-5 border-t border-zinc-700 shrink-0">
                         <div className="flex items-center justify-between mb-4">
@@ -788,7 +833,7 @@ export default function GradingWorkspacePage() {
                           </p>
                         </div>
                         <div className="flex gap-3">
-                          <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+                          <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Close</button>
                           <button type="button" onClick={handleSaveRubricScores} disabled={savingRubricScore} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2" style={{ background: "#7C1D2E" }}>
                             <CheckCircle className="w-4 h-4" />
                             {savingRubricScore ? "Saving..." : "Save & Apply Score"}
