@@ -1,6 +1,8 @@
 package com.womm.backend.entity;
 import jakarta.persistence.*;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "assignments")
@@ -34,6 +36,13 @@ public class Assignment {
 
     @Column(name = "input_file_content", columnDefinition = "LONGTEXT")
     private String inputFileContent;
+
+    @Column(name = "due_date")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dueDate;
+
+    public LocalDateTime getDueDate() { return dueDate; }
+    public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
 
     // ----- Constructors -----
     public Assignment() {}
