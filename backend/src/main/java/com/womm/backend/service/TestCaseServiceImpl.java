@@ -69,8 +69,8 @@ public class TestCaseServiceImpl implements TestCaseService {
         String inputFileBase64 = isFileMode ? assignment.getInputFileContent() : null;
         String inputFileName = isFileMode ? assignment.getInputFileName() : null;
 
-        List<TestResult> results = new ArrayList<>();
-        for (TestCase testCase : testCases) {
+        // Run all test cases in parallel
+        List<TestResult> results = testCases.parallelStream().map(testCase -> {
             CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
                     submission.getFileContent(),
                     submission.getFileName(),
@@ -85,11 +85,12 @@ public class TestCaseServiceImpl implements TestCaseService {
             result.setActualOutput(execResult.stdout);
 
             boolean passed = execResult.exitCode == 0 &&
-                    execResult.stdout.trim().equals(testCase.getExpectedOutput().trim());
+                    execResult.stdout.trim().replace("\r\n", "\n").replace("\r", "\n")
+                            .equals(testCase.getExpectedOutput().trim().replace("\r\n", "\n").replace("\r", "\n"));
             result.setPassed(passed);
 
-            results.add(testResultRepository.save(result));
-        }
+            return testResultRepository.save(result);
+        }).collect(java.util.stream.Collectors.toList());
 
         long passed = results.stream().filter(TestResult::isPassed).count();
         int score = testCases.isEmpty() ? 0 : (int) Math.round((double) passed / testCases.size() * 100);
