@@ -72,25 +72,44 @@ public class CodeExecutionService {
         runBuilder.directory(workDir.toFile());
         Process runProcess = runBuilder.start();
 
+        // Write stdin FIRST, then close it so the program knows input is done
         if (input != null && !input.isEmpty()) {
-            try (OutputStream stdin = runProcess.getOutputStream()) {
-                stdin.write(input.getBytes());
-                stdin.flush();
-            }
+            OutputStream stdin = runProcess.getOutputStream();
+            stdin.write(input.getBytes());
+            stdin.flush();
+            stdin.close();
+        } else {
+            // Close stdin immediately so programs don't hang waiting for input
+            runProcess.getOutputStream().close();
         }
 
-        String stdout = readStream(runProcess.getInputStream());
-        String stderr = readStream(runProcess.getErrorStream());
+        // Now read output concurrently using threads to avoid blocking
+        final StringBuilder stdout = new StringBuilder();
+        final StringBuilder stderr = new StringBuilder();
+
+        Thread stdoutThread = new Thread(() -> {
+            try { stdout.append(readStreamQuiet(runProcess.getInputStream())); } catch (Exception ignored) {}
+        });
+        Thread stderrThread = new Thread(() -> {
+            try { stderr.append(readStreamQuiet(runProcess.getErrorStream())); } catch (Exception ignored) {}
+        });
+
+        stdoutThread.start();
+        stderrThread.start();
+
         boolean finished = runProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-        log.info("CODEHAWK java exit={} stdout={} stderr={}", runProcess.exitValue(), stdout, stderr);
+        stdoutThread.join(2000);
+        stderrThread.join(2000);
+
+        log.info("CODEHAWK java exit={} stdout={} stderr={}", finished ? runProcess.exitValue() : -1, stdout, stderr);
 
         if (!finished) {
             runProcess.destroyForcibly();
             return new ExecutionResult("", "Time limit exceeded", -1);
         }
 
-        return new ExecutionResult(stdout.trim(), stderr.trim(), runProcess.exitValue());
+        return new ExecutionResult(stdout.toString().trim(), stderr.toString().trim(), runProcess.exitValue());
     }
 
     private ExecutionResult executePython(Path workDir, String fileName, String input) throws Exception {
@@ -99,22 +118,38 @@ public class CodeExecutionService {
         Process runProcess = runBuilder.start();
 
         if (input != null && !input.isEmpty()) {
-            try (OutputStream stdin = runProcess.getOutputStream()) {
-                stdin.write(input.getBytes());
-                stdin.flush();
-            }
+            OutputStream stdin = runProcess.getOutputStream();
+            stdin.write(input.getBytes());
+            stdin.flush();
+            stdin.close();
+        } else {
+            runProcess.getOutputStream().close();
         }
 
-        String stdout = readStream(runProcess.getInputStream());
-        String stderr = readStream(runProcess.getErrorStream());
+        final StringBuilder stdout = new StringBuilder();
+        final StringBuilder stderr = new StringBuilder();
+
+        Thread stdoutThread = new Thread(() -> {
+            try { stdout.append(readStreamQuiet(runProcess.getInputStream())); } catch (Exception ignored) {}
+        });
+        Thread stderrThread = new Thread(() -> {
+            try { stderr.append(readStreamQuiet(runProcess.getErrorStream())); } catch (Exception ignored) {}
+        });
+
+        stdoutThread.start();
+        stderrThread.start();
+
         boolean finished = runProcess.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+        stdoutThread.join(2000);
+        stderrThread.join(2000);
 
         if (!finished) {
             runProcess.destroyForcibly();
             return new ExecutionResult("", "Time limit exceeded", -1);
         }
 
-        return new ExecutionResult(stdout.trim(), stderr.trim(), runProcess.exitValue());
+        return new ExecutionResult(stdout.toString().trim(), stderr.toString().trim(), runProcess.exitValue());
     }
 
     private String readStream(InputStream stream) throws Exception {
@@ -125,6 +160,17 @@ public class CodeExecutionService {
                 sb.append(line).append("\n");
             }
         }
+        return sb.toString();
+    }
+
+    private String readStreamQuiet(InputStream stream) {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        } catch (Exception ignored) {}
         return sb.toString();
     }
 
