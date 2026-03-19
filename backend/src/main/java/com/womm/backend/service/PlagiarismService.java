@@ -43,7 +43,7 @@ public class PlagiarismService {
         }
 
         results.sort((x, y) ->
-                Integer.compare((int) y.get("similarity"), (int) x.get("similarity"))
+                Long.compare((Long) y.get("similarity"), (Long) x.get("similarity"))
         );
 
         return results;
