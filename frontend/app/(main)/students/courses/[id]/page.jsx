@@ -96,6 +96,7 @@ export default function StudentCourseDetailPage() {
   const [testResults, setTestResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(false);
   const fileInputRef = useRef(null);
+  const [fileError, setFileError] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -155,12 +156,32 @@ export default function StudentCourseDetailPage() {
 
   const existingSubmission = selectedAssignment ? submissions[selectedAssignment.id] : null;
 
-  const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (ext !== "java" && ext !== "py") {
+      setFileError("Only .java and .py files are accepted.");
+      setSelectedFile(null);
+      e.target.value = "";
+      return;
+    }
+    setFileError(null);
+    setSelectedFile(file);
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) setSelectedFile(file);
+    if (!file) return;
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (ext !== "java" && ext !== "py") {
+      setFileError("Only .java and .py files are accepted.");
+      setSelectedFile(null);
+      return;
+    }
+    setFileError(null);
+    setSelectedFile(file);
   };
 
   const handleSubmit = async () => {
@@ -210,6 +231,7 @@ export default function StudentCourseDetailPage() {
     setNewAttempt(false);
     setActiveTab("description");
     setTestResults([]);
+    setFileError(null);
   };
 
   if (loading) {
@@ -442,6 +464,13 @@ export default function StudentCourseDetailPage() {
                                 )}
                                 <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
                               </div>
+
+                              {fileError && (
+                                  <div className="mt-3 p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                                    <p className="text-red-400 text-sm">{fileError}</p>
+                                  </div>
+                              )}
+
                               <div className="flex gap-3 mt-4">
                                 <button
                                     type="button"
