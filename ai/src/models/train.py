@@ -8,7 +8,7 @@ import numpy as np
 import os
 
 from src.data.preprocess    import run_preprocessing, load_processed
-from src.models.logistic_regression_model import NeuralNet, binary_cross_entropy
+from src.models.neural_network import NeuralNet, binary_cross_entropy
 from src.utils.save_load    import save_weights, save_training_history
 
 MODELS_DIR    = os.path.join("models")

@@ -1,5 +1,5 @@
 """
-logistic_regression_model.py
+neural_network.py
 
 A two-layer neural network built entirely from scratch using numpy.
 Architecture:

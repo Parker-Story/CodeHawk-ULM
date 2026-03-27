@@ -8,7 +8,7 @@ import numpy as np
 import os
 import json
 
-from src.models.logistic_regression_model import NeuralNet, binary_cross_entropy
+from src.models.neural_network import NeuralNet, binary_cross_entropy
 from src.utils.save_load import load_weights, load_norm_stats, load_training_history
 from src.data.preprocess import load_processed
 

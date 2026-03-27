@@ -11,7 +11,7 @@ import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from src.models.logistic_regression_model import NeuralNet
+from src.models.neural_network import NeuralNet
 from src.utils.save_load import load_weights, load_norm_stats
 
 # ── Config ───────────────────────────────────────────────────────────────────
