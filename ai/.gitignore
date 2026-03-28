@@ -2,3 +2,6 @@
 data/raw/
 data/processed/
 data/metadata/
+
+# Model saved data
+models/

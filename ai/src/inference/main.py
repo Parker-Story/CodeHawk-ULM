@@ -1,71 +1,101 @@
 """
 main.py  —  FastAPI inference service
-Loads trained weights once at startup, then serves predictions on POST /detect.
-Called by the Spring Boot backend — never directly by the frontend.
+Loads trained weights, vocab, and normalisation stats once at startup.
+Exposes POST /detect for Spring Boot to call.
+
+Flow per request
+----------------
+raw code string
+  → tokenise (same logic as preprocess.py)
+  → TF-IDF vector using saved vocab + IDF
+  → concatenate with structural features
+  → z-score normalise using saved mean/std
+  → forward pass through loaded NeuralNetwork weights
+  → return { ai_probability, ai_percentage, label, confidence }
 """
 
 import os
 import re
-import ast
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi  import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from src.models.neural_network import NeuralNet
-from src.utils.save_load import load_weights, load_norm_stats
-
-# ── Config ───────────────────────────────────────────────────────────────────
+from src.models.neural_network import NeuralNetwork
+from src.utils.save_load       import load_weights, load_norm_stats, load_vocab
 
 MODELS_DIR  = os.path.join("models")
 WEIGHT_KEYS = ["W1", "b1", "W2", "b2", "W3", "b3"]
 
-# ── App + model (loaded once at startup) ─────────────────────────────────────
+# ── App ───────────────────────────────────────────────────────────────────────
 
-app   = FastAPI(title="AI Code Detection Service", version="1.0.0")
-model: NeuralNet | None = None
-norm_mean: np.ndarray | None = None
-norm_std:  np.ndarray | None = None
+app = FastAPI(title="AI Code Detection Service", version="1.0.0")
+
+# Global state — populated at startup, reused for every request
+_model:     NeuralNetwork | None = None
+_vocab:     dict | None          = None
+_idf:       np.ndarray | None    = None
+_norm_mean: np.ndarray | None    = None
+_norm_std:  np.ndarray | None    = None
 
 
 @app.on_event("startup")
-def load_model() -> None:
-    global model, norm_mean, norm_std
+def _load_artifacts() -> None:
+    global _model, _vocab, _idf, _norm_mean, _norm_std
 
     print("[startup] Loading model weights …")
     weights   = load_weights(MODELS_DIR, WEIGHT_KEYS)
     input_dim = weights["W1"].shape[0]
+    _model    = NeuralNetwork(input_dim=input_dim)
+    _model.set_weights(weights)
 
-    model = NeuralNet(input_dim=input_dim)
-    model.set_weights(weights)
+    print("[startup] Loading vocab + IDF …")
+    _vocab, _idf = load_vocab(MODELS_DIR)
 
-    norm_mean, norm_std = load_norm_stats(MODELS_DIR)
-    print("[startup] Model ready.")
+    print("[startup] Loading normalisation stats …")
+    _norm_mean, _norm_std = load_norm_stats(MODELS_DIR)
+
+    print("[startup] Ready ✓")
 
 
-# ── Request / Response schemas ────────────────────────────────────────────────
+# ── Schemas ───────────────────────────────────────────────────────────────────
 
 class DetectRequest(BaseModel):
-    code:           str
-    # Optional: pre-computed Ada embedding sent by caller (length 1536).
-    # If omitted the service falls back to zero-vector (structural features only).
-    ada_embedding:  list[float] | None = None
+    code: str                           # raw source code submitted by student
 
 
 class DetectResponse(BaseModel):
-    ai_probability: float   # 0.0 – 1.0
-    ai_percentage:  float   # 0.0 – 100.0  (convenience field for frontend)
-    label:          str     # "AI" | "Human" | "Uncertain"
-    confidence:     str     # "High" | "Medium" | "Low"
+    ai_probability: float               # 0.0 – 1.0
+    ai_percentage:  float               # 0.0 – 100.0  (for the frontend bar)
+    label:          str                 # "AI" | "Human" | "Uncertain"
+    confidence:     str                 # "High" | "Medium" | "Low"
 
 
-# ── Feature extraction (mirrors preprocess.py) ────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  Feature extraction  (mirrors preprocess.py exactly)
+# ══════════════════════════════════════════════════════════════════════════════
 
-def _count_lines(code: str) -> int:
-    return len(code.splitlines())
+def _tokenise(code: str) -> list:
+    tokens = re.findall(
+        r"[a-zA-Z_]\w*|[0-9]+(?:\.[0-9]+)?|[+\-*/=<>!&|^~%]+|[{}()\[\];:,.]",
+        code
+    )
+    return [t.lower() for t in tokens if t.strip()]
 
 
-def _count_blank_lines(code: str) -> int:
-    return sum(1 for ln in code.splitlines() if ln.strip() == "")
+def _tfidf_vector(tokens: list) -> np.ndarray:
+    """Convert token list to TF-IDF vector using the saved vocab + IDF."""
+    vec = np.zeros(len(_vocab), dtype=np.float32)
+    if not tokens:
+        return vec
+    for tok in tokens:
+        if tok in _vocab:
+            vec[_vocab[tok]] += 1
+    vec /= len(tokens)
+    vec *= _idf
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec /= norm
+    return vec
 
 
 def _is_comment(line: str) -> bool:
@@ -73,65 +103,37 @@ def _is_comment(line: str) -> bool:
     return s.startswith(("#", "//", "*", "/*", "*/", "--"))
 
 
-def _count_comment_lines(code: str) -> int:
-    return sum(1 for ln in code.splitlines() if _is_comment(ln))
-
-
-def _count_code_lines(code: str) -> int:
-    return sum(
-        1 for ln in code.splitlines()
-        if ln.strip() and not _is_comment(ln)
-    )
-
-
-def _count_functions(code: str) -> int:
-    patterns = [
+def _structural_vector(code: str) -> np.ndarray:
+    lines   = code.splitlines()
+    total   = len(lines)
+    blank   = sum(1 for ln in lines if ln.strip() == "")
+    comment = sum(1 for ln in lines if _is_comment(ln))
+    code_ln = sum(1 for ln in lines if ln.strip() and not _is_comment(ln))
+    funcs   = sum(len(re.findall(p, code)) for p in [
         r"\bdef\s+\w+\s*\(",
         r"\b\w[\w\s\*]+\s+\w+\s*\([^)]*\)\s*\{",
         r"\bfunction\s+\w+\s*\(",
-    ]
-    return sum(len(re.findall(p, code)) for p in patterns)
+    ])
+    return np.array([total, code_ln, comment, funcs, blank], dtype=np.float32)
 
 
-def extract_features(code: str,
-                     ada_embedding: list[float] | None) -> np.ndarray:
+def _build_feature_vector(code: str) -> np.ndarray:
     """
-    Build the same 1541-d feature vector used during training.
-
-    Ada embedding : first 1536 dimensions
-    Structural    : last 5 dimensions
+    Produce the same feature vector used during training:
+        TF-IDF (vocab_size,) || structural (5,)  → normalised
     """
-    # Ada embedding component
-    if ada_embedding and len(ada_embedding) == 1536:
-        embed = np.array(ada_embedding, dtype=np.float32)
-    else:
-        embed = np.zeros(1536, dtype=np.float32)
-
-    structural = np.array([
-        _count_lines(code),
-        _count_code_lines(code),
-        _count_comment_lines(code),
-        _count_functions(code),
-        _count_blank_lines(code),
-    ], dtype=np.float32)
-
-    return np.concatenate([embed, structural])          # (1541,)
+    tfidf      = _tfidf_vector(_tokenise(code))           # (vocab_size,)
+    structural = _structural_vector(code)                 # (5,)
+    x          = np.concatenate([tfidf, structural])      # (vocab_size + 5,)
+    x_norm     = (x - _norm_mean) / _norm_std             # z-score
+    return x_norm
 
 
-def normalise_vector(x: np.ndarray) -> np.ndarray:
-    """Apply the training-set z-score transform."""
-    return (x - norm_mean) / norm_std
+# ══════════════════════════════════════════════════════════════════════════════
+#  Label helper
+# ══════════════════════════════════════════════════════════════════════════════
 
-
-def probability_to_label(prob: float) -> tuple[str, str]:
-    """
-    Map raw probability to a human-readable label and confidence tier.
-
-    Zones:
-        0.00 – 0.35  →  Human    (High if < 0.20, else Medium)
-        0.35 – 0.65  →  Uncertain (Low confidence)
-        0.65 – 1.00  →  AI       (High if > 0.80, else Medium)
-    """
+def _label(prob: float) -> tuple:
     if prob < 0.20:
         return "Human", "High"
     elif prob < 0.35:
@@ -144,34 +146,31 @@ def probability_to_label(prob: float) -> tuple[str, str]:
         return "AI", "High"
 
 
-# ── Endpoints ────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  Endpoints
+# ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "model_loaded": model is not None}
+    return {"status": "ok", "model_loaded": _model is not None}
 
 
 @app.post("/detect", response_model=DetectResponse)
 def detect(req: DetectRequest) -> DetectResponse:
     """
-    Accepts raw source code (and an optional Ada embedding vector).
-    Returns the probability that the code was AI-generated.
+    Accepts raw source code, returns AI-detection probability.
+    Called by Spring Boot — never directly by the frontend.
     """
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded yet.")
+    if _model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded.")
 
     if not req.code or not req.code.strip():
-        raise HTTPException(status_code=400, detail="Code field must not be empty.")
+        raise HTTPException(status_code=400, detail="code must not be empty.")
 
-    # Build + normalise feature vector
-    x      = extract_features(req.code, req.ada_embedding)   # (1541,)
-    x_norm = normalise_vector(x)                              # (1541,)
+    x    = _build_feature_vector(req.code).reshape(1, -1)  # (1, input_dim)
+    prob = float(np.clip(_model.predict_proba(x)[0], 0.0, 1.0))
 
-    # Inference
-    prob = float(model.predict_proba(x_norm.reshape(1, -1))[0])
-    prob = float(np.clip(prob, 0.0, 1.0))
-
-    label, confidence = probability_to_label(prob)
+    label, confidence = _label(prob)
 
     return DetectResponse(
         ai_probability = round(prob, 4),
