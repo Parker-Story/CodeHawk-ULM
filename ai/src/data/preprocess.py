@@ -1,17 +1,10 @@
 """
 preprocess.py
 
-Complete rethink: TF-IDF removed entirely.
-Replaced with 40 hand-crafted features that capture real AI vs human
+40 hand-crafted features that capture real AI vs human
 code differences based on style, structure, and complexity patterns.
 
-Why TF-IDF failed:
-  - AI and human code use the same keywords and tokens
-  - TF-IDF measures WHAT tokens appear, not HOW code is structured
-  - 1000 near-zero dimensions drowned the 15 structural features
-  - The model had no learnable signal
-
-What works instead:
+Features:
   - Structural patterns (indentation, line length, nesting)
   - Style patterns (naming, comments, docstrings)
   - Complexity patterns (function size, branching, cyclomatic)
@@ -28,8 +21,7 @@ from src.utils.save_load import save_norm_stats
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-NEW_RAW_PATH = os.path.join(BASE_DIR, "data", "raw", "human_and_ai",
-                            "HumanVsAI_CodeDataset.csv")
+
 
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 MODELS_DIR    = os.path.join(BASE_DIR, "models")
@@ -288,30 +280,78 @@ def extract_feature_matrix(codes: list) -> np.ndarray:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_all_sources() -> pd.DataFrame:
-    if not os.path.exists(NEW_RAW_PATH):
-        raise FileNotFoundError(f"{NEW_RAW_PATH} not found!")
+    RAW_SOURCES = [
+        {
+            "path": os.path.join(BASE_DIR, "data", "raw", "human", "human_selected_dataset.csv"),
+            "force_label": 0,
+            "name": "Human (raw)",
+        },
+        {
+            "path": os.path.join(BASE_DIR, "data", "raw", "ai", "created_dataset_with_llms.csv"),
+            "force_label": 1,
+            "name": "AI (raw)",
+        },
+        {
+            "path": os.path.join(BASE_DIR, "data", "raw", "human_and_ai", "HumanVsAI_CodeDataset.csv"),
+            "force_label": None,
+            "name": "Human vs AI (combined)",
+        },
+    ]
 
-    df = pd.read_csv(NEW_RAW_PATH, low_memory=False)
+    frames = []
+    for src in RAW_SOURCES:
+        if not os.path.exists(src["path"]):
+            print(f"[load_all_sources] SKIPPED (not found): {src['path']}")
+            continue
 
-    # Check required columns
-    if "Sample_Code" not in df.columns or "Generated" not in df.columns:
-        raise ValueError("CSV must contain 'Sample_Code' and 'Generated' columns")
+        df = pd.read_csv(src["path"], low_memory=False)
 
-    # Map 'human' -> 0, 'ai' -> 1
-    df["label"] = df["Generated"].map({"Human": 0, "AI": 1})
-    df = df[["Sample_Code", "label"]].rename(columns={"Sample_Code": "code"})
-    df.dropna(subset=["code"], inplace=True)
-    df = df[df["code"].astype(str).str.strip() != ""]
-    df.reset_index(drop=True, inplace=True)
+        code_col_candidates = ["code", "Sample_Code"]
+        code_col = next((c for c in code_col_candidates if c in df.columns), None)
+        if not code_col:
+            print(f"[load_all_sources] SKIPPED (no code col): {src['path']}")
+            continue
 
-    before = len(df)
-    df.drop_duplicates(subset=["code"], inplace=True)
-    print(f"[load_all_sources] {len(df)} unique rows ({before - len(df)} dupes removed)")
+        if src["force_label"] is not None:
+            df = df[[code_col]].copy()
+            df.rename(columns={code_col: "code"}, inplace=True)
+            df["label"] = src["force_label"]
+        else:
+            # Here handle the 'Generated' column instead of 'label'
+            if "label" in df.columns:
+                label_col = "label"
+            elif "Generated" in df.columns:
+                label_col = "Generated"
+            else:
+                print(f"[load_all_sources] SKIPPED (no label or Generated col): {src['path']}")
+                continue
 
-    n_h = int((df["label"] == 0).sum())
-    n_a = int((df["label"] == 1).sum())
-    print(f"[load_all_sources] Human={n_h}  AI={n_a}\n")
-    return df
+            df = df[[code_col, label_col]].copy()
+            df.rename(columns={code_col: "code"}, inplace=True)
+
+            # Convert 'Generated' to numeric labels if needed
+            if label_col == "Generated":
+                df["label"] = df["Generated"].map({"Human": 0, "AI": 1})
+                df.drop(columns=["Generated"], inplace=True)
+
+        df.dropna(subset=["code", "label"], inplace=True)
+        df = df[df["code"].astype(str).str.strip() != ""]
+        frames.append(df)
+        print(f"[load_all_sources] {len(df):>6} rows <- {src['name']}")
+
+    if not frames:
+        raise RuntimeError("No valid data found in raw sources!")
+
+    combined = pd.concat(frames, ignore_index=True)
+    before = len(combined)
+    combined.drop_duplicates(subset=["code"], inplace=True)
+    combined.reset_index(drop=True, inplace=True)
+
+    n_h = int((combined["label"] == 0).sum())
+    n_a = int((combined["label"] == 1).sum())
+    print(f"\n[load_all_sources] {len(combined)} unique rows "
+          f"({before - len(combined)} dupes removed) | Human={n_h}  AI={n_a}\n")
+    return combined
 
 
 # ══════════════════════════════════════════════════════════════════════════════

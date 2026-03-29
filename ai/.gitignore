@@ -1,4 +1,5 @@
 # Datasets
+data/predict/
 data/raw/
 data/processed/
 data/metadata/
