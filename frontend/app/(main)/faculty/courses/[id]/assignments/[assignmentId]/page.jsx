@@ -687,7 +687,7 @@ export default function GradingWorkspacePage() {
                   <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
                     <div>
                       <h2 className="text-lg font-semibold text-white">{openSolution.fileName}</h2>
-                      <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}</p>
+                      <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}{openSolution.user?.cwid ? <span className="text-zinc-500 ml-2">CWID: {openSolution.user.cwid}</span> : null}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2 mr-3">
@@ -752,7 +752,7 @@ export default function GradingWorkspacePage() {
                     <div>
                       <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
                       <p className="text-zinc-400 text-sm mt-0.5">
-                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {assignedRubric.name}
+                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName}{gradingSubmission?.user?.cwid ? <span className="text-zinc-500 ml-2">CWID: {gradingSubmission.user.cwid}</span> : null} • {assignedRubric.name}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
