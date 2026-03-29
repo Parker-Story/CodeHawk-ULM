@@ -5,3 +5,7 @@ data/metadata/
 
 # Model saved data
 models/
+
+# Ignore Python cache
+__pycache__/
+*.py[cod]

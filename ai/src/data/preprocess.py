@@ -28,20 +28,8 @@ from src.utils.save_load import save_norm_stats
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-RAW_SOURCES = [
-    {
-        "path":        os.path.join(BASE_DIR, "data", "raw", "human",
-                                    "human_selected_dataset.csv"),
-        "force_label": 0,
-        "name":        "Human (raw)",
-    },
-    {
-        "path":        os.path.join(BASE_DIR, "data", "raw", "ai",
-                                    "created_dataset_with_llms.csv"),
-        "force_label": 1,
-        "name":        "AI (raw)",
-    },
-]
+NEW_RAW_PATH = os.path.join(BASE_DIR, "data", "raw", "human_and_ai",
+                            "HumanVsAI_CodeDataset.csv")
 
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 MODELS_DIR    = os.path.join(BASE_DIR, "models")
@@ -300,45 +288,30 @@ def extract_feature_matrix(codes: list) -> np.ndarray:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_all_sources() -> pd.DataFrame:
-    frames = []
-    for src in RAW_SOURCES:
-        if not os.path.exists(src["path"]):
-            print(f"[load_all_sources] SKIPPED (not found): {src['path']}")
-            continue
-        try:
-            df = pd.read_csv(src["path"], low_memory=False)
-        except Exception as e:
-            print(f"[load_all_sources] SKIPPED ({e}): {src['path']}")
-            continue
-        if "code" not in df.columns:
-            print(f"[load_all_sources] SKIPPED (no code col): {src['path']}")
-            continue
-        df = df[["code"]].copy()
-        df["label"] = src["force_label"]
-        df.dropna(subset=["code"], inplace=True)
-        df = df[df["code"].astype(str).str.strip() != ""]
-        frames.append(df)
-        print(f"[load_all_sources] {len(df):>6} rows <- {src['name']}")
+    if not os.path.exists(NEW_RAW_PATH):
+        raise FileNotFoundError(f"{NEW_RAW_PATH} not found!")
 
-    if not frames:
-        # Fallback to merged CSV
-        merged = os.path.join(BASE_DIR, "data", "processed",
-            "all_data_with_ada_embeddings_will_be_splitted_into_train_test_set.csv")
-        print("[load_all_sources] Falling back to merged CSV")
-        df = pd.read_csv(merged, low_memory=False)[["code", "label"]]
-        df.dropna(subset=["code"], inplace=True)
-        frames.append(df)
+    df = pd.read_csv(NEW_RAW_PATH, low_memory=False)
 
-    combined = pd.concat(frames, ignore_index=True)
-    before   = len(combined)
-    combined.drop_duplicates(subset=["code"], inplace=True)
-    combined.reset_index(drop=True, inplace=True)
+    # Check required columns
+    if "Sample_Code" not in df.columns or "Generated" not in df.columns:
+        raise ValueError("CSV must contain 'Sample_Code' and 'Generated' columns")
 
-    n_h = int((combined["label"] == 0).sum())
-    n_a = int((combined["label"] == 1).sum())
-    print(f"\n[load_all_sources] {len(combined)} unique rows "
-          f"({before - len(combined)} dupes removed) | Human={n_h}  AI={n_a}\n")
-    return combined
+    # Map 'human' -> 0, 'ai' -> 1
+    df["label"] = df["Generated"].map({"Human": 0, "AI": 1})
+    df = df[["Sample_Code", "label"]].rename(columns={"Sample_Code": "code"})
+    df.dropna(subset=["code"], inplace=True)
+    df = df[df["code"].astype(str).str.strip() != ""]
+    df.reset_index(drop=True, inplace=True)
+
+    before = len(df)
+    df.drop_duplicates(subset=["code"], inplace=True)
+    print(f"[load_all_sources] {len(df)} unique rows ({before - len(df)} dupes removed)")
+
+    n_h = int((df["label"] == 0).sum())
+    n_a = int((df["label"] == 1).sum())
+    print(f"[load_all_sources] Human={n_h}  AI={n_a}\n")
+    return df
 
 
 # ══════════════════════════════════════════════════════════════════════════════
