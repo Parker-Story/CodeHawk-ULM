@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 function VisibleTestCases({ assignmentId }) {
   const [testCases, setTestCases] = useState([]);
@@ -79,6 +82,36 @@ function AssignmentRubric({ assignmentId }) {
   );
 }
 
+function decodeBase64ToUtf8(base64) {
+  if (!base64) return "";
+  try {
+    // atob gives a "binary string" (1 byte per char). Convert to bytes, then decode as UTF-8.
+    const binary = atob(base64);
+    if (typeof TextDecoder === "undefined") return binary;
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  } catch {
+    // Fallback: last resort decode using atob directly.
+    try {
+      return atob(base64);
+    } catch {
+      return "";
+    }
+  }
+}
+
+function encodeUtf8ToBase64(text) {
+  try {
+    const bytes = new TextEncoder().encode(text || "");
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  } catch {
+    // Fallback for environments without TextEncoder (rare).
+    return btoa(unescape(encodeURIComponent(text || "")));
+  }
+}
+
 export default function StudentCourseDetailPage() {
   const params = useParams();
   const crn = params.id;
@@ -90,6 +123,7 @@ export default function StudentCourseDetailPage() {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [activeTab, setActiveTab] = useState("description");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [newAttempt, setNewAttempt] = useState(false);
@@ -97,6 +131,23 @@ export default function StudentCourseDetailPage() {
   const [loadingResults, setLoadingResults] = useState(false);
   const fileInputRef = useRef(null);
   const [fileError, setFileError] = useState(null);
+
+  const [customTestCases, setCustomTestCases] = useState([
+    { label: "", input: "", expectedOutput: "" },
+  ]);
+  const [customInputFile, setCustomInputFile] = useState({
+    inputFileName: "",
+    inputFileContentBase64: "",
+  });
+  const [customTestResults, setCustomTestResults] = useState([]);
+  const [loadingCustomResults, setLoadingCustomResults] = useState(false);
+  const [customError, setCustomError] = useState(null);
+
+  const [editorText, setEditorText] = useState("");
+  const [editorDirty, setEditorDirty] = useState(false);
+  const [savingCode, setSavingCode] = useState(false);
+  const [editorLanguage, setEditorLanguage] = useState("plaintext");
+  const [codeSaveError, setCodeSaveError] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -156,32 +207,195 @@ export default function StudentCourseDetailPage() {
 
   const existingSubmission = selectedAssignment ? submissions[selectedAssignment.id] : null;
 
+  useEffect(() => {
+    if (!existingSubmission?.fileContent) return;
+    // If the student edited, we only overwrite editor contents when submission itself changes
+    // (e.g., after Save Code or a new attempt).
+    const decoded = decodeBase64ToUtf8(existingSubmission.fileContent);
+    setEditorText(decoded);
+    setEditorDirty(false);
+
+    const fileName = existingSubmission?.fileName || "";
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (ext === "py") setEditorLanguage("python");
+    else if (ext === "java") setEditorLanguage("java");
+    else setEditorLanguage("plaintext");
+  }, [existingSubmission?.fileContent, existingSubmission?.fileName]);
+
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const ext = file.name.split(".").pop().toLowerCase();
-    if (ext !== "java" && ext !== "py") {
-      setFileError("Only .java and .py files are accepted.");
-      setSelectedFile(null);
-      e.target.value = "";
-      return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const allowed = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (ext === "java" || ext === "py") allowed.push(file);
+      else {
+        setFileError("Only .java and .py files are accepted.");
+        setSelectedFiles([]);
+        setSelectedFile(null);
+        e.target.value = "";
+        return;
+      }
     }
+
+    setSelectedFiles(allowed);
+    setSelectedFile(allowed[0] || null);
     setFileError(null);
-    setSelectedFile(file);
+    e.target.value = "";
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const ext = file.name.split(".").pop().toLowerCase();
-    if (ext !== "java" && ext !== "py") {
-      setFileError("Only .java and .py files are accepted.");
-      setSelectedFile(null);
-      return;
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+
+    const allowed = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (ext === "java" || ext === "py") allowed.push(file);
+      else {
+        setFileError("Only .java and .py files are accepted.");
+        setSelectedFiles([]);
+        setSelectedFile(null);
+        return;
+      }
     }
+
+    setSelectedFiles(allowed);
+    setSelectedFile(allowed[0] || null);
     setFileError(null);
-    setSelectedFile(file);
+  };
+
+  const handleSaveCode = async () => {
+    if (!user?.id || !selectedAssignment || !existingSubmission) return;
+    if (savingCode) return;
+    setSavingCode(true);
+    setCodeSaveError(null);
+    try {
+      const base64 = encodeUtf8ToBase64(editorText);
+      const response = await fetch(
+        `${API_BASE}/submission/code/${selectedAssignment.id}/${user.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: existingSubmission.fileName,
+            fileContent: base64,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Save failed");
+      const updated = await response.json();
+      setSubmissions((prev) => ({ ...prev, [selectedAssignment.id]: updated }));
+      setEditorDirty(false);
+    } catch (err) {
+      console.error(err);
+      setCodeSaveError("Failed to save code.");
+    } finally {
+      setSavingCode(false);
+    }
+  };
+
+  const handleCustomInputFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const base64 = reader.result.split(",")[1];
+        setCustomInputFile({
+          inputFileName: file.name,
+          inputFileContentBase64: base64,
+        });
+      } catch {
+        setCustomError("Failed to read input file.");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const runCustomTests = async () => {
+    if (!user?.id || !selectedAssignment) return;
+    if (!existingSubmission) return;
+
+    if (editorDirty) {
+      await handleSaveCode();
+    }
+
+    setLoadingCustomResults(true);
+    setCustomError(null);
+    setCustomTestResults([]);
+
+    try {
+      const inputMode = selectedAssignment.inputMode || "STDIN";
+
+      const payload = {
+        inputFileName: inputMode === "FILE" ? customInputFile.inputFileName : null,
+        inputFileContentBase64: inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
+        testCases: customTestCases.map((tc) => ({
+          label: tc.label,
+          input: inputMode === "STDIN" ? tc.input : null,
+          expectedOutput: tc.expectedOutput,
+        })),
+      };
+
+      const response = await fetch(
+        `${API_BASE}/testcase/run/custom/${selectedAssignment.id}/${user.id}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) throw new Error("Custom test run failed");
+
+      const results = await response.json();
+      setCustomTestResults(Array.isArray(results) ? results : []);
+    } catch (err) {
+      console.error(err);
+      setCustomError("Failed to run custom tests.");
+    } finally {
+      setLoadingCustomResults(false);
+    }
+  };
+
+  const runProfessorTests = async () => {
+    if (!user?.id || !selectedAssignment) return;
+    if (!existingSubmission) return;
+
+    if (editorDirty) {
+      await handleSaveCode();
+    }
+
+    setLoadingResults(true);
+    try {
+      const response = await fetch(
+        `${API_BASE}/testcase/run/${selectedAssignment.id}/${user.id}`,
+        { method: "POST" }
+      );
+      if (!response.ok) throw new Error("Failed to run professor tests");
+
+      // Refresh submission + visible results
+      const subRes = await fetch(`${API_BASE}/submission/${user.id}/${selectedAssignment.id}`);
+      if (subRes.ok) {
+        const updatedSub = await subRes.json();
+        setSubmissions((prev) => ({ ...prev, [selectedAssignment.id]: updatedSub }));
+      }
+
+      const res = await fetch(`${API_BASE}/testcase/results/${selectedAssignment.id}/${user.id}`);
+      const data = res.ok ? await res.json() : [];
+      const visible = Array.isArray(data) ? data.filter((r) => !r.testCase?.hidden) : [];
+      setTestResults(visible);
+      setActiveTab("results");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingResults(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -217,9 +431,15 @@ export default function StudentCourseDetailPage() {
       if (!response.ok) throw new Error("Failed to remove submission");
       setSubmissions((prev) => { const u = { ...prev }; delete u[selectedAssignment.id]; return u; });
       setTestResults([]);
+      setCustomTestResults([]);
+      setCustomError(null);
       setSubmitted(false);
       setSelectedFile(null);
+      setSelectedFiles([]);
       setActiveTab("upload");
+      setEditorDirty(false);
+      setEditorText("");
+      setCodeSaveError(null);
     } catch (error) {
       console.error("Error removing submission:", error);
     }
@@ -228,12 +448,21 @@ export default function StudentCourseDetailPage() {
   const closeModal = () => {
     setSelectedAssignment(null);
     setSelectedFile(null);
+    setSelectedFiles([]);
     setSubmitted(false);
     setSubmitting(false);
     setNewAttempt(false);
     setActiveTab("description");
     setTestResults([]);
     setFileError(null);
+    setCustomTestCases([{ label: "", input: "", expectedOutput: "" }]);
+    setCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
+    setCustomTestResults([]);
+    setLoadingCustomResults(false);
+    setCustomError(null);
+    setEditorDirty(false);
+    setEditorText("");
+    setCodeSaveError(null);
   };
 
   if (loading) {
@@ -289,10 +518,15 @@ export default function StudentCourseDetailPage() {
                                 onClick={() => {
                                   setSelectedAssignment(a);
                                   setSelectedFile(null);
+                                  setSelectedFiles([]);
                                   setSubmitted(false);
                                   setNewAttempt(false);
                                   setActiveTab("description");
                                   setTestResults([]);
+                                  setCustomTestCases([{ label: "", input: "", expectedOutput: "" }]);
+                                  setCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
+                                  setCustomTestResults([]);
+                                  setCustomError(null);
                                 }}
                                 className="flex items-center gap-4 p-4 w-full text-left text-zinc-300 hover:bg-zinc-700/30 transition-colors rounded-lg"
                             >
@@ -354,7 +588,7 @@ export default function StudentCourseDetailPage() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-zinc-700">
-                  {["description", "upload", ...(existingSubmission ? ["results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
+                  {["description", "upload", ...(existingSubmission ? ["submission", "custom", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
                           type="button"
@@ -367,7 +601,17 @@ export default function StudentCourseDetailPage() {
                           style={activeTab === tab ? { borderColor: "#C9A84C", color: "#C9A84C" } : {}}
                       >
                         {tab === "results" && <FlaskConical className="w-3.5 h-3.5" />}
-                        {tab === "description" ? "Description" : tab === "upload" ? "Upload Solution" : tab === "results" ? "Test Results" : "Feedback"}
+                        {tab === "description"
+                            ? "Description"
+                            : tab === "upload"
+                              ? "Upload Solution"
+                              : tab === "submission"
+                                ? "My Submission"
+                                : tab === "custom"
+                                  ? "Run With My Data"
+                                : tab === "results"
+                                  ? "Test Results"
+                                  : "Feedback"}
                       </button>
                   ))}
                 </div>
@@ -412,10 +656,27 @@ export default function StudentCourseDetailPage() {
                                 >
                                   View Test Results
                                 </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab("submission")}
+                                    className="mt-3 px-6 py-2 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                >
+                                  View My Submission
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab("custom")}
+                                    className="mt-3 px-6 py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                    style={{ background: "#7C1D2E" }}
+                                >
+                                  Run With My Data
+                                </button>
                               </div>
                               <button
                                   type="button"
-                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSubmitted(false); }}
+                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); setSubmitted(false); }}
                                   className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
                                   style={{ background: "#7C1D2E" }}
                               >
@@ -447,7 +708,7 @@ export default function StudentCourseDetailPage() {
                               </div>
                               <button
                                   type="button"
-                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); }}
+                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); }}
                                   className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
                                   style={{ background: "#7C1D2E" }}
                               >
@@ -461,54 +722,359 @@ export default function StudentCourseDetailPage() {
                                 Remove Submission
                               </button>
                             </div>
-                        ) : (
-                            <>
-                              {newAttempt && (
-                                  <p className="text-zinc-400 text-sm mb-4">Submitting a new file will replace your current submission.</p>
-                              )}
-                              <div
-                                  onDrop={handleDrop}
-                                  onDragOver={(e) => e.preventDefault()}
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="border-2 border-dashed border-zinc-600 rounded-xl p-12 text-center cursor-pointer hover:border-zinc-400 transition-colors"
-                              >
-                                <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-4" />
-                                {selectedFile ? (
-                                    <p className="text-white font-medium">{selectedFile.name}</p>
-                                ) : (
-                                    <>
-                                      <p className="text-white font-semibold text-lg">Ready to submit?</p>
-                                      <p className="text-zinc-400 text-sm mt-2">Drag and drop your file here or click to browse</p>
-                                    </>
-                                )}
-                                <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" />
-                              </div>
-
-                              {fileError && (
-                                  <div className="mt-3 p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
-                                    <p className="text-red-400 text-sm">{fileError}</p>
+                        ) : existingSubmission && newAttempt ? (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
+                                    <div className="min-w-0">
+                                      <p className="text-zinc-300 text-sm font-medium">Editing Submission</p>
+                                      <p className="text-zinc-400 text-xs truncate">{existingSubmission.fileName}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                          type="button"
+                                          onClick={handleSaveCode}
+                                          disabled={!editorDirty || savingCode}
+                                          className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          style={{ background: "#7C1D2E" }}
+                                      >
+                                        {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
+                                      </button>
+                                      <button
+                                          type="button"
+                                          onClick={runProfessorTests}
+                                          disabled={loadingResults || savingCode}
+                                          className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        Run Professor Tests
+                                      </button>
+                                    </div>
                                   </div>
-                              )}
 
-                              <div className="flex gap-3 mt-4">
-                                <button
-                                    type="button"
-                                    onClick={newAttempt ? () => setNewAttempt(false) : closeModal}
-                                    className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={!selectedFile || submitting}
-                                    className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{ background: "#7C1D2E" }}
-                                >
-                                  {submitting ? "Submitting..." : "Submit"}
-                                </button>
+                                  {codeSaveError && (
+                                      <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                                        <p className="text-red-400 text-sm">{codeSaveError}</p>
+                                      </div>
+                                  )}
+
+                                  <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                                    <MonacoEditor
+                                        height="28rem"
+                                        language={editorLanguage}
+                                        value={editorText}
+                                        onChange={(val) => {
+                                          setEditorText(val ?? "");
+                                          setEditorDirty(true);
+                                        }}
+                                        options={{
+                                          minimap: { enabled: false },
+                                          scrollBeyondLastLine: false,
+                                          fontSize: 13,
+                                          automaticLayout: true,
+                                        }}
+                                    />
+                                  </div>
+
+                                  <div className="flex gap-3 mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewAttempt(false)}
+                                        className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("custom")}
+                                        className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                        style={{ background: "#7C1D2E" }}
+                                    >
+                                      Run With My Data
+                                    </button>
+                                  </div>
+                                </div>
+                            ) : (
+                                <>
+                                  {newAttempt && (
+                                      <p className="text-zinc-400 text-sm mb-4">Submitting a new file will replace your current submission.</p>
+                                  )}
+                                  <div
+                                      onDrop={handleDrop}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onClick={() => fileInputRef.current?.click()}
+                                      className="border-2 border-dashed border-zinc-600 rounded-xl p-12 text-center cursor-pointer hover:border-zinc-400 transition-colors"
+                                  >
+                                    <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-4" />
+                                    {selectedFiles.length > 0 ? (
+                                        <div className="space-y-3">
+                                          <p className="text-white font-medium">
+                                            Selected {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""}.
+                                          </p>
+                                          <div className="flex flex-col gap-2 items-center">
+                                            <p className="text-zinc-400 text-xs">Choose main file to submit:</p>
+                                            <p className="text-zinc-500 text-[11px]">
+                                              Only one file is submitted.
+                                            </p>
+                                            <div className="flex flex-wrap gap-2 justify-center">
+                                              {selectedFiles.map((f) => (
+                                                  <button
+                                                      key={f.name}
+                                                      type="button"
+                                                      onClick={(e) => { e.stopPropagation(); setSelectedFile(f); }}
+                                                      className={`px-3 py-2 text-xs rounded-lg border transition-colors ${
+                                                          selectedFile?.name === f.name
+                                                              ? "bg-zinc-700 border-zinc-600 text-white"
+                                                              : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700"
+                                                      }`}
+                                                  >
+                                                    {f.name}
+                                                  </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                          <p className="text-white font-semibold text-lg">Ready to submit?</p>
+                                          <p className="text-zinc-400 text-sm mt-2">Drag and drop multiple files here or click to browse</p>
+                                        </>
+                                    )}
+                                    <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} className="hidden" />
+                                  </div>
+
+                                  {fileError && (
+                                      <div className="mt-3 p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                                        <p className="text-red-400 text-sm">{fileError}</p>
+                                      </div>
+                                  )}
+
+                                  <div className="flex gap-3 mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={newAttempt ? () => setNewAttempt(false) : closeModal}
+                                        className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={!selectedFile || submitting}
+                                        className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={{ background: "#7C1D2E" }}
+                                    >
+                                      {submitting ? "Submitting..." : "Submit"}
+                                    </button>
+                                  </div>
+                                </>
+                            )} 
+                      </div>
+                  )}
+
+                  {activeTab === "submission" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3 p-3 bg-zinc-800 rounded-xl border border-zinc-700">
+                          <div className="min-w-0">
+                            <p className="text-zinc-300 text-sm font-medium">Submission</p>
+                            <p className="text-zinc-400 text-xs truncate">{existingSubmission?.fileName || "Unnamed file"}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={handleSaveCode}
+                                disabled={!editorDirty || savingCode}
+                                className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ background: "#7C1D2E" }}
+                            >
+                              {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={runProfessorTests}
+                                disabled={loadingResults || savingCode}
+                                className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              Run Professor Tests
+                            </button>
+                          </div>
+                        </div>
+
+                        {codeSaveError && (
+                            <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                              <p className="text-red-400 text-sm">{codeSaveError}</p>
+                            </div>
+                        )}
+
+                        <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                          <MonacoEditor
+                              height="32rem"
+                              language={editorLanguage}
+                              value={editorText}
+                              onChange={(val) => {
+                                setEditorText(val ?? "");
+                                setEditorDirty(true);
+                              }}
+                              options={{
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false,
+                                fontSize: 13,
+                                automaticLayout: true,
+                              }}
+                            />
+                        </div>
+                      </div>
+                  )}
+
+                  {activeTab === "custom" && (
+                      <div className="space-y-4">
+                        <div className="p-3 bg-zinc-800 border border-zinc-700 rounded-xl">
+                          <p className="text-sm font-medium text-white">Run With My Data</p>
+                          <p className="text-zinc-400 text-xs mt-1">Custom runs won’t change your score.</p>
+                        </div>
+
+                        {selectedAssignment?.inputMode === "FILE" ? (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-zinc-300">Custom Input File</p>
+                              <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    onChange={handleCustomInputFileChange}
+                                    className="text-sm text-zinc-300"
+                                />
+                                {customInputFile.inputFileName && (
+                                    <span className="text-xs text-zinc-400">{customInputFile.inputFileName}</span>
+                                )}
                               </div>
-                            </>
+                            </div>
+                        ) : null}
+
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-zinc-300">Testcases</p>
+                          {customTestCases.map((tc, i) => (
+                              <div key={i} className="p-4 bg-zinc-900 border border-zinc-700 rounded-xl space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <input
+                                      value={tc.label}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, label: v } : x)));
+                                      }}
+                                      placeholder={`Label (optional)`}
+                                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40"
+                                  />
+                                  <button
+                                      type="button"
+                                      onClick={() => setCustomTestCases((prev) => prev.filter((_, idx) => idx !== i))}
+                                      className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+                                      disabled={customTestCases.length <= 1}
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+
+                                {selectedAssignment?.inputMode !== "FILE" ? (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-medium text-zinc-400">Input</p>
+                                      <textarea
+                                          rows={4}
+                                          value={tc.input}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, input: v } : x)));
+                                          }}
+                                          placeholder="stdin input"
+                                          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
+                                      />
+                                    </div>
+                                ) : null}
+
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium text-zinc-400">Expected Output</p>
+                                  <textarea
+                                      rows={4}
+                                      value={tc.expectedOutput}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, expectedOutput: v } : x)));
+                                      }}
+                                      placeholder="expected stdout"
+                                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
+                                  />
+                                </div>
+                              </div>
+                          ))}
+
+                          <button
+                              type="button"
+                              onClick={() => setCustomTestCases((prev) => [...prev, { label: "", input: "", expectedOutput: "" }])}
+                              className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                          >
+                            Add Testcase
+                          </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                              type="button"
+                              onClick={() => {
+                                setCustomTestResults([]);
+                                setCustomError(null);
+                              }}
+                              className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                          >
+                            Clear Results
+                          </button>
+                          <button
+                              type="button"
+                              onClick={runCustomTests}
+                              disabled={loadingCustomResults || customTestCases.length === 0}
+                              className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              style={{ background: "#7C1D2E" }}
+                          >
+                            {loadingCustomResults ? "Running..." : "Run My Tests"}
+                          </button>
+                        </div>
+
+                        {customError && (
+                            <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                              <p className="text-red-400 text-sm">{customError}</p>
+                            </div>
+                        )}
+
+                        {customTestResults.length > 0 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl border border-zinc-700">
+                                <span className="text-zinc-300 text-sm font-medium">My Results</span>
+                                <span className="text-sm font-semibold">
+                                  <span className="text-green-400">{customTestResults.filter((r) => r.passed).length}</span>
+                                  <span className="text-zinc-500"> / </span>
+                                  <span className="text-white">{customTestResults.length}</span>
+                                  <span className="text-zinc-400"> passed</span>
+                                </span>
+                              </div>
+                              {customTestResults.map((r, idx) => (
+                                  <div
+                                      key={idx}
+                                      className={`p-4 rounded-xl border ${
+                                          r.passed ? "bg-green-600/10 border-green-600/20" : "bg-red-600/10 border-red-600/20"
+                                      }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className={`w-2 h-2 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                      <span className={`text-sm font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>
+                                        {r.label || `Test Case ${idx + 1}`} — {r.passed ? "Passed" : "Failed"}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-zinc-400 mt-1">
+                                      Expected: <span className="font-mono text-zinc-300">{r.expectedOutput || ""}</span>
+                                    </p>
+                                    {!r.passed && (
+                                        <p className="text-xs text-zinc-400 mt-1">
+                                          Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span>
+                                        </p>
+                                    )}
+                                  </div>
+                              ))}
+                            </div>
                         )}
                       </div>
                   )}

@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import com.womm.backend.dto.SubmissionCodeUpdateRequest;
 
 @RestController
 @RequestMapping(path="/submission")
@@ -48,6 +49,14 @@ public class SubmissionController {
         @PathVariable String userId,
         @RequestBody Submission submission) {
         return submissionService.submitAssignment(assignmentId, userId, submission);
+    }
+
+    @PutMapping("/code/{assignmentId}/{userId}")
+    public Submission saveSubmissionCode(
+            @PathVariable Long assignmentId,
+            @PathVariable String userId,
+            @RequestBody SubmissionCodeUpdateRequest request) {
+        return submissionService.saveSubmissionCode(assignmentId, userId, request);
     }
 
     @GetMapping("/assignment/{assignmentId}")

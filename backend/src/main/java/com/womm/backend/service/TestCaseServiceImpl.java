@@ -1,11 +1,15 @@
 package com.womm.backend.service;
 
+import com.womm.backend.dto.CustomTestCaseRequest;
+import com.womm.backend.dto.CustomTestRunRequest;
+import com.womm.backend.dto.CustomTestRunResult;
 import com.womm.backend.entity.*;
 import com.womm.backend.id.SubmissionId;
 import com.womm.backend.repository.*;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TestCaseServiceImpl implements TestCaseService {
@@ -108,5 +112,58 @@ public class TestCaseServiceImpl implements TestCaseService {
     @Override
     public List<TestResult> getTestResultsForAssignment(Long assignmentId) {
         return testResultRepository.findByAssignmentId(assignmentId);
+    }
+
+    @Override
+    public List<CustomTestRunResult> runCustomTestsForSubmission(
+            Long assignmentId,
+            String userId,
+            CustomTestRunRequest request
+    ) {
+        if (request == null || request.getTestCases() == null) return new ArrayList<>();
+
+        Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        boolean isFileMode = "FILE".equals(assignment.getInputMode());
+
+        String inputFileBase64 = isFileMode ? request.getInputFileContentBase64() : null;
+        String inputFileName = isFileMode ? request.getInputFileName() : null;
+        if (isFileMode) {
+            if (inputFileBase64 == null || inputFileBase64.isEmpty()) inputFileBase64 = assignment.getInputFileContent();
+            if (inputFileName == null || inputFileName.isEmpty()) inputFileName = assignment.getInputFileName();
+        }
+
+        final String finalInputFileBase64 = inputFileBase64;
+        final String finalInputFileName = inputFileName;
+
+        return request.getTestCases().stream().map(tc -> {
+            String input = isFileMode ? null : tc.getInput();
+
+            CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
+                    submission.getFileContent(),
+                    submission.getFileName(),
+                    input,
+                    finalInputFileBase64,
+                    finalInputFileName
+            );
+
+            String expected = tc.getExpectedOutput() == null ? "" : tc.getExpectedOutput();
+            String actual = execResult.stdout == null ? "" : execResult.stdout;
+
+            boolean passed = execResult.exitCode == 0 &&
+                    actual.trim().replace("\r\n", "\n").replace("\r", "\n")
+                            .equals(expected.trim().replace("\r\n", "\n").replace("\r", "\n"));
+
+            CustomTestRunResult result = new CustomTestRunResult();
+            result.setLabel(tc.getLabel());
+            result.setPassed(passed);
+            result.setExpectedOutput(expected);
+            result.setActualOutput(actual);
+            return result;
+        }).collect(Collectors.toList());
     }
 }
