@@ -1,4 +1,5 @@
 package com.womm.backend.service;
+import com.womm.backend.dto.DetectionResponse;
 import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Submission;
 import com.womm.backend.entity.User;
@@ -24,6 +25,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     TestCaseService testCaseService;
     RubricService rubricService;
     RubricScoreRepository rubricScoreRepository;
+    AiDetectionService aiDetectionService;
 
     public SubmissionServiceImpl(
             SubmissionRepository submissionRepository,
@@ -33,7 +35,8 @@ public class SubmissionServiceImpl implements SubmissionService {
             TestResultRepository testResultRepository,
             RubricScoreRepository rubricScoreRepository,
             @Lazy TestCaseService testCaseService,
-            @Lazy RubricService rubricService) {
+            @Lazy RubricService rubricService,
+            AiDetectionService aiDetectionService) {
         this.submissionRepository = submissionRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
@@ -81,6 +84,22 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setUser(user);
         submission.setAssignment(assignment);
         submission.setSubmissionId(new SubmissionId(userId, assignmentId));
+
+        try {
+            DetectionResponse aiResult = aiDetectionService.detectAI(submission.getFileContent());
+
+            submission.setAiProbability(aiResult.getAi_probability());
+            submission.setAiPercentage(aiResult.getAi_percentage());
+            submission.setAiLabel(aiResult.getLabel());
+            submission.setAiConfidence(aiResult.getConfidence());
+
+        } catch (Exception e) {
+            submission.setAiProbability(0.0);
+            submission.setAiPercentage(0.0);
+            submission.setAiLabel("Unavailable");
+            submission.setAiConfidence("Low");
+        }
+
         Submission saved = submissionRepository.save(submission);
 
         if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {

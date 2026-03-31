@@ -1,12 +1,11 @@
-#### FOR LOCAL DEVELOPERS ###
-#Install with: pip install -r requirements-dev.txt
+### FOR LOCAL DEVELOPERS ###
+# Install with: pip install -r requirements-dev.txt
 
 # Core
 numpy>=1.26.0
 pandas>=2.2.0
 
-# API service
-# technically not required yet - these are all used in main to connect service to backend
+# API
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 pydantic>=2.7.0

@@ -5,8 +5,11 @@ data/processed/
 data/metadata/
 
 # Model saved data
-models/
+# models/
 
 # Ignore Python cache
 __pycache__/
 *.py[cod]
+
+# Docker
+.dockerignore

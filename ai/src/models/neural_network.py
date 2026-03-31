@@ -1,6 +1,6 @@
 """
 neural_network.py
-Smaller network sized for 40 dense features (not 1000+ sparse TF-IDF).
+Smaller network sized for 40 dense features.
 Architecture: Input(40) -> Dense(64) -> ReLU -> Dropout -> Dense(32) -> ReLU -> Dense(1) -> Sigmoid
 """
 
