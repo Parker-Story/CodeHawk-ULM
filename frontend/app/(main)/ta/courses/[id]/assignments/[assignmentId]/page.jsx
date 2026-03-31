@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, X, ClipboardList, ChevronDown, ChevronUp, MoreVertical, CheckCircle } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
+import AiDetectionBadge from "@/components/AiDetectionBadge";  // ← new
 
 export default function TAGradingWorkspacePage() {
     const params = useParams();
@@ -34,10 +35,7 @@ export default function TAGradingWorkspacePage() {
             .catch((err) => console.error(err));
 
         fetch(`${API_BASE}/rubric/assignment/${assignmentId}`)
-            .then((res) => {
-                if (!res.ok || res.status === 204) return null;
-                return res.text().then((text) => text ? JSON.parse(text) : null);
-            })
+            .then((res) => { if (!res.ok || res.status === 204) return null; return res.text().then((text) => text ? JSON.parse(text) : null); })
             .then((data) => { if (data) setRubric(data); })
             .catch((err) => console.error("Rubric fetch error:", err));
 
@@ -164,7 +162,6 @@ export default function TAGradingWorkspacePage() {
                     <p className="text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
                 </div>
 
-                {/* Submissions Table */}
                 <section className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-white">Submissions</h2>
@@ -177,12 +174,14 @@ export default function TAGradingWorkspacePage() {
                                 <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Test Results</th>
+                                {/* ── NEW: AI Detection column ── */}
+                                <th className="text-left py-3 px-4 font-semibold text-white">AI Detection</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             {submissions.length === 0 ? (
-                                <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                                <tr><td colSpan={6} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                             ) : (
                                 submissions.map((s) => {
                                     const userId = s.submissionId.userId;
@@ -227,6 +226,10 @@ export default function TAGradingWorkspacePage() {
                                                         <span className="text-zinc-600 text-sm">—</span>
                                                     )}
                                                 </td>
+                                                {/* ── NEW: AI Detection cell ── */}
+                                                <td className="py-3 px-4">
+                                                    <AiDetectionBadge submission={s} />
+                                                </td>
                                                 <td className="py-3 px-4">
                                                     <div className="relative">
                                                         <button
@@ -255,7 +258,7 @@ export default function TAGradingWorkspacePage() {
                                             </tr>
                                             {isExpanded && studentResults.length > 0 && (
                                                 <tr className="border-b border-zinc-700/50 bg-zinc-900/80">
-                                                    <td colSpan={5} className="px-4 py-3">
+                                                    <td colSpan={6} className="px-4 py-3">
                                                         <div className="space-y-2">
                                                             {studentResults.map((r) => (
                                                                 <div key={r.id} className="flex items-center gap-3 text-xs">
@@ -306,24 +309,14 @@ export default function TAGradingWorkspacePage() {
                 return (
                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                         <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-7xl h-[90vh] flex flex-col">
-
-                            {/* Header */}
                             <div className="flex items-center justify-between p-5 border-b border-zinc-700 shrink-0">
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
-                                    <p className="text-zinc-400 text-sm mt-0.5">
-                                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {rubric.name}
-                                    </p>
+                                    <p className="text-zinc-400 text-sm mt-0.5">{gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {rubric.name}</p>
                                 </div>
-                                <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                             </div>
-
-                            {/* Body */}
                             <div className="flex flex-1 overflow-hidden">
-
-                                {/* Left — Submission */}
                                 <div className="flex-1 flex flex-col border-r border-zinc-700 overflow-hidden">
                                     <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
                                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Submission</p>
@@ -335,8 +328,6 @@ export default function TAGradingWorkspacePage() {
                                         </pre>
                                     </div>
                                 </div>
-
-                                {/* Right — Rubric */}
                                 <div className="w-96 flex flex-col overflow-hidden shrink-0">
                                     <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
                                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Rubric</p>
@@ -347,9 +338,7 @@ export default function TAGradingWorkspacePage() {
                                             <div key={criteria.id}>
                                                 <div className="flex items-center justify-between mb-2">
                                                     <p className="text-white font-semibold text-sm">{criteria.title}</p>
-                                                    <p className="text-zinc-400 text-xs">
-                                                        {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
-                                                    </p>
+                                                    <p className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</p>
                                                 </div>
                                                 <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
                                                     {(criteria.items || []).map((item) => (
@@ -371,35 +360,17 @@ export default function TAGradingWorkspacePage() {
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Feedback */}
                                     <div className="px-5 pb-3 border-t border-zinc-700 pt-4 shrink-0">
                                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Feedback</p>
-                                        <textarea
-                                            rows={3}
-                                            value={feedbackInputs[gradingStudent] ?? ""}
-                                            onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [gradingStudent]: e.target.value }))}
-                                            placeholder="Leave feedback for the student..."
-                                            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSaveFeedback(gradingStudent)}
-                                            disabled={savingFeedback[gradingStudent]}
-                                            className="mt-2 w-full py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50"
-                                            style={{ background: "#3f3f46" }}
-                                        >
+                                        <textarea rows={3} value={feedbackInputs[gradingStudent] ?? ""} onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [gradingStudent]: e.target.value }))} placeholder="Leave feedback for the student..." className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none" />
+                                        <button type="button" onClick={() => handleSaveFeedback(gradingStudent)} disabled={savingFeedback[gradingStudent]} className="mt-2 w-full py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#3f3f46" }}>
                                             {savingFeedback[gradingStudent] ? "Saving..." : "Save Feedback"}
                                         </button>
                                     </div>
-
-                                    {/* Footer */}
                                     <div className="p-5 border-t border-zinc-700 shrink-0">
                                         <div className="flex items-center justify-between mb-4">
                                             <p className="text-zinc-300 text-sm font-medium">Total Score</p>
-                                            <p className="text-white font-bold">
-                                                {(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {rubric.totalPoints} pts
-                                            </p>
+                                            <p className="text-white font-bold">{(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {rubric.totalPoints} pts</p>
                                         </div>
                                         <div className="flex gap-3">
                                             <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>

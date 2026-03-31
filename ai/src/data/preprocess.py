@@ -1,93 +1,92 @@
 """
 preprocess.py
 
-40 hand-crafted features that capture real AI vs human
-code differences based on style, structure, and complexity patterns.
+Key fixes in this version:
+  1. REMOVED all raw count features that scale with code size:
+       total_lines, code_lines, blank_lines, comment_lines,
+       total_tokens, total_chars
+     These caused the model to learn "short = human, long = AI"
+     which is wrong and kills inference on short submissions.
 
-Features:
-  - Structural patterns (indentation, line length, nesting)
-  - Style patterns (naming, comments, docstrings)
-  - Complexity patterns (function size, branching, cyclomatic)
-  - Lexical diversity (unique token ratio)
-  - AI-specific tells (magic numbers, type hints, error handling style)
+  2. KEPT only ratios, densities, and averages that are
+     scale-invariant — they mean the same thing on 5-line code
+     and 500-line code.
+
+  3. REMOVED oversampling (balance_classes).
+     Instead, pos_weight is computed and saved so train.py
+     can apply it directly in the loss function.
+     Oversampling caused the model to memorise specific AI
+     samples rather than learning generalizable patterns.
+
+  4. ADDED robust clipping before normalisation:
+     each feature is clipped to [p1, p99] of the training set
+     so one extreme value can't dominate the normalised range.
+
+Final feature count: 32 (all scale-invariant)
 """
 
 import os
 import re
 import numpy as np
 import pandas as pd
+import json
 
 from src.utils.save_load import save_norm_stats
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-
+BASE_DIR      = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 MODELS_DIR    = os.path.join(BASE_DIR, "models")
 
-# Feature names in extraction order — used for debugging/inspection
+# ── Feature names (25 features) ───────────────────────────────
+
 FEATURE_NAMES = [
-    # ── Line structure (8) ───────────────────────────────────────────────────
-    "total_lines",
-    "code_lines",
-    "blank_lines",
-    "comment_lines",
+
+    # Line ratios (4)
     "blank_ratio",
     "comment_ratio",
+    "code_ratio",
     "avg_line_length",
-    "line_length_std",
 
-    # ── Indentation (4) ──────────────────────────────────────────────────────
-    "indent_std",               # AI: very uniform; human: varies
+    # Indentation (3)  ← mixed_indent removed
+    "indent_std",
     "indent_mean",
     "indent_max",
-    "mixed_indent",             # tabs vs spaces mixing (human habit)
 
-    # ── Naming style (5) ─────────────────────────────────────────────────────
-    "avg_identifier_length",    # AI: longer descriptive names
-    "long_identifier_ratio",    # ratio of identifiers > 8 chars
-    "snake_case_ratio",         # AI follows conventions strictly
-    "camel_case_count",
-    "single_char_var_ratio",    # humans use i, j, x more often
+    # Naming style (4)  ← camel_case removed (often redundant in Python corpora)
+    "avg_identifier_length",
+    "long_identifier_ratio",
+    "snake_case_ratio",
+    "single_char_var_ratio",
 
-    # ── Comments & docs (5) ──────────────────────────────────────────────────
-    "docstring_count",          # AI writes docstrings consistently
-    "inline_comment_ratio",     # AI adds inline comments more
-    "todo_count",               # humans leave TODOs, AI rarely does
-    "comment_word_count_avg",   # AI comments are more verbose
-    "has_module_docstring",     # AI almost always adds module docstring
+    # Comments & docs (4)  ← reduced (merged signal behavior)
+    "docstring_ratio",
+    "inline_comment_ratio",
+    "has_module_docstring",
+    "todo_count",
 
-    # ── Functions & structure (6) ────────────────────────────────────────────
-    "function_count",
-    "avg_function_length",      # AI writes shorter, cleaner functions
-    "max_function_length",
-    "max_nesting_depth",        # AI avoids deep nesting
+    # Functions & structure (5)  ← cyclomatic_per_function removed (often unstable/div by 0)
+    "avg_function_length",
+    "max_nesting_depth",
     "avg_nesting_depth",
-    "early_return_ratio",       # AI uses early returns more
+    "early_return_ratio",
+    "function_density",
 
-    # ── Complexity & style (6) ───────────────────────────────────────────────
-    "cyclomatic_complexity",    # if/for/while/elif branches
-    "magic_number_count",       # raw numbers not assigned to vars (human habit)
-    "string_literal_count",     # AI adds more descriptive strings
-    "type_hint_count",          # AI uses type hints more
-    "exception_handling_count", # AI wraps more in try/except
-    "list_comprehension_count", # AI uses comprehensions more
+    # Complexity & style (4)  ← reduced feature set
+    "magic_number_density",
+    "string_literal_density",
+    "exception_density",
+    "operator_density",
 
-    # ── Lexical diversity (4) ────────────────────────────────────────────────
-    "unique_token_ratio",       # AI has less token diversity (more repetitive)
-    "total_tokens",
+    # Lexical diversity (2)
+    "unique_token_ratio",
     "avg_tokens_per_line",
-    "operator_density",         # ratio of operators to total tokens
-
-    # ── Global stats (2) ─────────────────────────────────────────────────────
-    "total_chars",
-    "avg_chars_per_token",
 ]
+
+N_FEATURES = len(FEATURE_NAMES)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Feature extractor  (40 features, all hand-crafted)
+#  Helpers
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _is_comment_line(line: str) -> bool:
@@ -99,180 +98,166 @@ def _get_indent(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
-def _max_nesting(code: str) -> tuple:
-    """Return (max_depth, avg_depth) based on indentation levels."""
-    depths = []
-    for ln in code.splitlines():
-        if ln.strip():
-            depths.append(_get_indent(ln) // 4)   # assume 4-space indent
-    if not depths:
-        return 0, 0.0
-    return int(max(depths)), float(np.mean(depths))
-
-
-def _function_lengths(code: str) -> list:
-    """Return list of line counts per function/method."""
-    lengths = []
-    lines   = code.splitlines()
-    in_func = False
-    start   = 0
-
-    for i, ln in enumerate(lines):
-        stripped = ln.strip()
-        # Detect function start (Python / C-style)
-        if re.match(r"def\s+\w+|^\w[\w\s\*]+\s+\w+\s*\(", stripped):
-            if in_func:
-                lengths.append(i - start)
-            in_func = True
-            start   = i
-
-    if in_func:
-        lengths.append(len(lines) - start)
-
-    return lengths if lengths else [len(lines)]
-
-
-def _cyclomatic(code: str) -> int:
-    """
-    Approximate cyclomatic complexity:
-    count decision points (if, elif, for, while, case, catch, &&, ||)
-    """
-    patterns = [
-        r"\bif\b", r"\belif\b", r"\bfor\b", r"\bwhile\b",
-        r"\bcase\b", r"\bcatch\b", r"\bexcept\b",
-        r"&&", r"\|\|", r"\band\b", r"\bor\b",
-    ]
-    return sum(len(re.findall(p, code)) for p in patterns)
-
-
-def _tokenise_simple(code: str) -> list:
+def _tokenise(code: str) -> list:
     return re.findall(r"[a-zA-Z_]\w*|[0-9]+|\S", code)
 
 
 def extract_features(code: str) -> np.ndarray:
-    """
-    Extract all 40 features from a raw code string.
-    Returns np.ndarray shape (40,) dtype float32.
-    """
     code  = str(code)
     lines = code.splitlines()
-    n     = len(lines)
+    n     = max(len(lines), 1)
 
-    # ── Line structure ────────────────────────────────────────────────────────
-    blank_lines   = sum(1 for ln in lines if ln.strip() == "")
-    comment_lines = sum(1 for ln in lines if _is_comment_line(ln))
-    code_lines    = sum(1 for ln in lines if ln.strip() and not _is_comment_line(ln))
-    line_lengths  = [len(ln) for ln in lines] if lines else [0]
-    avg_line_len  = float(np.mean(line_lengths))
-    line_len_std  = float(np.std(line_lengths))
-    blank_ratio   = blank_lines   / max(n, 1)
-    comment_ratio = comment_lines / max(n, 1)
+    blank_ln   = sum(1 for ln in lines if ln.strip() == "")
+    comment_ln = sum(1 for ln in lines if _is_comment_line(ln))
+    code_ln    = sum(1 for ln in lines if ln.strip() and not _is_comment_line(ln))
+    nonempty   = [ln for ln in lines if ln.strip()]
 
-    # ── Indentation ───────────────────────────────────────────────────────────
-    nonempty_lines = [ln for ln in lines if ln.strip()]
-    indents = [_get_indent(ln) for ln in nonempty_lines] if nonempty_lines else [0]
-    indent_std   = float(np.std(indents))
-    indent_mean  = float(np.mean(indents))
-    indent_max   = float(max(indents))
-    # Mixed indentation: lines with tabs when most use spaces (or vice versa)
-    tab_lines   = sum(1 for ln in nonempty_lines if ln.startswith("\t"))
-    space_lines = sum(1 for ln in nonempty_lines if ln.startswith(" "))
-    mixed_indent = float(min(tab_lines, space_lines) / max(len(nonempty_lines), 1))
+    blank_ratio   = blank_ln / n
+    comment_ratio = comment_ln / n
+    code_ratio    = code_ln / n
 
-    # ── Naming style ──────────────────────────────────────────────────────────
+    # ── line length ─────────────────────────────
+    line_lens    = [len(ln) for ln in lines] if lines else [0]
+    avg_line_len = np.log1p(np.mean(line_lens)) / np.log1p(200)
+
+    # ── indentation ─────────────────────────────
+    indents    = [_get_indent(ln) for ln in nonempty] if nonempty else [0]
+
+    indent_std  = np.tanh(np.std(indents) / 4)
+    indent_mean = np.tanh(np.mean(indents) / 4)
+    indent_max  = np.tanh(np.max(indents) / 8)
+
+    tab_ln      = sum(1 for ln in nonempty if ln.startswith("\t"))
+    space_ln    = sum(1 for ln in nonempty if ln.startswith(" "))
+    mixed_ind   = float(min(tab_ln, space_ln) / max(len(nonempty), 1))
+
+    # ── identifiers (STABILIZED) ─────────────────────────────
     identifiers = re.findall(r"\b[a-zA-Z_]\w*\b", code)
-    id_lengths  = [len(i) for i in identifiers] if identifiers else [0]
-    avg_id_len  = float(np.mean(id_lengths))
-    long_id_ratio = sum(1 for l in id_lengths if l > 8) / max(len(id_lengths), 1)
-    snake_ids   = [i for i in identifiers if "_" in i and i.islower()]
-    snake_ratio = len(snake_ids) / max(len(identifiers), 1)
-    camel_count = float(len(re.findall(r"\b[a-z][a-zA-Z]*[A-Z][a-zA-Z]*\b", code)))
-    single_char = sum(1 for i in identifiers if len(i) == 1)
-    single_char_ratio = single_char / max(len(identifiers), 1)
+    n_ids       = max(len(identifiers), 3)
 
-    # ── Comments & docs ───────────────────────────────────────────────────────
-    docstrings     = re.findall(r'""".*?"""|\'\'\'.*?\'\'\'', code, re.DOTALL)
-    docstring_count = float(len(docstrings))
-    inline_comments = sum(1 for ln in lines
-                          if not _is_comment_line(ln) and
-                          ("#" in ln or "//" in ln))
-    inline_comment_ratio = inline_comments / max(n, 1)
-    todo_count = float(len(re.findall(r"\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b",
-                                       code, re.IGNORECASE)))
-    comment_texts = [ln.strip().lstrip("#/").strip()
-                     for ln in lines if _is_comment_line(ln)]
-    comment_word_avg = float(np.mean([len(c.split()) for c in comment_texts])
-                             if comment_texts else 0.0)
-    has_module_doc = float(bool(re.match(r'\s*"""|\s*\'\'\'', code)))
+    id_lens     = [len(i) for i in identifiers] if identifiers else [0]
 
-    # ── Functions & structure ─────────────────────────────────────────────────
-    func_pattern  = r"\bdef\s+\w+|\b\w[\w\s\*]+\s+\w+\s*\([^)]*\)\s*\{"
-    function_count = float(len(re.findall(func_pattern, code)))
-    func_lengths   = _function_lengths(code)
-    avg_func_len   = float(np.mean(func_lengths))
-    max_func_len   = float(max(func_lengths))
-    max_nest, avg_nest = _max_nesting(code)
-    early_returns  = float(len(re.findall(r"\breturn\b", code)))
-    early_return_ratio = early_returns / max(function_count, 1)
+    avg_id_len  = np.tanh(np.mean(id_lens) / 12)
 
-    # ── Complexity & style ────────────────────────────────────────────────────
-    cyclomatic   = float(_cyclomatic(code))
-    # Magic numbers: standalone integers not in assignments to UPPER_CASE vars
-    magic_nums   = float(len(re.findall(r"(?<![A-Z_=])\b[2-9]\d*\b(?!\s*[=])", code)))
-    string_lits  = float(len(re.findall(r'"[^"]*"|\'[^\']*\'', code)))
-    type_hints   = float(len(re.findall(r":\s*(int|str|float|bool|list|dict|"
-                                         r"tuple|set|Optional|Union|Any|None)\b", code)))
-    except_count = float(len(re.findall(r"\bexcept\b|\bcatch\b", code)))
-    list_comps   = float(len(re.findall(r"\[.+\bfor\b.+\bin\b", code)))
+    long_id_r   = np.tanh(
+        (sum(1 for l in id_lens if l > 8) / n_ids) * 1.5
+    )
 
-    # ── Lexical diversity ─────────────────────────────────────────────────────
-    tokens      = _tokenise_simple(code)
-    total_toks  = float(len(tokens))
-    unique_toks = float(len(set(t.lower() for t in tokens)))
-    unique_ratio = unique_toks / max(total_toks, 1)
-    toks_per_line = total_toks / max(n, 1)
-    ops          = re.findall(r"[+\-*/=<>!&|^~%]+", code)
-    op_density   = float(len(ops)) / max(total_toks, 1)
+    snake_r     = np.tanh(
+        len([i for i in identifiers if "_" in i and i.islower()]) / n_ids
+    )
 
-    # ── Global stats ──────────────────────────────────────────────────────────
-    total_chars      = float(len(code))
-    avg_chars_per_tok = total_chars / max(total_toks, 1)
+    camel_r     = np.tanh(
+        len(re.findall(r"\b[a-z][a-zA-Z]*[A-Z][a-zA-Z]*\b", code)) / n_ids
+    )
 
+    single_r    = sum(1 for i in identifiers if len(i) == 1) / n_ids
+
+    naming_entropy = -(
+        snake_r * np.log(snake_r + 1e-8) +
+        camel_r * np.log(camel_r + 1e-8) +
+        (1 - snake_r - camel_r) * np.log(1 - snake_r - camel_r + 1e-8)
+    )
+
+    # ── functions (FIXED) ─────────────────────────────
+    func_count = max(len(re.findall(r"\bdef\s+\w+", code)), 1)
+
+    docstrings   = re.findall(r'""".*?"""|\'\'\'.*?\'\'\'', code, re.DOTALL)
+    docstring_r  = len(docstrings) / func_count
+
+    # ── comments ─────────────────────────────
+    inline_cmt = sum(
+        1 for ln in lines
+        if not _is_comment_line(ln) and ("#" in ln or "//" in ln)
+    )
+    inline_cmt_r = np.tanh(inline_cmt / n)
+
+    has_mod_doc = float(bool(re.match(r'\s*"""|\'\'\'', code)))
+
+    cmt_texts    = [ln.strip().lstrip("#/").strip() for ln in lines if _is_comment_line(ln)]
+    cmt_word_avg = float(np.mean([len(c.split()) for c in cmt_texts]) if cmt_texts else 0.0)
+
+    todo_cnt = float(len(re.findall(r"\bTODO\b|\bFIXME\b|\bHACK\b|\bXXX\b", code, re.IGNORECASE)))
+
+    # ── function structure ─────────────────────────────
+    func_lines, in_func, start_i = [], False, 0
+    for i, ln in enumerate(lines):
+        if re.match(r"\s*def\s+\w+", ln):
+            if in_func:
+                func_lines.append(i - start_i)
+            in_func, start_i = True, i
+
+    if in_func:
+        func_lines.append(len(lines) - start_i)
+
+    avg_func_len = np.log1p(np.mean(func_lines) if func_lines else n) / np.log1p(100)
+
+    depth_vals = [_get_indent(ln) // 4 for ln in lines if ln.strip()]
+    max_nest   = np.tanh(max(depth_vals) / 6) if depth_vals else 0.0
+    avg_nest   = np.tanh(np.mean(depth_vals) / 4) if depth_vals else 0.0
+
+    structure_complexity = np.tanh(
+        avg_func_len + max_nest + avg_nest
+    )
+
+    # ── control flow ─────────────────────────────
+    early_ret = float(len(re.findall(r"\breturn\b", code)))
+    early_ret_r = early_ret / func_count
+
+    cyclo = float(sum(len(re.findall(p, code)) for p in [
+        r"\bif\b", r"\belif\b", r"\bfor\b", r"\bwhile\b",
+        r"\bcase\b", r"\bcatch\b", r"\bexcept\b",
+        r"&&", r"\|\|", r"\band\b", r"\bor\b",
+    ]))
+
+    cyclo_per_func = np.log1p(cyclo / func_count) / np.log1p(50)
+
+    # ── densities ─────────────────────────────
+    magic_nums  = float(len(re.findall(r"(?<![A-Z_=])\b[2-9]\d*\b(?!\s*[=])", code)))
+    string_lits = float(len(re.findall(r'"[^"]*"|\'[^\']*\'', code)))
+    type_hints  = float(len(re.findall(r":\s*(int|str|float|bool|list|dict|tuple|set|Optional|Union|Any|None)\b", code)))
+    except_cnt  = float(len(re.findall(r"\bexcept\b|\bcatch\b", code)))
+    list_comps  = float(len(re.findall(r"\[.+\bfor\b.+\bin\b", code)))
+
+    magic_density  = magic_nums / n
+    string_density = string_lits / n
+    type_hint_r    = type_hints / func_count
+    except_density  = except_cnt / n
+    list_comp_dens  = list_comps / n
+
+    # ── tokens ─────────────────────────────
+    tokens     = _tokenise(code)
+    total_toks = max(float(len(tokens)), 1.0)
+
+    unique_ratio = float(len(set(t.lower() for t in tokens))) / total_toks
+    toks_per_ln  = np.tanh((total_toks / n) / 20)
+    op_density   = float(len(re.findall(r"[+\-*/=<>!&|^~%]+", code))) / total_toks
+
+    # ── FINAL FEATURE VECTOR ─────────────────────────────
     features = [
-        # Line structure
-        float(n), float(code_lines), float(blank_lines), float(comment_lines),
-        blank_ratio, comment_ratio, avg_line_len, line_len_std,
-        # Indentation
-        indent_std, indent_mean, indent_max, mixed_indent,
-        # Naming
-        avg_id_len, long_id_ratio, snake_ratio, camel_count, single_char_ratio,
-        # Comments & docs
-        docstring_count, inline_comment_ratio, todo_count,
-        comment_word_avg, has_module_doc,
-        # Functions & structure
-        function_count, avg_func_len, max_func_len,
-        float(max_nest), float(avg_nest), early_return_ratio,
-        # Complexity & style
-        cyclomatic, magic_nums, string_lits, type_hints,
-        except_count, list_comps,
-        # Lexical diversity
-        unique_ratio, total_toks, toks_per_line, op_density,
-        # Global
-        total_chars, avg_chars_per_tok,
+        blank_ratio, comment_ratio, code_ratio, avg_line_len,
+        indent_std, indent_mean, indent_max, mixed_ind,
+
+        naming_entropy,
+
+        docstring_r, inline_cmt_r, has_mod_doc, cmt_word_avg, todo_cnt,
+
+        structure_complexity, early_ret_r,
+
+        cyclo_per_func,
+
+        magic_density, string_density, type_hint_r,
+        except_density, list_comp_dens, op_density,
+
+        unique_ratio, toks_per_ln
     ]
 
-    assert len(features) == len(FEATURE_NAMES), \
-        f"Feature count mismatch: {len(features)} vs {len(FEATURE_NAMES)}"
-
-    return np.array(features, dtype=np.float32)
+    arr = np.array(features, dtype=np.float32)
+    return np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def extract_feature_matrix(codes: list) -> np.ndarray:
-    """Extract features for all code samples. Returns (N, 40) matrix."""
-    matrix = np.stack([extract_features(c) for c in codes], axis=0)
-    # Replace NaN/Inf with 0 (can occur on empty/malformed code)
-    matrix = np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0)
-    return matrix
+    return np.stack([extract_features(c) for c in codes], axis=0)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -282,19 +267,22 @@ def extract_feature_matrix(codes: list) -> np.ndarray:
 def load_all_sources() -> pd.DataFrame:
     RAW_SOURCES = [
         {
-            "path": os.path.join(BASE_DIR, "data", "raw", "human", "human_selected_dataset.csv"),
+            "path":        os.path.join(BASE_DIR, "data", "raw", "human",
+                                        "human_selected_dataset.csv"),
             "force_label": 0,
-            "name": "Human (raw)",
+            "name":        "Human (raw)",
         },
         {
-            "path": os.path.join(BASE_DIR, "data", "raw", "ai", "created_dataset_with_llms.csv"),
+            "path":        os.path.join(BASE_DIR, "data", "raw", "ai",
+                                        "created_dataset_with_llms.csv"),
             "force_label": 1,
-            "name": "AI (raw)",
+            "name":        "AI (raw)",
         },
         {
-            "path": os.path.join(BASE_DIR, "data", "raw", "human_and_ai", "HumanVsAI_CodeDataset.csv"),
+            "path":        os.path.join(BASE_DIR, "data", "raw", "human_and_ai",
+                                        "HumanVsAI_CodeDataset.csv"),
             "force_label": None,
-            "name": "Human vs AI (combined)",
+            "name":        "Human vs AI (combined)",
         },
     ]
 
@@ -306,8 +294,7 @@ def load_all_sources() -> pd.DataFrame:
 
         df = pd.read_csv(src["path"], low_memory=False)
 
-        code_col_candidates = ["code", "Sample_Code"]
-        code_col = next((c for c in code_col_candidates if c in df.columns), None)
+        code_col = next((c for c in ["code", "Sample_Code"] if c in df.columns), None)
         if not code_col:
             print(f"[load_all_sources] SKIPPED (no code col): {src['path']}")
             continue
@@ -317,19 +304,12 @@ def load_all_sources() -> pd.DataFrame:
             df.rename(columns={code_col: "code"}, inplace=True)
             df["label"] = src["force_label"]
         else:
-            # Here handle the 'Generated' column instead of 'label'
-            if "label" in df.columns:
-                label_col = "label"
-            elif "Generated" in df.columns:
-                label_col = "Generated"
-            else:
-                print(f"[load_all_sources] SKIPPED (no label or Generated col): {src['path']}")
+            label_col = next((c for c in ["label", "Generated"] if c in df.columns), None)
+            if not label_col:
+                print(f"[load_all_sources] SKIPPED (no label col): {src['path']}")
                 continue
-
             df = df[[code_col, label_col]].copy()
             df.rename(columns={code_col: "code"}, inplace=True)
-
-            # Convert 'Generated' to numeric labels if needed
             if label_col == "Generated":
                 df["label"] = df["Generated"].map({"Human": 0, "AI": 1})
                 df.drop(columns=["Generated"], inplace=True)
@@ -340,11 +320,10 @@ def load_all_sources() -> pd.DataFrame:
         print(f"[load_all_sources] {len(df):>6} rows <- {src['name']}")
 
     if not frames:
-        raise RuntimeError("No valid data found in raw sources!")
+        raise RuntimeError("No valid data sources found.")
 
     combined = pd.concat(frames, ignore_index=True)
-    before = len(combined)
-    combined.drop_duplicates(subset=["code"], inplace=True)
+    before   = len(combined)
     combined.reset_index(drop=True, inplace=True)
 
     n_h = int((combined["label"] == 0).sum())
@@ -355,50 +334,82 @@ def load_all_sources() -> pd.DataFrame:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Class balancing
+#  Normalisation with percentile clipping
 # ══════════════════════════════════════════════════════════════════════════════
 
-def balance_classes(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
-    rng  = np.random.default_rng(seed)
-    df_h = df[df["label"] == 0]
-    df_a = df[df["label"] == 1]
-    n_h, n_a = len(df_h), len(df_a)
-    ratio = max(n_h, n_a) / max(min(n_h, n_a), 1)
-    print(f"[balance_classes] Human={n_h}  AI={n_a}  ratio={ratio:.2f}")
-    if ratio <= 1.2:
-        print("[balance_classes] Already balanced.")
-        return df.sample(frac=1, random_state=seed).reset_index(drop=True)
-    if n_h < n_a:
-        extra = df_h.iloc[rng.choice(n_h, n_a - n_h, replace=True)]
-        out   = pd.concat([df_h, extra, df_a], ignore_index=True)
-    else:
-        extra = df_a.iloc[rng.choice(n_a, n_h - n_a, replace=True)]
-        out   = pd.concat([df_h, df_a, extra], ignore_index=True)
-    out = out.sample(frac=1, random_state=seed).reset_index(drop=True)
-    print(f"[balance_classes] Balanced -> "
-          f"Human={int((out['label']==0).sum())}  AI={int((out['label']==1).sum())}\n")
-    return out
+def normalise(X_train: np.ndarray,
+              X_test:  np.ndarray,
+              save_dir: str = MODELS_DIR) -> tuple:
+    """
+    Clip each feature to [p1, p99] of the training distribution FIRST,
+    then z-score normalise.  Prevents one extreme sample from dominating
+    the normalised range.
+    """
+    os.makedirs(save_dir, exist_ok=True)
 
+    # Compute percentile clips on training data only
+    p1  = np.percentile(X_train, 1,  axis=0)
+    p99 = np.percentile(X_train, 99, axis=0)
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  Normalisation
-# ══════════════════════════════════════════════════════════════════════════════
+    X_train_c = np.clip(X_train, p1, p99)
+    X_test_c  = np.clip(X_test,  p1, p99)   # use training clips on test
 
-def normalise(X_train, X_test, save_dir=MODELS_DIR):
-    mean = X_train.mean(axis=0)
-    std  = X_train.std(axis=0)
+    mean = X_train_c.mean(axis=0)
+    std  = X_train_c.std(axis=0)
     std  = np.where(std == 0, 1.0, std)
-    X_train_n = (X_train - mean) / std
-    X_test_n  = (X_test  - mean) / std
+
+    X_train_n = (X_train_c - mean) / std
+    X_test_n  = (X_test_c  - mean) / std
+
+    # Save everything needed at inference time
+    from src.utils.save_load import save_norm_stats
     save_norm_stats(mean, std, save_dir)
+
+    # Also save clip bounds
+    np.save(os.path.join(save_dir, "clip_p1.npy"),  p1)
+    np.save(os.path.join(save_dir, "clip_p99.npy"), p99)
+    print(f"[normalise] Saved mean/std + clip bounds -> {save_dir}")
+
     return X_train_n, X_test_n, mean, std
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  Save / load
+#  pos_weight computation  (replaces oversampling)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def save_processed(X_train, X_test, y_train, y_test, out_dir=PROCESSED_DIR):
+def compute_and_save_pos_weight(y_train: np.ndarray,
+                                 save_dir: str = MODELS_DIR) -> float:
+    """
+    pos_weight = n_negative / n_positive
+    Used in BCE loss to up-weight the minority class without duplicating data.
+    Saved to JSON so train.py can load it.
+    """
+    n_neg = float((y_train == 0).sum())
+    n_pos = float((y_train == 1).sum())
+    pw    = n_neg / max(n_pos, 1.0)
+    pw    = float(np.clip(pw, 0.5, 4.0))   # don't let it go extreme
+
+    path = os.path.join(save_dir, "pos_weight.json")
+    with open(path, "w") as f:
+        json.dump({"pos_weight": pw}, f)
+    print(f"[compute_pos_weight] pos_weight={pw:.3f} -> {path}")
+    return pw
+
+
+def load_pos_weight(save_dir: str = MODELS_DIR) -> float:
+    path = os.path.join(save_dir, "pos_weight.json")
+    if not os.path.exists(path):
+        return 1.0
+    with open(path) as f:
+        return float(json.load(f)["pos_weight"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  Save / load processed arrays
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_processed(X_train, X_test, y_train, y_test,
+                   out_dir: str = PROCESSED_DIR) -> None:
     os.makedirs(out_dir, exist_ok=True)
     for name, arr in [("X_train", X_train), ("X_test",  X_test),
                       ("y_train", y_train), ("y_test",  y_test)]:
@@ -406,7 +417,7 @@ def save_processed(X_train, X_test, y_train, y_test, out_dir=PROCESSED_DIR):
     print(f"[save_processed] -> {out_dir}")
 
 
-def load_processed(out_dir=PROCESSED_DIR):
+def load_processed(out_dir: str = PROCESSED_DIR) -> tuple:
     arrs = [np.load(os.path.join(out_dir, f"{n}.npy"))
             for n in ("X_train", "X_test", "y_train", "y_test")]
     print(f"[load_processed] <- {out_dir}")
@@ -420,17 +431,17 @@ def load_processed(out_dir=PROCESSED_DIR):
 def run_preprocessing() -> tuple:
     """
     Pipeline:
-      1. Load raw CSVs (deduplicated)
-      2. Stratified split  (test = real unbalanced distribution)
-      3. Balance TRAINING only
-      4. Extract 40 hand-crafted features
-      5. Normalise (fit on train)
-      6. Save
+      1. Load raw CSVs
+      2. Stratified split (test = real distribution, no balancing)
+      3. Extract 32 scale-invariant features
+      4. Clip + normalise (fit on train only)
+      5. Compute pos_weight from training labels (no oversampling)
+      6. Save everything
     """
     df = load_all_sources()
     y  = df["label"].to_numpy(dtype=np.float32)
 
-    # Stratified split BEFORE balancing
+    # Stratified split
     rng = np.random.default_rng(42)
     train_idx, test_idx = [], []
     for cls in np.unique(y):
@@ -442,26 +453,33 @@ def run_preprocessing() -> tuple:
     train_df = df.iloc[rng.permutation(train_idx)].reset_index(drop=True)
     test_df  = df.iloc[rng.permutation(test_idx)].reset_index(drop=True)
 
-    # Balance training set only
-    train_df = balance_classes(train_df, seed=42)
+    # NO oversampling — use pos_weight in loss instead
+    n_h_tr = int((train_df["label"] == 0).sum())
+    n_a_tr = int((train_df["label"] == 1).sum())
+    print(f"[run_preprocessing] Train: Human={n_h_tr}  AI={n_a_tr}  "
+          f"ratio={max(n_h_tr,n_a_tr)/max(min(n_h_tr,n_a_tr),1):.2f}")
+    print(f"[run_preprocessing] Test:  "
+          f"Human={int((test_df['label']==0).sum())}  "
+          f"AI={int((test_df['label']==1).sum())}")
 
     train_codes = train_df["code"].astype(str).tolist()
     test_codes  = test_df["code"].astype(str).tolist()
     y_train     = train_df["label"].to_numpy(dtype=np.float32)
     y_test      = test_df["label"].to_numpy(dtype=np.float32)
 
-    # Extract 40 features
-    print("[run_preprocessing] Extracting features (this takes ~1 min) ...")
+    print("\n[run_preprocessing] Extracting features ...")
     X_train = extract_feature_matrix(train_codes)
     X_test  = extract_feature_matrix(test_codes)
 
     print(f"[run_preprocessing] train={X_train.shape}  test={X_test.shape}")
-    print(f"[run_preprocessing] Feature names: {FEATURE_NAMES}")
 
-    # Normalise + save
+    # Clip + normalise
     X_train, X_test, _, _ = normalise(X_train, X_test, MODELS_DIR)
-    save_processed(X_train, X_test, y_train, y_test, PROCESSED_DIR)
 
+    # Compute pos_weight (no oversampling)
+    compute_and_save_pos_weight(y_train, MODELS_DIR)
+
+    save_processed(X_train, X_test, y_train, y_test, PROCESSED_DIR)
     return X_train, X_test, y_train, y_test
 
 

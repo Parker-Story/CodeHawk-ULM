@@ -8,10 +8,9 @@ import numpy as np
 
 from src.models.neural_network import NeuralNetwork, binary_cross_entropy
 from src.utils.save_load       import load_weights
-from src.data.preprocess       import load_processed
+from src.data.preprocess       import load_processed, load_pos_weight
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+BASE_DIR      = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MODELS_DIR    = os.path.join(BASE_DIR, "models")
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 METADATA_DIR  = os.path.join(BASE_DIR, "data", "metadata")
@@ -53,9 +52,10 @@ def _calibration(yt, yp, n=10):
 
 def evaluate(threshold: float = 0.5) -> dict:
     _, X_test, _, y_test = load_processed(PROCESSED_DIR)
-    weights   = load_weights(MODELS_DIR, WEIGHT_KEYS)
-    model     = NeuralNetwork(input_dim=weights["W1"].shape[0])
+    weights    = load_weights(MODELS_DIR, WEIGHT_KEYS)
+    model      = NeuralNetwork(input_dim=weights["W1"].shape[0])
     model.set_weights(weights)
+    pos_weight = load_pos_weight(MODELS_DIR)
 
     y_proba = model.predict_proba(X_test)
     y_pred  = (y_proba >= threshold).astype(int)
@@ -65,14 +65,16 @@ def evaluate(threshold: float = 0.5) -> dict:
     prec = _prec(cm); rec = _rec(cm); f1 = _f1(prec, rec)
     acc  = float(np.mean(y_int == y_pred))
     auc  = _roc_auc(y_test, y_proba)
-    loss = binary_cross_entropy(y_test, y_proba)
+    loss = binary_cross_entropy(y_test, y_proba, pos_weight=pos_weight)
     cp, ca = _calibration(y_test, y_proba)
 
     results = {
-        "accuracy": round(acc,4), "precision": round(prec,4),
-        "recall":   round(rec,4), "f1_score":  round(f1,4),
-        "auc_roc":  round(auc,4), "bce_loss":  round(loss,4),
-        "threshold_used": threshold, "confusion_matrix": cm,
+        "accuracy":       round(acc,4),  "precision":  round(prec,4),
+        "recall":         round(rec,4),  "f1_score":   round(f1,4),
+        "auc_roc":        round(auc,4),  "bce_loss":   round(loss,4),
+        "threshold_used": threshold,
+        "pos_weight_used": pos_weight,
+        "confusion_matrix": cm,
         "calibration": {"mean_predicted": cp, "mean_actual": ca},
     }
 
@@ -84,7 +86,7 @@ def evaluate(threshold: float = 0.5) -> dict:
     print(f"  Recall     : {rec:.4f}")
     print(f"  F1 Score   : {f1:.4f}")
     print(f"  AUC-ROC    : {auc:.4f}")
-    print(f"  BCE Loss   : {loss:.4f}")
+    print(f"  BCE Loss   : {loss:.4f}  (pos_weight={pos_weight:.2f})")
     print(f"  Confusion  : TP={cm['TP']} FP={cm['FP']} TN={cm['TN']} FN={cm['FN']}")
     print("="*52 + "\n")
 

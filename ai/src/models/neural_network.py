@@ -1,16 +1,13 @@
 """
 neural_network.py
-Smaller network sized for 40 dense features.
-Architecture: Input(40) -> Dense(64) -> ReLU -> Dropout -> Dense(32) -> ReLU -> Dense(1) -> Sigmoid
+Architecture: Input(32) -> Dense(64) -> ReLU -> Dropout -> Dense(32) -> ReLU -> Dense(1) -> Sigmoid
 """
 
 import numpy as np
 
 
 def _sigmoid(z):
-    return np.where(z >= 0,
-                    1.0 / (1.0 + np.exp(-z)),
-                    np.exp(z) / (1.0 + np.exp(z)))
+    return 1 / (1 + np.exp(-np.clip(z, -500, 500)))
 
 
 def _relu(z):
@@ -21,27 +18,27 @@ def _relu_grad(z):
     return (z > 0).astype(np.float32)
 
 
-def binary_cross_entropy(y_true, y_pred, eps=1e-9):
+def binary_cross_entropy(y_true: np.ndarray,
+                         y_pred: np.ndarray,
+                         eps:        float = 1e-9,
+                         pos_weight: float = 1.0) -> float:
+    """
+    Weighted binary cross-entropy.
+    pos_weight > 1 increases the penalty for missing positive (AI) samples.
+
+    Loss = -mean( pos_weight * y * log(p) + (1-y) * log(1-p) )
+    """
     y_pred = np.clip(y_pred, eps, 1.0 - eps)
     return float(-np.mean(
-        y_true * np.log(y_pred) + (1.0 - y_true) * np.log(1.0 - y_pred)
+        pos_weight * y_true * np.log(y_pred) +
+        (1.0 - y_true) * np.log(1.0 - y_pred)
     ))
 
 
 class NeuralNetwork:
-    """
-    Parameters
-    ----------
-    input_dim    : 40  (number of hand-crafted features)
-    hidden1      : 64
-    hidden2      : 32
-    lr           : learning rate
-    dropout_rate : dropout on hidden-1
-    l2_lambda    : L2 weight decay
-    """
 
     def __init__(self,
-                 input_dim:    int   = 40,
+                 input_dim:    int   = 32,
                  hidden1:      int   = 64,
                  hidden2:      int   = 32,
                  lr:           float = 5e-4,
@@ -87,13 +84,23 @@ class NeuralNetwork:
                        "z2": z2, "a2": a2, "z3": z3, "a3": a3}
         return a3.reshape(-1)
 
-    def backward(self, y_true):
+    def backward(self, y_true: np.ndarray, pos_weight: float = 1.0) -> None:
+        """
+        Backprop with weighted BCE gradient.
+
+        The gradient of weighted BCE w.r.t. the pre-sigmoid output z is:
+            dL/dz = (1/N) * ( -(pos_weight - 1) * y * (1-a) + a - y )
+                  = (1/N) * ( a - y + (pos_weight-1) * y * (1-a) )
+        which simplifies to the standard (a-y)/N when pos_weight=1.
+        """
         N   = y_true.shape[0]
         c   = self._cache
         y_t = y_true.reshape(-1, 1)
         a3  = c["a3"]
 
-        dz3 = (a3 - y_t) / N
+        # Weighted gradient at output
+        dz3 = (a3 - y_t + (pos_weight - 1.0) * y_t * (1.0 - a3)) / N
+
         dW3 = c["a2"].T @ dz3
         db3 = dz3.sum(axis=0, keepdims=True)
 

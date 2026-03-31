@@ -1,17 +1,15 @@
 """
-train.py — tuned for 40 dense hand-crafted features.
-Smaller batches and more epochs work better on dense low-dim features.
+train.py
 """
 
 import os
 import numpy as np
 
-from src.data.preprocess       import run_preprocessing, load_processed
+from src.data.preprocess       import run_preprocessing, load_processed, load_pos_weight
 from src.models.neural_network import NeuralNetwork, binary_cross_entropy
 from src.utils.save_load       import save_weights, save_training_history
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+BASE_DIR      = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MODELS_DIR    = os.path.join(BASE_DIR, "models")
 PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 WEIGHT_KEYS   = ["W1", "b1", "W2", "b2", "W3", "b3"]
@@ -29,7 +27,7 @@ def _accuracy(y_true, y_proba, threshold=0.5):
 
 
 def train(epochs:       int   = 200,
-          batch_size:   int   = 32,      # smaller batches for 40-dim dense features
+          batch_size:   int   = 32,
           lr:           float = 5e-4,
           dropout_rate: float = 0.3,
           hidden1:      int   = 64,
@@ -51,14 +49,24 @@ def train(epochs:       int   = 200,
         print("[train] Loading cached arrays ...")
         X_train, X_test, y_train, y_test = load_processed(PROCESSED_DIR)
 
+    # Load pos_weight computed during preprocessing (replaces oversampling)
+    pos_weight = load_pos_weight(MODELS_DIR)
+    print(f"[train] pos_weight={pos_weight:.3f}  "
+          f"(AI samples weighted {pos_weight:.1f}x in loss)")
+
     input_dim = X_train.shape[1]
     print(f"[train] input_dim={input_dim}  train={len(X_train)}  test={len(X_test)}")
     print(f"[train] Train: Human={int((y_train==0).sum())}  AI={int((y_train==1).sum())}")
     print(f"[train] Test:  Human={int((y_test==0).sum())}   AI={int((y_test==1).sum())}\n")
 
     model = NeuralNetwork(
-        input_dim=input_dim, hidden1=hidden1, hidden2=hidden2,
-        lr=lr, dropout_rate=dropout_rate, l2_lambda=l2_lambda, seed=seed,
+        input_dim    = input_dim,
+        hidden1      = hidden1,
+        hidden2      = hidden2,
+        lr           = lr,
+        dropout_rate = dropout_rate,
+        l2_lambda    = l2_lambda,
+        seed         = seed,
     )
 
     rng     = np.random.default_rng(seed)
@@ -72,14 +80,15 @@ def train(epochs:       int   = 200,
         batch_losses = []
         for X_b, y_b in _batch_generator(X_train, y_train, batch_size, rng):
             y_hat = model.forward(X_b, training=True)
-            loss  = binary_cross_entropy(y_b, y_hat)
-            model.backward(y_b)
+            # pos_weight applied here — no oversampling needed
+            loss  = binary_cross_entropy(y_b, y_hat, pos_weight=pos_weight)
+            model.backward(y_b, pos_weight=pos_weight)
             batch_losses.append(loss)
 
         train_loss = float(np.mean(batch_losses))
         train_acc  = _accuracy(y_train, model.predict_proba(X_train))
         val_proba  = model.predict_proba(X_test)
-        val_loss   = float(binary_cross_entropy(y_test, val_proba))
+        val_loss   = float(binary_cross_entropy(y_test, val_proba, pos_weight=pos_weight))
         val_acc    = _accuracy(y_test, val_proba)
 
         history["train_loss"].append(train_loss)

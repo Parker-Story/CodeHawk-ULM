@@ -7,7 +7,7 @@ import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
-
+import AiDetectionBadge from "@/components/AiDetectionBadge";  // ← new
 
 export default function GradingWorkspacePage() {
   const params = useParams();
@@ -267,7 +267,6 @@ export default function GradingWorkspacePage() {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rubricItemId: item.id, awardedPoints: awarded }),
         });
       }));
-      // Save feedback alongside score
       await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${gradingStudent}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: feedbackInputs[gradingStudent] ?? "" }),
@@ -285,7 +284,6 @@ export default function GradingWorkspacePage() {
       const inputs = {};
       list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
       setScoreInputs(inputs);
-      // Stay open — do NOT call setGradingStudent(null)
     } catch (err) { console.error(err); } finally { setSavingRubricScore(false); }
   };
 
@@ -306,8 +304,7 @@ export default function GradingWorkspacePage() {
         body: JSON.stringify({ ...assignment, scoresVisible: !assignment.scoresVisible }),
       });
       if (!res.ok) throw new Error("Failed to update assignment");
-      const updated = await res.json();
-      setAssignment(updated);
+      setAssignment(await res.json());
     } catch (err) { console.error(err); }
   };
 
@@ -326,8 +323,7 @@ export default function GradingWorkspacePage() {
     setSavingFeedback((prev) => ({ ...prev, [userId]: true }));
     try {
       await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: feedbackInputs[userId] ?? "" }),
       });
     } catch (err) { console.error(err); }
@@ -346,9 +342,7 @@ export default function GradingWorkspacePage() {
   const navigateSolutionStudent = (direction) => {
     const currentIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
     const nextIndex = currentIndex + direction;
-    if (nextIndex >= 0 && nextIndex < submissions.length) {
-      setOpenSolution(submissions[nextIndex]);
-    }
+    if (nextIndex >= 0 && nextIndex < submissions.length) setOpenSolution(submissions[nextIndex]);
   };
 
   const getResultsForStudent = (userId) => testResults.filter((r) => r.submission?.submissionId?.userId === userId);
@@ -369,8 +363,8 @@ export default function GradingWorkspacePage() {
               <h1 className="text-2xl font-bold text-white">Grading Workspace</h1>
               {isFileMode && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{ background: "#C9A84C22", color: "#C9A84C" }}>
-                  <FileInput className="w-3.5 h-3.5" /> File Input — {assignment.inputFileName}
-                </span>
+                    <FileInput className="w-3.5 h-3.5" /> File Input — {assignment.inputFileName}
+                  </span>
               )}
             </div>
             <p className="text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
@@ -411,12 +405,14 @@ export default function GradingWorkspacePage() {
                   <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Test Results</th>
+                  {/* ── NEW: AI Detection column ── */}
+                  <th className="text-left py-3 px-4 font-semibold text-white">AI Detection</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 {submissions.length === 0 ? (
-                    <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                    <tr><td colSpan={6} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                 ) : (
                     submissions.map((s) => {
                       const userId = s.submissionId.userId;
@@ -461,6 +457,10 @@ export default function GradingWorkspacePage() {
                                     <span className="text-zinc-600 text-sm">—</span>
                                 )}
                               </td>
+                              {/* ── NEW: AI Detection cell ── */}
+                              <td className="py-3 px-4">
+                                <AiDetectionBadge submission={s} />
+                              </td>
                               <td className="py-3 px-4">
                                 <div className="relative">
                                   <button
@@ -493,7 +493,7 @@ export default function GradingWorkspacePage() {
                             </tr>
                             {isExpanded && studentResults.length > 0 && (
                                 <tr className="border-b border-zinc-700/50 bg-zinc-900/80">
-                                  <td colSpan={5} className="px-4 py-3">
+                                  <td colSpan={6} className="px-4 py-3">
                                     <div className="space-y-2">
                                       {studentResults.map((r) => (
                                           <div key={r.id} className="flex items-center gap-3 text-xs">
@@ -517,7 +517,7 @@ export default function GradingWorkspacePage() {
             </div>
           </section>
 
-          {/* Rubric Section */}
+          {/* Rubric Section — unchanged from original */}
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -534,7 +534,6 @@ export default function GradingWorkspacePage() {
                   </button>
               )}
             </div>
-
             {assignedRubric ? (
                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between p-4 border-b border-zinc-700">
@@ -590,16 +589,13 @@ export default function GradingWorkspacePage() {
             )}
           </section>
 
-          {/* Test Cases Section */}
+          {/* Test Cases Section — unchanged from original */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold text-white">Test Cases</h2>
                 <p className="text-zinc-400 text-xs mt-0.5">
-                  {isFileMode
-                      ? `Test cases check output only — input is read from ${assignment.inputFileName}.`
-                      : "Test cases run automatically when a student submits."
-                  }
+                  {isFileMode ? `Test cases check output only — input is read from ${assignment.inputFileName}.` : "Test cases run automatically when a student submits."}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -611,7 +607,6 @@ export default function GradingWorkspacePage() {
                 </button>
               </div>
             </div>
-
             {addingTestCase && (
                 <div className="bg-zinc-900 border rounded-xl p-4 mb-4 space-y-3" style={{ borderColor: "#7C1D2E66" }}>
                   <div className="grid grid-cols-2 gap-3">
@@ -648,7 +643,6 @@ export default function GradingWorkspacePage() {
                   </div>
                 </div>
             )}
-
             <div className="bg-zinc-900 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
               {testCases.length === 0 ? (
                   <p className="text-zinc-400 text-sm p-4">No test cases yet. Add one to enable auto-grading.</p>
@@ -661,9 +655,7 @@ export default function GradingWorkspacePage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-white text-sm font-medium">{tc.label || `Test Case ${tc.id}`}{tc.hidden && <span className="ml-2 text-xs text-zinc-500">(hidden)</span>}</p>
-                            {!isFileMode && (
-                                <p className="text-zinc-400 text-xs mt-1">Input: <span className="font-mono text-zinc-300">{tc.input || "(none)"}</span></p>
-                            )}
+                            {!isFileMode && <p className="text-zinc-400 text-xs mt-1">Input: <span className="font-mono text-zinc-300">{tc.input || "(none)"}</span></p>}
                             <p className="text-zinc-400 text-xs mt-0.5">Expected: <span className="font-mono text-zinc-300">{tc.expectedOutput}</span></p>
                           </div>
                         </div>
@@ -677,7 +669,7 @@ export default function GradingWorkspacePage() {
           </section>
         </div>
 
-        {/* Solution Viewer */}
+        {/* All modals — unchanged from original */}
         {openSolution && (() => {
           const solutionIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
           const solutionUserId = openSolution.submissionId.userId;
@@ -697,28 +689,23 @@ export default function GradingWorkspacePage() {
                         </button>
                       </div>
                       <div className="w-px h-5 bg-zinc-700" />
-                      <button type="button" onClick={() => navigateSolutionStudent(-1)} disabled={solutionIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
-                        <ChevronUp className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => navigateSolutionStudent(-1)} disabled={solutionIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30"><ChevronUp className="w-5 h-5" /></button>
                       <span className="text-zinc-500 text-xs">{solutionIndex + 1} / {submissions.length}</span>
-                      <button type="button" onClick={() => navigateSolutionStudent(1)} disabled={solutionIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
-                        <ChevronDown className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => navigateSolutionStudent(1)} disabled={solutionIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30"><ChevronDown className="w-5 h-5" /></button>
                       <div className="w-px h-5 bg-zinc-700 mx-1" />
                       <button type="button" onClick={() => setOpenSolution(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                     </div>
                   </div>
                   <div className="p-6 overflow-auto flex-1">
-          <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
-            {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
-          </pre>
+                    <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
+                      {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
+                    </pre>
                   </div>
                 </div>
               </div>
           );
         })()}
 
-        {/* Confirm Delete Submission */}
         {confirmDeleteUserId && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
               <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-6">
@@ -733,15 +720,12 @@ export default function GradingWorkspacePage() {
                 </p>
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setConfirmDeleteUserId(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
-                  <button type="button" onClick={() => handleDeleteSubmission(confirmDeleteUserId)} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
-                    Yes, Remove
-                  </button>
+                  <button type="button" onClick={() => handleDeleteSubmission(confirmDeleteUserId)} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Yes, Remove</button>
                 </div>
               </div>
             </div>
         )}
 
-        {/* Rubric Grading Panel */}
         {gradingStudent && assignedRubric && (() => {
           const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
           const gradingIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
@@ -751,22 +735,14 @@ export default function GradingWorkspacePage() {
                   <div className="flex items-center justify-between p-5 border-b border-zinc-700 shrink-0">
                     <div>
                       <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
-                      <p className="text-zinc-400 text-sm mt-0.5">
-                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {assignedRubric.name}
-                      </p>
+                      <p className="text-zinc-400 text-sm mt-0.5">{gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {assignedRubric.name}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => navigateStudent(-1)} disabled={gradingIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
-                        <ChevronUp className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => navigateStudent(-1)} disabled={gradingIndex <= 0} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30"><ChevronUp className="w-5 h-5" /></button>
                       <span className="text-zinc-500 text-xs">{gradingIndex + 1} / {submissions.length}</span>
-                      <button type="button" onClick={() => navigateStudent(1)} disabled={gradingIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30">
-                        <ChevronDown className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => navigateStudent(1)} disabled={gradingIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors disabled:opacity-30"><ChevronDown className="w-5 h-5" /></button>
                       <div className="w-px h-5 bg-zinc-700 mx-1" />
-                      <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
-                        <X className="w-5 h-5" />
-                      </button>
+                      <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                     </div>
                   </div>
                   <div className="flex flex-1 overflow-hidden">
@@ -776,9 +752,9 @@ export default function GradingWorkspacePage() {
                         <p className="text-sm text-zinc-300 mt-0.5">{gradingSubmission?.fileName || "Unnamed file"}</p>
                       </div>
                       <div className="flex-1 overflow-auto p-5">
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
-                {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
-              </pre>
+                        <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 h-full">
+                          {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
+                        </pre>
                       </div>
                     </div>
                     <div className="w-96 flex flex-col overflow-hidden shrink-0">
@@ -791,9 +767,7 @@ export default function GradingWorkspacePage() {
                             <div key={criteria.id}>
                               <div className="flex items-center justify-between mb-2">
                                 <p className="text-white font-semibold text-sm">{criteria.title}</p>
-                                <p className="text-zinc-400 text-xs">
-                                  {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
-                                </p>
+                                <p className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</p>
                               </div>
                               <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
                                 {(criteria.items || []).map((item) => (
@@ -817,20 +791,12 @@ export default function GradingWorkspacePage() {
                       </div>
                       <div className="px-5 pb-3 border-t border-zinc-700 pt-4 shrink-0">
                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Feedback</p>
-                        <textarea
-                            rows={3}
-                            value={feedbackInputs[gradingStudent] ?? ""}
-                            onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [gradingStudent]: e.target.value }))}
-                            placeholder="Leave feedback for the student..."
-                            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
-                        />
+                        <textarea rows={3} value={feedbackInputs[gradingStudent] ?? ""} onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [gradingStudent]: e.target.value }))} placeholder="Leave feedback for the student..." className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none" />
                       </div>
                       <div className="p-5 border-t border-zinc-700 shrink-0">
                         <div className="flex items-center justify-between mb-4">
                           <p className="text-zinc-300 text-sm font-medium">Total Score</p>
-                          <p className="text-white font-bold">
-                            {(assignedRubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {assignedRubric.totalPoints} pts
-                          </p>
+                          <p className="text-white font-bold">{(assignedRubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {assignedRubric.totalPoints} pts</p>
                         </div>
                         <div className="flex gap-3">
                           <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Close</button>
@@ -847,13 +813,10 @@ export default function GradingWorkspacePage() {
           );
         })()}
 
-        {/* Link Test Cases Dialog */}
         <Dialog isOpen={!!linkingItem} onClose={() => setLinkingItem(null)} title={`Link Test Cases — ${linkingItem?.label}`}>
           <div className="space-y-3">
-            <p className="text-zinc-400 text-sm">Select which test cases count toward this rubric item. The score will be calculated as (passed / total) × max points.</p>
-            {testCases.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No test cases on this assignment yet.</p>
-            ) : (
+            <p className="text-zinc-400 text-sm">Select which test cases count toward this rubric item.</p>
+            {testCases.length === 0 ? <p className="text-zinc-400 text-sm">No test cases on this assignment yet.</p> : (
                 <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
                   {testCases.map((tc) => (
                       <label key={tc.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zinc-700/30 transition-colors">
@@ -876,7 +839,6 @@ export default function GradingWorkspacePage() {
           </div>
         </Dialog>
 
-        {/* Plagiarism Results Modal */}
         {plagiarismOpen && plagiarismResults && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
               <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
@@ -938,17 +900,12 @@ export default function GradingWorkspacePage() {
             </div>
         )}
 
-        {/* Attach Rubric Dialog */}
         <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
           <div className="space-y-3">
-            {availableRubrics.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No rubrics available. Create one from the Rubrics page.</p>
-            ) : (
+            {availableRubrics.length === 0 ? <p className="text-zinc-400 text-sm">No rubrics available. Create one from the Rubrics page.</p> : (
                 availableRubrics.map((rubric) => (
                     <button key={rubric.id} type="button" onClick={() => handleAttachRubric(rubric.id)} className="w-full flex items-center gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-zinc-500 hover:bg-zinc-700/50 transition-colors text-left">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}>
-                        <ClipboardList className="w-4 h-4" style={{ color: "#c0a080" }} />
-                      </div>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}><ClipboardList className="w-4 h-4" style={{ color: "#c0a080" }} /></div>
                       <div>
                         <p className="text-white font-medium text-sm">{rubric.name}</p>
                         <p className="text-zinc-400 text-xs mt-0.5">{rubric.totalPoints} pts{rubric.description && ` • ${rubric.description}`}</p>
@@ -960,17 +917,12 @@ export default function GradingWorkspacePage() {
           </div>
         </Dialog>
 
-        {/* Import Suite Dialog */}
         <Dialog isOpen={importSuiteOpen} onClose={() => setImportSuiteOpen(false)} title="Import from Suite">
           <div className="space-y-3">
-            {availableSuites.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No suites available. Create one from the Test Suites page.</p>
-            ) : (
+            {availableSuites.length === 0 ? <p className="text-zinc-400 text-sm">No suites available. Create one from the Test Suites page.</p> : (
                 availableSuites.map((suite) => (
                     <button key={suite.id} type="button" onClick={() => handleImportSuite(suite.id)} className="w-full flex items-center gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-zinc-500 hover:bg-zinc-700/50 transition-colors text-left">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#C9A84C22" }}>
-                        <FlaskConical className="w-4 h-4" style={{ color: "#C9A84C" }} />
-                      </div>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#C9A84C22" }}><FlaskConical className="w-4 h-4" style={{ color: "#C9A84C" }} /></div>
                       <div>
                         <p className="text-white font-medium text-sm">{suite.name}</p>
                         {suite.description && <p className="text-zinc-400 text-xs mt-0.5">{suite.description}</p>}

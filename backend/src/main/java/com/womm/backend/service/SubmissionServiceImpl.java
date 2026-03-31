@@ -45,6 +45,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         this.testCaseService = testCaseService;
         this.rubricService = rubricService;
         this.rubricScoreRepository = rubricScoreRepository;
+        this.aiDetectionService = aiDetectionService;
     }
 
     @Override

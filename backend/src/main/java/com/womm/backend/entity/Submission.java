@@ -72,5 +72,4 @@ public class Submission {
     public void setAiLabel(String aiLabel) { this.aiLabel = aiLabel; }
     public String getAiConfidence() { return aiConfidence; }
     public void setAiConfidence(String aiConfidence) { this.aiConfidence = aiConfidence; }
-    }
 }
