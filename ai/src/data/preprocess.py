@@ -1,28 +1,5 @@
 """
 preprocess.py
-
-Key fixes in this version:
-  1. REMOVED all raw count features that scale with code size:
-       total_lines, code_lines, blank_lines, comment_lines,
-       total_tokens, total_chars
-     These caused the model to learn "short = human, long = AI"
-     which is wrong and kills inference on short submissions.
-
-  2. KEPT only ratios, densities, and averages that are
-     scale-invariant — they mean the same thing on 5-line code
-     and 500-line code.
-
-  3. REMOVED oversampling (balance_classes).
-     Instead, pos_weight is computed and saved so train.py
-     can apply it directly in the loss function.
-     Oversampling caused the model to memorise specific AI
-     samples rather than learning generalizable patterns.
-
-  4. ADDED robust clipping before normalisation:
-     each feature is clipped to [p1, p99] of the training set
-     so one extreme value can't dominate the normalised range.
-
-Final feature count: 32 (all scale-invariant)
 """
 
 import os
