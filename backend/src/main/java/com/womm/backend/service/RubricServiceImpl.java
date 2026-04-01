@@ -14,6 +14,7 @@ public class RubricServiceImpl implements RubricService {
     private final RubricCriteriaRepository rubricCriteriaRepository;
     private final RubricItemRepository rubricItemRepository;
     private final RubricScoreRepository rubricScoreRepository;
+    private final RubricScoreLabelRepository rubricScoreLabelRepository;
     private final AssignmentRubricRepository assignmentRubricRepository;
     private final AssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
@@ -26,6 +27,7 @@ public class RubricServiceImpl implements RubricService {
             RubricCriteriaRepository rubricCriteriaRepository,
             RubricItemRepository rubricItemRepository,
             RubricScoreRepository rubricScoreRepository,
+            RubricScoreLabelRepository rubricScoreLabelRepository,
             AssignmentRubricRepository assignmentRubricRepository,
             AssignmentRepository assignmentRepository,
             UserRepository userRepository,
@@ -36,6 +38,7 @@ public class RubricServiceImpl implements RubricService {
         this.rubricCriteriaRepository = rubricCriteriaRepository;
         this.rubricItemRepository = rubricItemRepository;
         this.rubricScoreRepository = rubricScoreRepository;
+        this.rubricScoreLabelRepository = rubricScoreLabelRepository;
         this.assignmentRubricRepository = assignmentRubricRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
@@ -102,7 +105,6 @@ public class RubricServiceImpl implements RubricService {
             RubricCriteria newCrit = new RubricCriteria();
             newCrit.setRubric(savedCopy);
             newCrit.setTitle(origCrit.getTitle());
-            newCrit.setWeight(origCrit.getWeight());
             newCrit.setDisplayOrder(origCrit.getDisplayOrder());
             RubricCriteria savedCrit = rubricCriteriaRepository.save(newCrit);
 
@@ -112,21 +114,31 @@ public class RubricServiceImpl implements RubricService {
                 newItem.setCriteria(savedCrit);
                 newItem.setLabel(origItem.getLabel());
                 newItem.setMaxPoints(origItem.getMaxPoints());
+                newItem.setWeight(origItem.getWeight());
                 newItem.setAutoGrade(origItem.isAutoGrade());
                 newItem.setDisplayOrder(origItem.getDisplayOrder());
-                rubricItemRepository.save(newItem);
+                RubricItem savedItem = rubricItemRepository.save(newItem);
+
+                // Copy score labels
+                List<RubricScoreLabel> origLabels = rubricScoreLabelRepository.findByRubricItemId(origItem.getId());
+                for (RubricScoreLabel origLabel : origLabels) {
+                    RubricScoreLabel newLabel = new RubricScoreLabel();
+                    newLabel.setRubricItem(savedItem);
+                    newLabel.setScore(origLabel.getScore());
+                    newLabel.setLabel(origLabel.getLabel());
+                    rubricScoreLabelRepository.save(newLabel);
+                }
             }
         }
         return savedCopy;
     }
 
     @Override
-    public RubricCriteria addCriteria(Long rubricId, String title, double weight, int displayOrder) {
+    public RubricCriteria addCriteria(Long rubricId, String title, int displayOrder) {
         Rubric rubric = getRubric(rubricId);
         RubricCriteria criteria = new RubricCriteria();
         criteria.setRubric(rubric);
         criteria.setTitle(title);
-        criteria.setWeight(weight);
         criteria.setDisplayOrder(displayOrder);
         return rubricCriteriaRepository.save(criteria);
     }
@@ -145,20 +157,38 @@ public class RubricServiceImpl implements RubricService {
     }
 
     @Override
-    public RubricItem addItem(Long criteriaId, String label, double maxPoints, boolean autoGrade, int displayOrder) {
+    public RubricItem addItem(Long criteriaId, String label, double weight, boolean autoGrade, int displayOrder) {
         RubricCriteria criteria = rubricCriteriaRepository.findById(criteriaId)
                 .orElseThrow(() -> new RuntimeException("Criteria not found: " + criteriaId));
+        Rubric rubric = criteria.getRubric();
         RubricItem item = new RubricItem();
         item.setCriteria(criteria);
         item.setLabel(label);
-        item.setMaxPoints(maxPoints);
+        item.setWeight(weight);
         item.setAutoGrade(autoGrade);
         item.setDisplayOrder(displayOrder);
-        RubricItem saved = rubricItemRepository.save(item);
-        Rubric rubric = criteria.getRubric();
-        rubric.setTotalPoints(rubric.getTotalPoints() + maxPoints);
-        rubricRepository.save(rubric);
-        return saved;
+
+        // For weighted rubrics, maxPoints = weight (score calculated at grading time)
+        // For unweighted rubrics, maxPoints is the weight value used as raw points
+        item.setMaxPoints(rubric.isWeighted() ? weight : weight);
+        return rubricItemRepository.save(item);
+    }
+
+    @Override
+    @Transactional
+    public void saveScoreLabels(Long itemId, Map<Integer, String> labels) {
+        RubricItem item = rubricItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+        rubricScoreLabelRepository.deleteByRubricItemId(itemId);
+        for (Map.Entry<Integer, String> entry : labels.entrySet()) {
+            if (entry.getValue() != null && !entry.getValue().isBlank()) {
+                RubricScoreLabel scoreLabel = new RubricScoreLabel();
+                scoreLabel.setRubricItem(item);
+                scoreLabel.setScore(entry.getKey());
+                scoreLabel.setLabel(entry.getValue());
+                rubricScoreLabelRepository.save(scoreLabel);
+            }
+        }
     }
 
     @Override
@@ -241,7 +271,8 @@ public class RubricServiceImpl implements RubricService {
                 .orElse(new RubricScore());
         score.setRubricItem(item);
         score.setSubmission(submission);
-        score.setAwardedPoints(Math.min(awardedPoints, item.getMaxPoints()));
+        // For weighted rubrics, awardedPoints stores the 0-5 score
+        score.setAwardedPoints(awardedPoints);
         return rubricScoreRepository.save(score);
     }
 
@@ -265,7 +296,11 @@ public class RubricServiceImpl implements RubricService {
                 long passed = studentResults.stream()
                         .filter(r -> linkedTestCaseIds.contains(r.getTestCase().getId()) && r.isPassed())
                         .count();
-                double awarded = (double) passed / total * item.getMaxPoints();
+                // For weighted rubrics, auto-grade gives a 0-5 score based on pass rate
+                // For unweighted, gives proportional points
+                double awarded = rubric.isWeighted()
+                        ? Math.round((double) passed / total * 5)
+                        : (double) passed / total * item.getMaxPoints();
                 saveScore(item.getId(), assignmentId, userId, awarded);
             }
         }
@@ -274,24 +309,24 @@ public class RubricServiceImpl implements RubricService {
     @Override
     public Map<String, Object> calculateTotalScore(Long assignmentId, String userId) {
         Rubric rubric = getRubricForAssignment(assignmentId);
-        if (rubric == null) return Map.of("total", 0, "possible", 0, "percentage", 0);
+        if (rubric == null) return Map.of("awarded", 0, "possible", 0, "percentage", 0);
         List<RubricScore> scores = rubricScoreRepository.findBySubmission(assignmentId, userId);
 
         if (rubric.isWeighted()) {
-            double weightedPercentage = 0;
+            // For weighted rubrics: each item has a weight (%), score is 0-5
+            // Contribution = (score/5) * weight
+            double totalPercentage = 0;
             for (RubricCriteria criteria : rubric.getCriteria()) {
-                double criteriaPossible = criteria.getItems().stream().mapToDouble(RubricItem::getMaxPoints).sum();
-                if (criteriaPossible == 0) continue;
-                List<Long> itemIds = criteria.getItems().stream().map(RubricItem::getId).toList();
-                double criteriaAwarded = scores.stream()
-                        .filter(s -> itemIds.contains(s.getRubricItem().getId()))
-                        .mapToDouble(RubricScore::getAwardedPoints).sum();
-                double criteriaScore = criteriaAwarded / criteriaPossible;
-                weightedPercentage += criteriaScore * criteria.getWeight();
+                for (RubricItem item : criteria.getItems()) {
+                    if (item.getWeight() == 0) continue;
+                    double itemScore = scores.stream()
+                            .filter(s -> s.getRubricItem().getId().equals(item.getId()))
+                            .mapToDouble(RubricScore::getAwardedPoints)
+                            .findFirst().orElse(0);
+                    totalPercentage += (itemScore / 5.0) * item.getWeight();
+                }
             }
-            double possible = rubric.getTotalPoints();
-            double awarded = weightedPercentage / 100 * possible;
-            return Map.of("awarded", awarded, "possible", possible, "percentage", Math.round(weightedPercentage));
+            return Map.of("awarded", Math.round(totalPercentage), "possible", 100, "percentage", Math.round(totalPercentage));
         }
 
         double awarded = scores.stream().mapToDouble(RubricScore::getAwardedPoints).sum();

@@ -59,20 +59,28 @@ function AssignmentRubric({ assignmentId }) {
                 <div className="flex items-center justify-between px-3 py-2 bg-zinc-700/30">
                   <p className="text-white text-xs font-medium">{criteria.title}</p>
                   <p className="text-zinc-400 text-xs">
-                    {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                    {rubric.weighted
+                      ? `${(criteria.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}% weight`
+                      : `${(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts`}
                   </p>
                 </div>
                 {(criteria.items || []).map((item) => (
                     <div key={item.id} className="flex items-center justify-between px-3 py-2 border-t border-zinc-700/30">
                       <span className="text-zinc-300 text-xs">{item.label}</span>
-                      <span className="text-zinc-400 text-xs">{item.maxPoints} pts</span>
+                      <span className="text-zinc-400 text-xs">
+                        {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
+                      </span>
                     </div>
                 ))}
               </div>
           ))}
           <div className="flex items-center justify-between px-3 py-2 bg-zinc-700/30 border-t border-zinc-700">
             <p className="text-white text-xs font-semibold">Total</p>
-            <p className="text-white text-xs font-semibold">{rubric.totalPoints} pts</p>
+            <p className="text-white text-xs font-semibold">
+              {rubric.weighted
+                ? `${(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}%`
+                : `${rubric.totalPoints} pts`}
+            </p>
           </div>
         </div>
       </div>
