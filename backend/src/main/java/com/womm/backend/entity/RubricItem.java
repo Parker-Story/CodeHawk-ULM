@@ -29,6 +29,13 @@ public class RubricItem {
     @Column(name = "display_order", nullable = false)
     private int displayOrder = 0;
 
+    @Column(name = "weight", nullable = false, columnDefinition = "DECIMAL(5,2)")
+    private double weight = 0;
+
+    @OneToMany(mappedBy = "rubricItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("score ASC")
+    private List<RubricScoreLabel> scoreLabels;
+
     public RubricItem() {}
 
     public Long getId() { return id; }
@@ -43,4 +50,8 @@ public class RubricItem {
     public void setAutoGrade(boolean autoGrade) { this.autoGrade = autoGrade; }
     public int getDisplayOrder() { return displayOrder; }
     public void setDisplayOrder(int displayOrder) { this.displayOrder = displayOrder; }
+    public double getWeight() { return weight; }
+    public void setWeight(double weight) { this.weight = weight; }
+    public List<RubricScoreLabel> getScoreLabels() { return scoreLabels; }
+    public void setScoreLabels(List<RubricScoreLabel> scoreLabels) { this.scoreLabels = scoreLabels; }
 }
