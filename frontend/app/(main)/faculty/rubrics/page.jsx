@@ -278,12 +278,18 @@ export default function RubricsPage() {
                                             <p className="text-zinc-400 text-sm">No criteria yet. Add a section to get started.</p>
                                         ) : (
                                             (rubricDetails[rubric.id]?.criteria || []).map((criteria) => (
-                                                <div key={criteria.id} className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                                                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700/50">
-                                                        <p className="text-white font-medium text-sm">{criteria.title}</p>
+                                                <div key={criteria.id} className="rounded-xl overflow-hidden border border-zinc-700">
+                                                    {/* Section header */}
+                                                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700/60" style={{ background: "#7C1D2E14" }}>
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-1 h-4 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
+                                                            <p className="text-sm font-semibold text-white">{criteria.title}</p>
+                                                        </div>
                                                         <div className="flex items-center gap-2">
                                                             {!rubricDetails[rubric.id]?.weighted && (
-                                                                <span className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</span>
+                                                                <span className="text-xs text-zinc-400">
+                                                                    {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                                                                </span>
                                                             )}
                                                             <button type="button" onClick={() => handleDeleteCriteria(rubric.id, criteria.id)} className="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -291,39 +297,43 @@ export default function RubricsPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="divide-y divide-zinc-700/30">
+                                                    {/* Items */}
+                                                    <div className="bg-zinc-900 divide-y divide-zinc-800">
                                                         {(criteria.items || []).map((item) => (
-                                                            <div key={item.id} className="px-4 py-3">
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2 min-w-0">
-                                                                        {item.autoGrade && <span className="shrink-0 text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
-                                                                        <span className="text-zinc-300 text-sm truncate">{item.label}</span>
+                                                            <div key={item.id} className="flex items-start gap-3 px-4 py-2.5">
+                                                                <span className="text-zinc-600 text-xs mt-0.5 shrink-0 select-none">›</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                            {item.autoGrade && <span className="shrink-0 text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
+                                                                            <span className="text-zinc-300 text-sm truncate">{item.label}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-3 shrink-0 ml-3">
+                                                                            {rubricDetails[rubric.id]?.weighted
+                                                                                ? <span className="text-xs text-zinc-400">{item.weight}%</span>
+                                                                                : <span className="text-xs text-zinc-500">{item.maxPoints} pts</span>
+                                                                            }
+                                                                            <button type="button" onClick={() => handleDeleteItem(rubric.id, criteria.id, item.id)} className="p-1 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="flex items-center gap-3 shrink-0 ml-3">
-                                                                        {rubricDetails[rubric.id]?.weighted
-                                                                            ? <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#C9A84C22", color: "#C9A84C" }}>{item.weight}%</span>
-                                                                            : <span className="text-zinc-400 text-xs">{item.maxPoints} pts</span>
-                                                                        }
-                                                                        <button type="button" onClick={() => handleDeleteItem(rubric.id, criteria.id, item.id)} className="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
-                                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                                        </button>
-                                                                    </div>
+                                                                    {/* Show score labels if present */}
+                                                                    {item.scoreLabels && item.scoreLabels.length > 0 && (
+                                                                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                                                            {item.scoreLabels.map((sl) => (
+                                                                                <span key={sl.score} className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">
+                                                                                    {sl.score}: {sl.label}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                {/* Show score labels if present */}
-                                                                {item.scoreLabels && item.scoreLabels.length > 0 && (
-                                                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                                                        {item.scoreLabels.map((sl) => (
-                                                                            <span key={sl.score} className="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
-                                                                                {sl.score}: {sl.label}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         ))}
 
                                                         {addingItem === criteria.id ? (
-                                                            <div className="p-3 space-y-3 bg-zinc-900/50">
+                                                            <div className="p-3 space-y-3 bg-zinc-900">
                                                                 <input type="text" value={newItem.label} onChange={(e) => setNewItem((p) => ({ ...p, label: e.target.value }))} placeholder="Item label (e.g. Correct Output)" className={inputClass} />
                                                                 <div className="flex gap-2 items-center">
                                                                     {rubricDetails[rubric.id]?.weighted ? (
@@ -367,7 +377,7 @@ export default function RubricsPage() {
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <button type="button" onClick={() => { setAddingItem(criteria.id); setNewItem({ label: "", weight: "", autoGrade: false }); setNewItemLabels({ 0: "", 1: "", 2: "", 3: "", 4: "", 5: "" }); }} className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors w-full hover:opacity-80" style={{ color: "#C9A84C" }}>
+                                                            <button type="button" onClick={() => { setAddingItem(criteria.id); setNewItem({ label: "", weight: "", autoGrade: false }); setNewItemLabels({ 0: "", 1: "", 2: "", 3: "", 4: "", 5: "" }); }} className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors w-full hover:opacity-80 bg-zinc-900" style={{ color: "#a1a1aa" }}>
                                                                 <Plus className="w-3.5 h-3.5" /> Add Item
                                                             </button>
                                                         )}

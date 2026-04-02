@@ -53,28 +53,36 @@ function AssignmentRubric({ assignmentId }) {
   return (
       <div className="space-y-2">
         <p className="text-sm font-medium text-zinc-300">Grading Rubric</p>
-        <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+        <div className="border border-zinc-700 rounded-xl overflow-hidden">
           {(rubric.criteria || []).map((criteria) => (
-              <div key={criteria.id} className="border-b border-zinc-700/50 last:border-0">
-                <div className="flex items-center justify-between px-3 py-2 bg-zinc-700/30">
-                  <p className="text-white text-xs font-medium">{criteria.title}</p>
+              <div key={criteria.id} className="border-b border-zinc-700/50 last:border-b-0">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700/40" style={{ background: "#7C1D2E14" }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-0.5 h-3 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
+                    <p className="text-white text-xs font-semibold">{criteria.title}</p>
+                  </div>
                   <p className="text-zinc-400 text-xs">
                     {rubric.weighted
                       ? `${(criteria.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}% weight`
                       : `${(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts`}
                   </p>
                 </div>
-                {(criteria.items || []).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between px-3 py-2 border-t border-zinc-700/30">
-                      <span className="text-zinc-300 text-xs">{item.label}</span>
-                      <span className="text-zinc-400 text-xs">
-                        {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
-                      </span>
-                    </div>
-                ))}
+                <div className="bg-zinc-900 divide-y divide-zinc-800">
+                  {(criteria.items || []).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between px-3 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-zinc-600 text-xs shrink-0 select-none">›</span>
+                          <span className="text-zinc-300 text-xs">{item.label}</span>
+                        </div>
+                        <span className="text-zinc-500 text-xs shrink-0 ml-2">
+                          {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
+                        </span>
+                      </div>
+                  ))}
+                </div>
               </div>
           ))}
-          <div className="flex items-center justify-between px-3 py-2 bg-zinc-700/30 border-t border-zinc-700">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-zinc-700 bg-zinc-900">
             <p className="text-white text-xs font-semibold">Total</p>
             <p className="text-white text-xs font-semibold">
               {rubric.weighted
@@ -125,7 +133,7 @@ export default function StudentCourseDetailPage() {
           if (!res.ok) throw new Error("Failed to fetch assignments");
           return res.json();
         })
-        .then((data) => setAssignments(Array.isArray(data) ? data : []))
+        .then((data) => setAssignments(Array.isArray(data) ? data.filter((a) => a.published) : []))
         .catch((err) => console.error("Error loading assignments:", err));
   }, [crn]);
 

@@ -21,4 +21,9 @@ public interface RubricScoreRepository extends JpaRepository<RubricScore, Long> 
     @Transactional
     @Query("DELETE FROM RubricScore rs WHERE rs.submission.submissionId.assignmentId = :assignmentId")
     void deleteByAssignmentId(@Param("assignmentId") Long assignmentId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM RubricScore rs WHERE rs.rubricItem.criteria.rubric.id = :rubricId")
+    void deleteByRubricId(@Param("rubricId") Long rubricId);
 }

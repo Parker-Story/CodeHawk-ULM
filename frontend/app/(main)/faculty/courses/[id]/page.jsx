@@ -280,7 +280,10 @@ export default function CourseDetailPage() {
                             >
                               <FileText className="w-5 h-5 shrink-0" style={{ color: "#C9A84C" }} />
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-white">{a.title}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-white">{a.title}</p>
+                                  {!a.published && <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-400">Draft</span>}
+                                </div>
                                 {a.description && <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>}
                               </div>
                               <div className="relative shrink-0">

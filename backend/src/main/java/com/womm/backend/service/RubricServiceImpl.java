@@ -84,6 +84,9 @@ public class RubricServiceImpl implements RubricService {
     @Override
     @Transactional
     public void deleteRubric(Long id) {
+        rubricScoreRepository.deleteByRubricId(id);
+        articRepository.deleteByRubricId(id);
+        assignmentRubricRepository.deleteByRubricId(id);
         rubricRepository.deleteById(id);
     }
 

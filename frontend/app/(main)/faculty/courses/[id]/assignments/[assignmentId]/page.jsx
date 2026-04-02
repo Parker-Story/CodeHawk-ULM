@@ -313,6 +313,19 @@ export default function GradingWorkspacePage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleTogglePublished = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/assignment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...assignment, published: !assignment.published }),
+      });
+      if (!res.ok) throw new Error("Failed to update assignment");
+      const updated = await res.json();
+      setAssignment(updated);
+    } catch (err) { console.error(err); }
+  };
+
   const handleDownloadPlagiarismCSV = () => {
     if (!plagiarismResults) return;
     const rows = [["Student A", "Student B", "Similarity %", "Flagged"], ...plagiarismResults.map((r) => [r.studentAName, r.studentBName, r.similarity, r.similarity >= 70 ? "Yes" : "No"])];
@@ -383,6 +396,18 @@ export default function GradingWorkspacePage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Submissions</h2>
               <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-400">Published</span>
+                  <button
+                      type="button"
+                      onClick={handleTogglePublished}
+                      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                      style={assignment?.published ? { background: "#7C1D2E" } : { background: "#52525b" }}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${assignment?.published ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+                <div className="w-px h-5 bg-zinc-700" />
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-zinc-400">Show scores to students</span>
                   <button
@@ -558,34 +583,40 @@ export default function GradingWorkspacePage() {
                   </div>
                   {(assignedRubric.criteria || []).map((criteria) => (
                       <div key={criteria.id} className="border-b border-zinc-700/50 last:border-0">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-700/20">
-                          <p className="text-white text-sm font-medium">{criteria.title}</p>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-700/40" style={{ background: "#7C1D2E14" }}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-1 h-3.5 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
+                            <p className="text-white text-sm font-semibold">{criteria.title}</p>
+                          </div>
                           {!assignedRubric.weighted && (
                               <p className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts</p>
                           )}
                         </div>
-                        {(criteria.items || []).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-700/30">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
-                                <span className="text-zinc-300 text-sm">{item.label}</span>
-                                {item.autoGrade && itemLinkMap[item.id]?.length > 0 && (
-                                    <span className="text-xs text-zinc-500">({itemLinkMap[item.id].length} test{itemLinkMap[item.id].length !== 1 ? "s" : ""} linked)</span>
-                                )}
+                        <div className="bg-zinc-900/40 divide-y divide-zinc-800">
+                          {(criteria.items || []).map((item) => (
+                              <div key={item.id} className="flex items-center justify-between px-4 py-2.5">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-zinc-600 text-xs shrink-0 select-none">›</span>
+                                  {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
+                                  <span className="text-zinc-300 text-sm">{item.label}</span>
+                                  {item.autoGrade && itemLinkMap[item.id]?.length > 0 && (
+                                      <span className="text-xs text-zinc-500">({itemLinkMap[item.id].length} test{itemLinkMap[item.id].length !== 1 ? "s" : ""} linked)</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  {assignedRubric.weighted
+                                      ? <span className="text-xs text-zinc-400">{item.weight}%</span>
+                                      : <span className="text-zinc-500 text-xs">{item.maxPoints} pts</span>
+                                  }
+                                  {item.autoGrade && testCases.length > 0 && (
+                                      <button type="button" onClick={() => handleOpenLinkDialog(item)} className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-zinc-300 rounded-lg border border-zinc-600 bg-zinc-800 transition-colors hover:border-zinc-400 hover:text-white">
+                                        <Link className="w-3 h-3" /> Link Tests
+                                      </button>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3 shrink-0">
-                                {assignedRubric.weighted
-                                    ? <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{ background: "#C9A84C22", color: "#C9A84C" }}>{item.weight}%</span>
-                                    : <span className="text-zinc-400 text-xs">{item.maxPoints} pts</span>
-                                }
-                                {item.autoGrade && testCases.length > 0 && (
-                                    <button type="button" onClick={() => handleOpenLinkDialog(item)} className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
-                                      <Link className="w-3 h-3" /> Link Tests
-                                    </button>
-                                )}
-                              </div>
-                            </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                   ))}
                 </div>
@@ -804,9 +835,12 @@ export default function GradingWorkspacePage() {
 
                       <div className="flex-1 overflow-auto p-5 space-y-6">
                         {(assignedRubric.criteria || []).map((criteria) => (
-                            <div key={criteria.id}>
-                              <div className="flex items-center justify-between mb-3">
-                                <p className="text-white font-semibold text-sm">{criteria.title}</p>
+                            <div key={criteria.id} className="rounded-xl overflow-hidden border border-zinc-700">
+                              <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-700/60" style={{ background: "#7C1D2E14" }}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1 h-3.5 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
+                                  <p className="text-white font-semibold text-sm">{criteria.title}</p>
+                                </div>
                                 {assignedRubric.weighted ? (
                                     <p className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}% weight</p>
                                 ) : (
@@ -815,17 +849,18 @@ export default function GradingWorkspacePage() {
                                     </p>
                                 )}
                               </div>
-                              <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
+                              <div className="bg-zinc-900 divide-y divide-zinc-800">
                                 {(criteria.items || []).map((item) => (
                                     <div key={item.id} className="px-4 py-3">
                                       {/* Item header */}
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2 min-w-0">
+                                          <span className="text-zinc-600 text-xs shrink-0 select-none">›</span>
                                           {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
                                           <span className="text-zinc-200 text-sm font-medium">{item.label}</span>
                                         </div>
                                         <span className="text-zinc-500 text-xs shrink-0 ml-3">
-                                          {assignedRubric.weighted ? `${item.weight}% weight` : `Max: ${item.maxPoints} pts`}
+                                          {assignedRubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
                                         </span>
                                       </div>
 
