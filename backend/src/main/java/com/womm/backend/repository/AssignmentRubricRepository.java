@@ -2,6 +2,10 @@ package com.womm.backend.repository;
 
 import com.womm.backend.entity.AssignmentRubric;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 public interface AssignmentRubricRepository extends JpaRepository<AssignmentRubric, Long> {
@@ -10,6 +14,6 @@ public interface AssignmentRubricRepository extends JpaRepository<AssignmentRubr
 
     @Modifying
     @Transactional
-    @org.springframework.data.jpa.repository.Query("DELETE FROM AssignmentRubric ar WHERE ar.rubric.id = :rubricId")
-    void deleteByRubricId(@org.springframework.data.repository.query.Param("rubricId") Long rubricId);
+    @Query("DELETE FROM AssignmentRubric ar WHERE ar.rubric.id = :rubricId")
+    void deleteByRubricId(@Param("rubricId") Long rubricId);
 }

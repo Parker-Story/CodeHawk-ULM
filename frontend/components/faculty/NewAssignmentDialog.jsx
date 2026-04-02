@@ -12,6 +12,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [scoresVisible, setScoresVisible] = useState(false);
+  const [publishOnCreate, setPublishOnCreate] = useState(false);
   const [inputMode, setInputMode] = useState("STDIN");
   const [inputFile, setInputFile] = useState(null);
   const [inputFileContent, setInputFileContent] = useState(null);
@@ -31,6 +32,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
     setTitle("");
     setDescription("");
     setScoresVisible(false);
+    setPublishOnCreate(false);
     setInputMode("STDIN");
     setInputFile(null);
     setInputFileContent(null);
@@ -47,6 +49,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
         body: JSON.stringify({
           title,
           description,
+          published: publishOnCreate,
           scoresVisible,
           inputMode,
           inputFileName: inputFile?.name ?? null,
@@ -145,9 +148,25 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
             </button>
           </div>
 
+          {/* Publish on Create */}
+          <div className="flex items-center justify-between p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
+            <div>
+              <p className="text-sm font-medium text-zinc-300">Publish upon creation</p>
+              <p className="text-xs text-zinc-500 mt-0.5">Students can see the assignment immediately. You can publish later from the assignment page.</p>
+            </div>
+            <button
+                type="button"
+                onClick={() => setPublishOnCreate((prev) => !prev)}
+                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                style={publishOnCreate ? { background: "#7C1D2E" } : { background: "#52525b" }}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${publishOnCreate ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
           <div className="flex gap-3 pt-4 border-t border-zinc-700">
             <button type="button" onClick={handleClose} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
-            <button type="submit" disabled={inputMode === "FILE" && !inputFile} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>Publish Assignment</button>
+            <button type="submit" disabled={inputMode === "FILE" && !inputFile} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>Create Assignment</button>
           </div>
         </form>
       </Dialog>
