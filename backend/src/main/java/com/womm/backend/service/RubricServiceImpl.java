@@ -122,6 +122,7 @@ public class RubricServiceImpl implements RubricService {
                 newItem.setDisplayOrder(origItem.getDisplayOrder());
                 RubricItem savedItem = rubricItemRepository.save(newItem);
 
+                // Copy score labels
                 List<RubricScoreLabel> origLabels = rubricScoreLabelRepository.findByRubricItemId(origItem.getId());
                 for (RubricScoreLabel origLabel : origLabels) {
                     RubricScoreLabel newLabel = new RubricScoreLabel();

@@ -21,9 +21,9 @@ public interface RubricService {
 
     RubricItem addItem(Long criteriaId, String label, double weight, boolean autoGrade, int displayOrder);
     void saveScoreLabels(Long itemId, Map<Integer, String> labels);
+
     List<AssignmentRubricItemTestCase> getLinkedTestCases(Long assignmentId, Long rubricItemId);
     void linkTestCasesToItem(Long assignmentId, Long rubricItemId, List<Long> testCaseIds);
-
     void deleteItem(Long itemId);
 
     void attachRubricToAssignment(Long rubricId, Long assignmentId);

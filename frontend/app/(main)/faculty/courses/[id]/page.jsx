@@ -295,9 +295,7 @@ export default function CourseDetailPage() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium text-white">{a.title}</p>
-                                  {!a.published && (
-                                      <span className="text-xs px-2 py-0.5 rounded-full text-zinc-400 bg-zinc-700/60 border border-zinc-600">Draft</span>
-                                  )}
+                                  {!a.published && <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-400">Draft</span>}
                                 </div>
                                 {a.description && <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>}
                               </div>
