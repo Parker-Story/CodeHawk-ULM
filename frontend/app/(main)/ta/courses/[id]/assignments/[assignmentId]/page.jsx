@@ -48,8 +48,9 @@ export default function TAGradingWorkspacePage() {
                 setSubmissions(list);
                 const inputs = {};
                 const feedbacks = {};
+                const totalPts = assignment?.totalPoints ?? 100;
                 list.forEach((s) => {
-                    inputs[s.submissionId.userId] = s.score ?? "";
+                    inputs[s.submissionId.userId] = s.score != null ? Math.round(s.score / 100 * totalPts) : "";
                     feedbacks[s.submissionId.userId] = s.feedback ?? "";
                 });
                 setScoreInputs(inputs);
@@ -100,7 +101,7 @@ export default function TAGradingWorkspacePage() {
         setSavingScore((prev) => ({ ...prev, [userId]: true }));
         try {
             const response = await fetch(`${API_BASE}/submission/score/${assignmentId}/${userId}`, {
-                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score: parseInt(score) }),
+                method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ score: Math.round(parseInt(score) / (assignment?.totalPoints ?? 100) * 100) }),
             });
             if (!response.ok) throw new Error("Failed to save score");
             const updated = await response.json();
@@ -163,7 +164,8 @@ export default function TAGradingWorkspacePage() {
             const list = Array.isArray(subData) ? subData : [];
             setSubmissions(list);
             const inputs = {};
-            list.forEach((s) => { inputs[s.submissionId.userId] = s.score ?? ""; });
+            const totalPts = assignment?.totalPoints ?? 100;
+            list.forEach((s) => { inputs[s.submissionId.userId] = s.score != null ? Math.round(s.score / 100 * totalPts) : ""; });
             setScoreInputs(inputs);
             // Stay open — do NOT close the panel
         } catch (err) { console.error(err); } finally { setSavingRubricScore(false); }
@@ -229,6 +231,7 @@ export default function TAGradingWorkspacePage() {
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-2">
                                                         <input type="number" min="0" max="100" value={scoreInputs[userId] ?? ""} onChange={(e) => setScoreInputs((prev) => ({ ...prev, [userId]: e.target.value }))} placeholder="—" className="w-16 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40" />
+                                                        <span className="text-zinc-500 text-xs">/ {assignment?.totalPoints ?? 100}</span>
                                                         <button type="button" onClick={() => handleScoreSave(userId)} disabled={savingScore[userId]} className="px-3 py-1 text-xs font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>
                                                             {savingScore[userId] ? "Saving..." : "Save"}
                                                         </button>
@@ -314,6 +317,7 @@ export default function TAGradingWorkspacePage() {
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center gap-2 mr-3">
                                         <input type="number" min="0" max="100" value={scoreInputs[solutionUserId] ?? ""} onChange={(e) => setScoreInputs((prev) => ({ ...prev, [solutionUserId]: e.target.value }))} placeholder="Score" className="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40" />
+                                        <span className="text-zinc-500 text-xs">/ {assignment?.totalPoints ?? 100}</span>
                                         <button type="button" onClick={() => handleScoreSave(solutionUserId)} disabled={savingScore[solutionUserId]} className="px-4 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>
                                             {savingScore[solutionUserId] ? "Saving..." : "Save Score"}
                                         </button>

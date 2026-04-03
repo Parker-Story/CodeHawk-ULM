@@ -402,6 +402,10 @@ export default function CourseDetailPage() {
                   <label className={labelClass}>Description</label>
                   <textarea rows={4} value={editAssignment.description || ""} onChange={(e) => setEditAssignment((prev) => ({ ...prev, description: e.target.value }))} className={inputClass} />
                 </div>
+                <div>
+                  <label className={labelClass}>Total Points</label>
+                  <input type="number" min="1" value={editAssignment.totalPoints ?? 100} onChange={(e) => setEditAssignment((prev) => ({ ...prev, totalPoints: parseInt(e.target.value) || 100 }))} className={inputClass} required />
+                </div>
                 <div className="flex gap-3 pt-4 border-t border-zinc-700">
                   <button type="button" onClick={() => setEditAssignment(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
                   <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Save Changes</button>

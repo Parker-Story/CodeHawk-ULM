@@ -18,6 +18,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
   const [inputFileContent, setInputFileContent] = useState(null);
   const fileInputRef = useRef(null);
   const [dueDate, setDueDate] = useState("");
+  const [totalPoints, setTotalPoints] = useState(100);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -37,6 +38,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
     setInputFile(null);
     setInputFileContent(null);
     setDueDate("");
+    setTotalPoints(100);
     onClose();
   };
 
@@ -55,6 +57,7 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
           inputFileName: inputFile?.name ?? null,
           inputFileContent: inputMode === "FILE" ? inputFileContent : null,
           dueDate: dueDate ? `${dueDate}:00` : null,
+          totalPoints,
         }),
       });
       if (!response.ok) throw new Error("Failed to create assignment");
@@ -86,6 +89,11 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
                 onChange={(e) => setDueDate(e.target.value)}
                 style={{ colorScheme: "dark" }}
             />
+          </div>
+
+          <div>
+            <label htmlFor="total-points" className={labelClass}>Total Points</label>
+            <input id="total-points" type="number" min="1" className={inputClass} value={totalPoints} onChange={(e) => setTotalPoints(parseInt(e.target.value) || 100)} required />
           </div>
 
           {/* Input Mode */}
