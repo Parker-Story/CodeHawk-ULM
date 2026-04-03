@@ -287,7 +287,7 @@ export default function TAGradingWorkspacePage() {
                         <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
                             <div>
                                 <h2 className="text-lg font-semibold text-white">{openSolution.fileName}</h2>
-                                <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}</p>
+                                <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}{openSolution.user?.cwid ? ` (${openSolution.user.cwid})` : ""}</p>
                             </div>
                             <button type="button" onClick={() => setOpenSolution(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                         </div>
@@ -312,7 +312,7 @@ export default function TAGradingWorkspacePage() {
                                 <div>
                                     <h2 className="text-lg font-semibold text-white">Grade Rubric</h2>
                                     <p className="text-zinc-400 text-sm mt-0.5">
-                                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName} • {rubric.name}
+                                        {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName}{gradingSubmission?.user?.cwid ? ` (${gradingSubmission.user.cwid})` : ""} • {rubric.name}
                                     </p>
                                 </div>
                                 <button type="button" onClick={() => setGradingStudent(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors">
