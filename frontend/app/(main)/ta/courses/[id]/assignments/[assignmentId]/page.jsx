@@ -77,9 +77,11 @@ export default function TAGradingWorkspacePage() {
             .then((data) => {
                 const map = {};
                 if (Array.isArray(data)) { data.forEach((rs) => { map[rs.rubricItem.id] = rs.awardedPoints; }); }
-                (rubric.criteria || []).flatMap((c) => c.items || []).forEach((item) => {
-                    if (!item.autoGrade && map[item.id] === undefined) { map[item.id] = item.maxPoints; }
-                });
+                if (!rubric.weighted) {
+                    (rubric.criteria || []).flatMap((c) => c.items || []).forEach((item) => {
+                        if (!item.autoGrade && map[item.id] === undefined) { map[item.id] = item.maxPoints; }
+                    });
+                }
                 setRubricScores(map);
             })
             .catch((err) => console.error(err));
@@ -386,34 +388,75 @@ export default function TAGradingWorkspacePage() {
                                 </div>
 
                                 {/* Right — Rubric */}
-                                <div className="w-96 flex flex-col overflow-hidden shrink-0">
-                                    <div className="px-5 py-3 border-b border-zinc-700/50 shrink-0">
+                                <div className="w-[520px] flex flex-col overflow-hidden shrink-0">
+                                    <div className="px-6 py-3 border-b border-zinc-700/50 shrink-0">
                                         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Rubric</p>
-                                        <p className="text-sm text-zinc-300 mt-0.5">{rubric.totalPoints} total points</p>
+                                        <p className="text-sm text-zinc-300 mt-0.5">{rubric.weighted ? "Weighted — score each item 0 to 5" : `${rubric.totalPoints} total points`}</p>
                                     </div>
-                                    <div className="flex-1 overflow-auto p-5 space-y-5">
+
+                                    <div className="flex-1 overflow-auto p-5 space-y-6">
                                         {(rubric.criteria || []).map((criteria) => (
-                                            <div key={criteria.id}>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-white font-semibold text-sm">{criteria.title}</p>
-                                                    <p className="text-zinc-400 text-xs">
-                                                        {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
-                                                    </p>
+                                            <div key={criteria.id} className="rounded-xl overflow-hidden border border-zinc-700">
+                                                <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-700/60" style={{ background: "#7C1D2E14" }}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-1 h-3.5 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
+                                                        <p className="text-white font-semibold text-sm">{criteria.title}</p>
+                                                    </div>
+                                                    {rubric.weighted ? (
+                                                        <p className="text-zinc-400 text-xs">{(criteria.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}% weight</p>
+                                                    ) : (
+                                                        <p className="text-zinc-400 text-xs">
+                                                            {(criteria.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <div className="bg-zinc-800 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
+                                                <div className="bg-zinc-900 divide-y divide-zinc-800">
                                                     {(criteria.items || []).map((item) => (
-                                                        <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                                                            <div className="min-w-0 flex-1">
-                                                                <div className="flex items-center gap-2">
+                                                        <div key={item.id} className="px-4 py-3">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <span className="text-zinc-600 text-xs shrink-0 select-none">›</span>
                                                                     {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#7C1D2E33", color: "#c0a080" }}>auto</span>}
-                                                                    <span className="text-zinc-300 text-sm">{item.label}</span>
+                                                                    <span className="text-zinc-200 text-sm font-medium">{item.label}</span>
                                                                 </div>
-                                                                <p className="text-zinc-500 text-xs mt-0.5">Max: {item.maxPoints} pts</p>
+                                                                <span className="text-zinc-500 text-xs shrink-0 ml-3">
+                                                                    {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
+                                                                </span>
                                                             </div>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <input type="number" min="0" max={item.maxPoints} step="0.25" value={rubricScores[item.id] ?? ""} onChange={(e) => handleRubricScoreChange(item.id, e.target.value)} placeholder="0" disabled={item.autoGrade} className="w-16 bg-zinc-700 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40 disabled:opacity-50 disabled:cursor-not-allowed" />
-                                                                <span className="text-zinc-500 text-xs">/ {item.maxPoints}</span>
-                                                            </div>
+
+                                                            {/* Non-weighted: number input */}
+                                                            {!rubric.weighted && (
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <input type="number" min="0" max={item.maxPoints} step="0.25" value={rubricScores[item.id] ?? ""} onChange={(e) => handleRubricScoreChange(item.id, e.target.value)} placeholder="0" disabled={item.autoGrade} className="w-16 bg-zinc-700 border border-zinc-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-600/40 disabled:opacity-50 disabled:cursor-not-allowed" />
+                                                                    <span className="text-zinc-500 text-xs">/ {item.maxPoints}</span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Weighted: 0-5 score buttons with labels */}
+                                                            {rubric.weighted && (
+                                                                <div className="flex flex-col gap-1 mt-1">
+                                                                    {[5, 4, 3, 2, 1, 0].map((score) => {
+                                                                        const scoreLabel = item.scoreLabels?.find(sl => sl.score === score);
+                                                                        const isSelected = parseInt(rubricScores[item.id]) === score;
+                                                                        return (
+                                                                            <button key={score} type="button" disabled={item.autoGrade}
+                                                                                onClick={() => handleRubricScoreChange(item.id, score)}
+                                                                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all text-left w-full disabled:opacity-50 disabled:cursor-not-allowed border"
+                                                                                style={isSelected
+                                                                                    ? { background: "#7C1D2E22", borderColor: "#7C1D2E", color: "white" }
+                                                                                    : { background: "transparent", borderColor: "#3f3f46", color: "#a1a1aa" }}>
+                                                                                <span className="text-base font-bold w-5 shrink-0 text-center tabular-nums"
+                                                                                    style={{ color: isSelected ? "#f87171" : "#52525b" }}>
+                                                                                    {score}
+                                                                                </span>
+                                                                                <span className="flex-1 leading-snug">
+                                                                                    {scoreLabel?.label || <span className="italic opacity-40">No descriptor</span>}
+                                                                                </span>
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -446,9 +489,23 @@ export default function TAGradingWorkspacePage() {
                                     <div className="p-5 border-t border-zinc-700 shrink-0">
                                         <div className="flex items-center justify-between mb-4">
                                             <p className="text-zinc-300 text-sm font-medium">Total Score</p>
-                                            <p className="text-white font-bold">
-                                                {(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {rubric.totalPoints} pts
-                                            </p>
+                                            {rubric.weighted ? (
+                                                <p className="text-white font-bold">
+                                                    {(() => {
+                                                        const allItems = (rubric.criteria || []).flatMap((c) => c.items || []);
+                                                        const anyScored = allItems.some((i) => rubricScores[i.id] !== undefined && rubricScores[i.id] !== null && rubricScores[i.id] !== "");
+                                                        if (!anyScored) return "—";
+                                                        return allItems.reduce((sum, i) => {
+                                                            const score = parseFloat(rubricScores[i.id]) || 0;
+                                                            return sum + (score / 5) * (i.weight || 0);
+                                                        }, 0).toFixed(1) + "%";
+                                                    })()}
+                                                </p>
+                                            ) : (
+                                                <p className="text-white font-bold">
+                                                    {(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (parseFloat(rubricScores[i.id]) || 0), 0).toFixed(2)} / {rubric.totalPoints} pts
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="flex gap-3">
                                             <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Close</button>
