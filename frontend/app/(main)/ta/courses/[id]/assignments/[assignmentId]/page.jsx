@@ -216,7 +216,6 @@ export default function TAGradingWorkspacePage() {
                             <thead>
                             <tr className="bg-zinc-700/50 border-b border-zinc-700">
                                 <th className="text-left py-3 px-4 font-semibold text-white">Student</th>
-                                <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Test Results</th>
                                 <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
@@ -224,7 +223,7 @@ export default function TAGradingWorkspacePage() {
                             </thead>
                             <tbody>
                             {submissions.length === 0 ? (
-                                <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                                <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                             ) : (
                                 submissions.map((s) => {
                                     const userId = s.submissionId.userId;
@@ -241,12 +240,6 @@ export default function TAGradingWorkspacePage() {
                                                             <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
                                                         </div>
                                                         <span className="text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2 text-zinc-400">
-                                                        <FileText className="w-4 h-4" />
-                                                        <span>{s.fileName || "Unnamed file"}</span>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4">
@@ -298,7 +291,7 @@ export default function TAGradingWorkspacePage() {
                                             </tr>
                                             {isExpanded && studentResults.length > 0 && (
                                                 <tr className="border-b border-zinc-700/50 bg-zinc-900/80">
-                                                    <td colSpan={5} className="px-4 py-3">
+                                                    <td colSpan={4} className="px-4 py-3">
                                                         <div className="space-y-2">
                                                             {studentResults.map((r) => (
                                                                 <div key={r.id} className="flex items-center gap-3 text-xs">
