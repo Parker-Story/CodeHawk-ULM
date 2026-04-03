@@ -168,7 +168,7 @@ export default function StudentCourseDetailPage() {
           if (!res.ok) throw new Error("Failed to fetch assignments");
           return res.json();
         })
-        .then((data) => setAssignments(Array.isArray(data) ? data : []))
+        .then((data) => setAssignments(Array.isArray(data) ? data.filter((a) => a.published) : []))
         .catch((err) => console.error("Error loading assignments:", err));
   }, [crn]);
 

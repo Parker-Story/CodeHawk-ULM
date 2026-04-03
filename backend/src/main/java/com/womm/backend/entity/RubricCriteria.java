@@ -27,9 +27,6 @@ public class RubricCriteria {
     @OrderBy("displayOrder ASC")
     private List<RubricItem> items;
 
-    @Column(name = "weight", nullable = false, columnDefinition = "DECIMAL(5,2)")
-    private double weight = 0;
-
     public RubricCriteria() {}
 
     public Long getId() { return id; }
@@ -42,6 +39,4 @@ public class RubricCriteria {
     public void setDisplayOrder(int displayOrder) { this.displayOrder = displayOrder; }
     public List<RubricItem> getItems() { return items; }
     public void setItems(List<RubricItem> items) { this.items = items; }
-    public double getWeight() { return weight; }
-    public void setWeight(double weight) { this.weight = weight; }
 }

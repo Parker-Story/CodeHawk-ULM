@@ -197,6 +197,19 @@ export default function CourseDetailPage() {
     } catch (error) { console.error("Error updating assignment:", error); }
   };
 
+  const handleTogglePublish = async (assignment) => {
+    try {
+      const response = await fetch(`${API_BASE}/assignment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...assignment, published: !assignment.published }),
+      });
+      if (!response.ok) throw new Error("Failed to update assignment");
+      const updated = await response.json();
+      setAssignments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (error) { console.error("Error toggling publish:", error); }
+  };
+
   const handleDeleteAssignment = async () => {
     try {
       const response = await fetch(`${API_BASE}/assignment/${deleteAssignmentConfirm.assignment.id}`, { method: "DELETE" });
@@ -280,7 +293,12 @@ export default function CourseDetailPage() {
                             >
                               <FileText className="w-5 h-5 shrink-0" style={{ color: "#C9A84C" }} />
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-white">{a.title}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-white">{a.title}</p>
+                                  {!a.published && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full text-zinc-400 bg-zinc-700/60 border border-zinc-600">Draft</span>
+                                  )}
+                                </div>
                                 {a.description && <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>}
                               </div>
                               <div className="relative shrink-0">
@@ -293,6 +311,14 @@ export default function CourseDetailPage() {
                                 </button>
                                 {activeMenu === a.id && (
                                     <div className="absolute right-0 top-8 z-10 bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg overflow-hidden w-40">
+                                      <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleTogglePublish(a); setActiveMenu(null); }}
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                                      >
+                                        {a.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        {a.published ? "Unpublish" : "Publish"}
+                                      </button>
                                       <button
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); setEditAssignment({ ...a }); setActiveMenu(null); }}
