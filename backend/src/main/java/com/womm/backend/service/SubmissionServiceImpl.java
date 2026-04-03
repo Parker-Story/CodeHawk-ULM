@@ -3,6 +3,7 @@ import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Submission;
 import com.womm.backend.entity.User;
 import com.womm.backend.id.SubmissionId;
+import com.womm.backend.dto.SubmissionCodeUpdateRequest;
 import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.SubmissionRepository;
 import com.womm.backend.repository.TestCaseRepository;
@@ -89,6 +90,30 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
 
         return saved;
+    }
+
+    @Override
+    public Submission saveSubmissionCode(Long assignmentId, String userId, SubmissionCodeUpdateRequest request) {
+        if (request == null) throw new RuntimeException("Request body is required");
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
+
+        Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
+                .orElseGet(() -> {
+                    Submission s = new Submission();
+                    s.setSubmissionId(new SubmissionId(userId, assignmentId));
+                    return s;
+                });
+
+        submission.setUser(user);
+        submission.setAssignment(assignment);
+        submission.setFileName(request.getFileName());
+        submission.setFileContent(request.getFileContent());
+
+        return submissionRepository.save(submission);
     }
 
     @Override

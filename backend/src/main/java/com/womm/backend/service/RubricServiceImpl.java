@@ -170,10 +170,7 @@ public class RubricServiceImpl implements RubricService {
         item.setWeight(weight);
         item.setAutoGrade(autoGrade);
         item.setDisplayOrder(displayOrder);
-
-        // For weighted rubrics, maxPoints = weight (score calculated at grading time)
-        // For unweighted rubrics, maxPoints is the weight value used as raw points
-        item.setMaxPoints(rubric.isWeighted() ? weight : weight);
+        item.setMaxPoints(weight);
         return rubricItemRepository.save(item);
     }
 
@@ -274,7 +271,6 @@ public class RubricServiceImpl implements RubricService {
                 .orElse(new RubricScore());
         score.setRubricItem(item);
         score.setSubmission(submission);
-        // For weighted rubrics, awardedPoints stores the 0-5 score
         score.setAwardedPoints(awardedPoints);
         return rubricScoreRepository.save(score);
     }
@@ -299,8 +295,6 @@ public class RubricServiceImpl implements RubricService {
                 long passed = studentResults.stream()
                         .filter(r -> linkedTestCaseIds.contains(r.getTestCase().getId()) && r.isPassed())
                         .count();
-                // For weighted rubrics, auto-grade gives a 0-5 score based on pass rate
-                // For unweighted, gives proportional points
                 double awarded = rubric.isWeighted()
                         ? Math.round((double) passed / total * 5)
                         : (double) passed / total * item.getMaxPoints();
@@ -316,8 +310,6 @@ public class RubricServiceImpl implements RubricService {
         List<RubricScore> scores = rubricScoreRepository.findBySubmission(assignmentId, userId);
 
         if (rubric.isWeighted()) {
-            // For weighted rubrics: each item has a weight (%), score is 0-5
-            // Contribution = (score/5) * weight
             double totalPercentage = 0;
             for (RubricCriteria criteria : rubric.getCriteria()) {
                 for (RubricItem item : criteria.getItems()) {
