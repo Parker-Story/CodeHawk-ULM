@@ -30,7 +30,14 @@ export default function RubricsPage() {
         if (!user?.id) return;
         fetch(`${API_BASE}/rubric/user/${user.id}`)
             .then((res) => res.json())
-            .then((data) => { setRubrics(Array.isArray(data) ? data : []); setLoading(false); })
+            .then((data) => {
+                const list = Array.isArray(data) ? data : [];
+                setRubrics(list);
+                const details = {};
+                list.forEach((r) => { if (r.criteria) details[r.id] = r; });
+                setRubricDetails(details);
+                setLoading(false);
+            })
             .catch((err) => { console.error(err); setLoading(false); });
     }, [user?.id]);
 
@@ -180,6 +187,14 @@ export default function RubricsPage() {
         return criteria.flatMap(c => c.items || []).reduce((sum, i) => sum + (i.weight || 0), 0);
     };
 
+    // Calculate total points from items when rubricDetails is loaded; fall back to stored value
+    const getDisplayTotalPoints = (rubric) => {
+        if (rubricDetails[rubric.id]) {
+            return rubricDetails[rubric.id].criteria?.flatMap(c => c.items || []).reduce((sum, i) => sum + (i.maxPoints || 0), 0) ?? 0;
+        }
+        return rubric.totalPoints;
+    };
+
     if (loading) return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
 
     return (
@@ -241,7 +256,7 @@ export default function RubricsPage() {
                                                     {rubric.weighted && <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: "#C9A84C22", color: "#C9A84C" }}>weighted</span>}
                                                 </div>
                                                 <p className="text-zinc-400 text-xs mt-0.5">
-                                                    {rubric.weighted ? "Score 0–5 per item • weights sum to 100%" : `${rubric.totalPoints} point${rubric.totalPoints !== 1 ? "s" : ""}`}
+                                                    {rubric.weighted ? "Score 0–5 per item • weights sum to 100%" : `${getDisplayTotalPoints(rubric)} point${getDisplayTotalPoints(rubric) !== 1 ? "s" : ""}`}
                                                     {rubric.description && ` • ${rubric.description}`}
                                                 </p>
                                             </div>

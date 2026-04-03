@@ -171,7 +171,12 @@ public class RubricServiceImpl implements RubricService {
         item.setAutoGrade(autoGrade);
         item.setDisplayOrder(displayOrder);
         item.setMaxPoints(weight);
-        return rubricItemRepository.save(item);
+        RubricItem savedItem = rubricItemRepository.save(item);
+        if (!rubric.isWeighted()) {
+            rubric.setTotalPoints(rubric.getTotalPoints() + weight);
+            rubricRepository.save(rubric);
+        }
+        return savedItem;
     }
 
     @Override
