@@ -197,6 +197,19 @@ export default function CourseDetailPage() {
     } catch (error) { console.error("Error updating assignment:", error); }
   };
 
+  const handleTogglePublish = async (assignment) => {
+    try {
+      const response = await fetch(`${API_BASE}/assignment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...assignment, published: !assignment.published }),
+      });
+      if (!response.ok) throw new Error("Failed to update assignment");
+      const updated = await response.json();
+      setAssignments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    } catch (error) { console.error("Error toggling publish:", error); }
+  };
+
   const handleDeleteAssignment = async () => {
     try {
       const response = await fetch(`${API_BASE}/assignment/${deleteAssignmentConfirm.assignment.id}`, { method: "DELETE" });
@@ -296,6 +309,14 @@ export default function CourseDetailPage() {
                                 </button>
                                 {activeMenu === a.id && (
                                     <div className="absolute right-0 top-8 z-10 bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg overflow-hidden w-40">
+                                      <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleTogglePublish(a); setActiveMenu(null); }}
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                                      >
+                                        {a.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        {a.published ? "Unpublish" : "Publish"}
+                                      </button>
                                       <button
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); setEditAssignment({ ...a }); setActiveMenu(null); }}

@@ -1,5 +1,6 @@
 package com.womm.backend.service;
 import com.womm.backend.entity.Submission;
+import com.womm.backend.dto.SubmissionCodeUpdateRequest;
 import java.util.List;
 
 public interface SubmissionService {
@@ -9,6 +10,7 @@ public interface SubmissionService {
     Submission updateSubmission(Submission submission);
     void deleteSubmission(String userId, Long assignmentId);
     Submission submitAssignment(Long assignmentId, String userId, Submission submission);
+    Submission saveSubmissionCode(Long assignmentId, String userId, SubmissionCodeUpdateRequest request);
     List<Submission> getSubmissionsByAssignment(Long assignmentId);
     Submission scoreSubmission(Long assignmentId, String userId, Integer score);
     Submission saveFeedback(Long assignmentId, String userId, String feedback);

@@ -3,6 +3,7 @@ package com.womm.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "rubric_items")
@@ -34,7 +35,7 @@ public class RubricItem {
 
     @OneToMany(mappedBy = "rubricItem", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("score ASC")
-    private List<RubricScoreLabel> scoreLabels;
+    private List<RubricScoreLabel> scoreLabels = new ArrayList<>();
 
     public RubricItem() {}
 
