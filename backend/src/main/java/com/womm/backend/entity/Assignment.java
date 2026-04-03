@@ -44,9 +44,6 @@ public class Assignment {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dueDate;
 
-    @Column(name = "published", nullable = false)
-    private boolean published = false;
-
     public LocalDateTime getDueDate() { return dueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
 
@@ -76,6 +73,4 @@ public class Assignment {
     public void setInputFileName(String inputFileName) { this.inputFileName = inputFileName; }
     public String getInputFileContent() { return inputFileContent; }
     public void setInputFileContent(String inputFileContent) { this.inputFileContent = inputFileContent; }
-    public boolean isPublished() { return published; }
-    public void setPublished(boolean published) { this.published = published; }
 }
