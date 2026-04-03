@@ -332,6 +332,9 @@ export default function TAGradingWorkspacePage() {
                                 <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
                                     {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
                                 </pre>
+                            </div>
+                        </div>
+                    </div>
                 );
             })()}
 
