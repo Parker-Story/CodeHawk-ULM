@@ -46,6 +46,10 @@ export default function GradingWorkspacePage() {
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [feedbackInputs, setFeedbackInputs] = useState({});
   const [savingFeedback, setSavingFeedback] = useState({});
+  const [gradingFiles, setGradingFiles] = useState([]);
+  const [activeGradingFile, setActiveGradingFile] = useState(0);
+  const [solutionFiles, setSolutionFiles] = useState([]);
+  const [activeSolutionFile, setActiveSolutionFile] = useState(0);
 
   const isFileMode = assignment?.inputMode === "FILE";
 
@@ -96,6 +100,15 @@ export default function GradingWorkspacePage() {
   }, [openMenuUserId]);
 
   useEffect(() => {
+    if (!openSolution) { setSolutionFiles([]); setActiveSolutionFile(0); return; }
+    const userId = openSolution.submissionId.userId;
+    fetch(`${API_BASE}/submission/files/${assignmentId}/${userId}`)
+        .then((res) => res.json())
+        .then((data) => { setSolutionFiles(Array.isArray(data) ? data : []); setActiveSolutionFile(0); })
+        .catch(() => { setSolutionFiles([]); setActiveSolutionFile(0); });
+  }, [openSolution?.submissionId?.userId, assignmentId]);
+
+  useEffect(() => {
     if (!assignedRubric) return;
     const autoItems = (assignedRubric.criteria || []).flatMap((c) => c.items || []).filter((i) => i.autoGrade);
     autoItems.forEach((item) => {
@@ -125,6 +138,14 @@ export default function GradingWorkspacePage() {
         .then((data) => setAvailableRubrics(Array.isArray(data) ? data : []))
         .catch((err) => console.error(err));
   }, [attachRubricOpen, user?.id]);
+
+  useEffect(() => {
+    if (!gradingStudent) { setGradingFiles([]); setActiveGradingFile(0); return; }
+    fetch(`${API_BASE}/submission/files/${assignmentId}/${gradingStudent}`)
+        .then((res) => res.json())
+        .then((data) => { setGradingFiles(Array.isArray(data) ? data : []); setActiveGradingFile(0); })
+        .catch(() => { setGradingFiles([]); setActiveGradingFile(0); });
+  }, [gradingStudent, assignmentId]);
 
   useEffect(() => {
     if (!gradingStudent || !assignedRubric) return;
@@ -438,7 +459,6 @@ export default function GradingWorkspacePage() {
                 <thead>
                 <tr className="bg-zinc-700/50 border-b border-zinc-700">
                   <th className="text-left py-3 px-4 font-semibold text-white">Student</th>
-                  <th className="text-left py-3 px-4 font-semibold text-white">File</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Score</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Test Results</th>
                   <th className="text-left py-3 px-4 font-semibold text-white">Actions</th>
@@ -446,7 +466,7 @@ export default function GradingWorkspacePage() {
                 </thead>
                 <tbody>
                 {submissions.length === 0 ? (
-                    <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
+                    <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-400">No submissions yet.</td></tr>
                 ) : (
                     submissions.map((s) => {
                       const userId = s.submissionId.userId;
@@ -463,12 +483,6 @@ export default function GradingWorkspacePage() {
                                     <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
                                   </div>
                                   <span className="text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-2 text-zinc-400">
-                                  <FileText className="w-4 h-4" />
-                                  <span>{s.fileName || "Unnamed file"}</span>
                                 </div>
                               </td>
                               <td className="py-3 px-4">
@@ -524,7 +538,7 @@ export default function GradingWorkspacePage() {
                             </tr>
                             {isExpanded && studentResults.length > 0 && (
                                 <tr className="border-b border-zinc-700/50 bg-zinc-900/80">
-                                  <td colSpan={5} className="px-4 py-3">
+                                  <td colSpan={4} className="px-4 py-3">
                                     <div className="space-y-2">
                                       {studentResults.map((r) => (
                                           <div key={r.id} className="flex items-center gap-3 text-xs">
@@ -733,8 +747,8 @@ export default function GradingWorkspacePage() {
                 <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col">
                   <div className="flex items-center justify-between p-6 border-b border-zinc-700 shrink-0">
                     <div>
-                      <h2 className="text-lg font-semibold text-white">{openSolution.fileName}</h2>
-                      <p className="text-zinc-400 text-sm">{openSolution.user?.firstName} {openSolution.user?.lastName}{openSolution.user?.cwid ? ` (${openSolution.user.cwid})` : ""}</p>
+                      <h2 className="text-lg font-semibold text-white">{openSolution.user?.firstName} {openSolution.user?.lastName}</h2>
+                      <p className="text-zinc-400 text-sm">{openSolution.user?.cwid ? `(${openSolution.user.cwid})` : ""}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2 mr-3">
@@ -756,10 +770,30 @@ export default function GradingWorkspacePage() {
                       <button type="button" onClick={() => setOpenSolution(null)} className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                     </div>
                   </div>
+                  {solutionFiles.length > 1 && (
+                      <div className="flex border-b border-zinc-700 overflow-x-auto shrink-0">
+                        {solutionFiles.map((f, i) => (
+                            <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setActiveSolutionFile(i)}
+                                className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 shrink-0 ${
+                                    activeSolutionFile === i
+                                        ? "text-white border-[#7C1D2E]"
+                                        : "text-zinc-400 border-transparent hover:text-zinc-200"
+                                }`}
+                            >
+                              {f.fileName}
+                            </button>
+                        ))}
+                      </div>
+                  )}
                   <div className="p-6 overflow-auto flex-1">
-          <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
-            {openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available."}
-          </pre>
+                    <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4">
+                      {solutionFiles.length > 0
+                          ? (solutionFiles[activeSolutionFile]?.fileContent ? atob(solutionFiles[activeSolutionFile].fileContent) : "No file content available.")
+                          : (openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available.")}
+                    </pre>
                   </div>
                 </div>
               </div>
@@ -825,13 +859,36 @@ export default function GradingWorkspacePage() {
 
                     {/* Left — code viewer */}
                     <div className="flex-1 flex flex-col border-r border-zinc-700 overflow-hidden min-w-0">
-                      <div className="px-6 py-3 border-b border-zinc-700/50 shrink-0">
-                        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Submission</p>
-                        <p className="text-sm text-zinc-300 mt-0.5">{gradingSubmission?.fileName || "Unnamed file"}</p>
-                      </div>
+                      {gradingFiles.length > 1 ? (
+                          <div className="flex border-b border-zinc-700 shrink-0 overflow-x-auto">
+                            {gradingFiles.map((f, i) => (
+                                <button
+                                    key={f.id}
+                                    type="button"
+                                    onClick={() => setActiveGradingFile(i)}
+                                    className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 shrink-0 ${
+                                        activeGradingFile === i
+                                            ? "text-white border-[#7C1D2E]"
+                                            : "text-zinc-400 border-transparent hover:text-zinc-200"
+                                    }`}
+                                >
+                                  {f.fileName}
+                                </button>
+                            ))}
+                          </div>
+                      ) : (
+                          <div className="px-6 py-3 border-b border-zinc-700/50 shrink-0">
+                            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Submission</p>
+                            <p className="text-sm text-zinc-300 mt-0.5">
+                              {gradingFiles[0]?.fileName || gradingSubmission?.fileName || "Unnamed file"}
+                            </p>
+                          </div>
+                      )}
                       <div className="flex-1 overflow-auto p-5">
                         <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-800 rounded-xl p-4 min-h-full">
-                          {gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available."}
+                          {gradingFiles.length > 0
+                              ? (gradingFiles[activeGradingFile]?.fileContent ? atob(gradingFiles[activeGradingFile].fileContent) : "No file content available.")
+                              : (gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available.")}
                         </pre>
                       </div>
                     </div>

@@ -1,11 +1,14 @@
 package com.womm.backend.service;
 import com.womm.backend.entity.Assignment;
 import com.womm.backend.entity.Submission;
+import com.womm.backend.entity.SubmissionFile;
 import com.womm.backend.entity.User;
 import com.womm.backend.id.SubmissionId;
 import com.womm.backend.dto.SubmissionCodeUpdateRequest;
+import com.womm.backend.dto.MultiFileSubmissionRequest;
 import com.womm.backend.repository.AssignmentRepository;
 import com.womm.backend.repository.SubmissionRepository;
+import com.womm.backend.repository.SubmissionFileRepository;
 import com.womm.backend.repository.TestCaseRepository;
 import com.womm.backend.repository.TestResultRepository;
 import com.womm.backend.repository.UserRepository;
@@ -18,6 +21,7 @@ import com.womm.backend.repository.RubricScoreRepository;
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
     SubmissionRepository submissionRepository;
+    SubmissionFileRepository submissionFileRepository;
     UserRepository userRepository;
     AssignmentRepository assignmentRepository;
     TestCaseRepository testCaseRepository;
@@ -28,6 +32,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     public SubmissionServiceImpl(
             SubmissionRepository submissionRepository,
+            SubmissionFileRepository submissionFileRepository,
             AssignmentRepository assignmentRepository,
             UserRepository userRepository,
             TestCaseRepository testCaseRepository,
@@ -36,6 +41,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             @Lazy TestCaseService testCaseService,
             @Lazy RubricService rubricService) {
         this.submissionRepository = submissionRepository;
+        this.submissionFileRepository = submissionFileRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
         this.testCaseRepository = testCaseRepository;
@@ -70,6 +76,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     public void deleteSubmission(String userId, Long assignmentId) {
         rubricScoreRepository.deleteBySubmission(assignmentId, userId);
         testResultRepository.deleteBySubmission(assignmentId, userId);
+        submissionFileRepository.deleteByUserIdAndAssignmentId(userId, assignmentId);
         submissionRepository.deleteById(new SubmissionId(userId, assignmentId));
     }
 
@@ -90,6 +97,59 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
 
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public Submission submitFiles(Long assignmentId, String userId, MultiFileSubmissionRequest request) {
+        if (request == null || request.getFiles() == null || request.getFiles().isEmpty())
+            throw new RuntimeException("At least one file is required");
+        if (request.getFiles().size() > 10)
+            throw new RuntimeException("Maximum of 10 files allowed");
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
+
+        List<MultiFileSubmissionRequest.FileEntry> files = request.getFiles();
+
+        // Save Submission record first (submission_files FK requires it to exist)
+        Submission submission = submissionRepository.findById(new SubmissionId(userId, assignmentId))
+                .orElseGet(() -> {
+                    Submission s = new Submission();
+                    s.setSubmissionId(new SubmissionId(userId, assignmentId));
+                    return s;
+                });
+        submission.setUser(user);
+        submission.setAssignment(assignment);
+        submission.setFileName(files.get(0).getFileName());
+        submission.setFileContent(files.get(0).getFileContent());
+        Submission saved = submissionRepository.save(submission);
+
+        // Replace submission files now that the parent row exists
+        submissionFileRepository.deleteByUserIdAndAssignmentId(userId, assignmentId);
+        for (int i = 0; i < files.size(); i++) {
+            SubmissionFile sf = new SubmissionFile();
+            sf.setUserId(userId);
+            sf.setAssignmentId(assignmentId);
+            sf.setFileName(files.get(i).getFileName());
+            sf.setFileContent(files.get(i).getFileContent());
+            sf.setFileOrder(i);
+            submissionFileRepository.save(sf);
+        }
+
+        if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {
+            testCaseService.runTestsForSubmission(assignmentId, userId);
+            rubricService.autoGradeSubmission(assignmentId, userId);
+        }
+
+        return saved;
+    }
+
+    @Override
+    public List<SubmissionFile> getSubmissionFiles(Long assignmentId, String userId) {
+        return submissionFileRepository.findByUserIdAndAssignmentIdOrderByFileOrder(userId, assignmentId);
     }
 
     @Override

@@ -147,6 +147,8 @@ export default function StudentCourseDetailPage() {
   const [loadingResults, setLoadingResults] = useState(false);
   const fileInputRef = useRef(null);
   const [fileError, setFileError] = useState(null);
+  const [submissionFiles, setSubmissionFiles] = useState([]);
+  const [activeSubmissionFile, setActiveSubmissionFile] = useState(0);
 
   const [customTestCases, setCustomTestCases] = useState([
     { label: "", input: "", expectedOutput: "" },
@@ -238,9 +240,29 @@ export default function StudentCourseDetailPage() {
     else setEditorLanguage("plaintext");
   }, [existingSubmission?.fileContent, existingSubmission?.fileName]);
 
+  useEffect(() => {
+    if (!existingSubmission || !user?.id || !selectedAssignment) {
+      setSubmissionFiles([]);
+      setActiveSubmissionFile(0);
+      return;
+    }
+    fetch(`${API_BASE}/submission/files/${selectedAssignment.id}/${user.id}`)
+        .then((res) => res.json())
+        .then((data) => { setSubmissionFiles(Array.isArray(data) ? data : []); setActiveSubmissionFile(0); })
+        .catch(() => { setSubmissionFiles([]); setActiveSubmissionFile(0); });
+  }, [existingSubmission?.submissionId?.userId, selectedAssignment?.id, user?.id]);
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+
+    if (files.length > 10) {
+      setFileError("You can submit a maximum of 10 files at once.");
+      setSelectedFiles([]);
+      setSelectedFile(null);
+      e.target.value = "";
+      return;
+    }
 
     const allowed = [];
     for (const file of files) {
@@ -265,6 +287,13 @@ export default function StudentCourseDetailPage() {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
+
+    if (files.length > 10) {
+      setFileError("You can submit a maximum of 10 files at once.");
+      setSelectedFiles([]);
+      setSelectedFile(null);
+      return;
+    }
 
     const allowed = [];
     for (const file of files) {
@@ -415,25 +444,37 @@ export default function StudentCourseDetailPage() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile || !user?.id) return;
+    if (selectedFiles.length === 0 || !user?.id) return;
     setSubmitting(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
-        const response = await fetch(`${API_BASE}/submission/submit/${selectedAssignment.id}/${user.id}`, {
+      const fileEntries = await Promise.all(
+        selectedFiles.map(
+          (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const base64 = reader.result.split(",")[1];
+                resolve({ fileName: file.name, fileContent: base64 });
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            })
+        )
+      );
+      const response = await fetch(
+        `${API_BASE}/submission/submit-files/${selectedAssignment.id}/${user.id}`,
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileName: selectedFile.name, fileContent: base64 }),
-        });
-        if (!response.ok) throw new Error("Submission failed");
-        const updated = await response.json();
-        setSubmissions((prev) => ({ ...prev, [selectedAssignment.id]: updated }));
-        setSubmitted(true);
-        setNewAttempt(false);
-        setSubmitting(false);
-      };
-      reader.readAsDataURL(selectedFile);
+          body: JSON.stringify({ files: fileEntries }),
+        }
+      );
+      if (!response.ok) throw new Error("Submission failed");
+      const updated = await response.json();
+      setSubmissions((prev) => ({ ...prev, [selectedAssignment.id]: updated }));
+      setSubmitted(true);
+      setNewAttempt(false);
+      setSubmitting(false);
     } catch (error) {
       console.error("Error submitting:", error);
       setSubmitting(false);
@@ -479,6 +520,8 @@ export default function StudentCourseDetailPage() {
     setEditorDirty(false);
     setEditorText("");
     setCodeSaveError(null);
+    setSubmissionFiles([]);
+    setActiveSubmissionFile(0);
   };
 
   if (loading) {
@@ -663,7 +706,11 @@ export default function StudentCourseDetailPage() {
                                   <CheckCircle className="w-8 h-8 text-green-400" />
                                 </div>
                                 <p className="text-green-400 font-semibold text-lg">Submitted successfully!</p>
-                                <p className="text-zinc-400 text-sm mt-2">{selectedFile?.name}</p>
+                                <p className="text-zinc-400 text-sm mt-2">
+                                  {selectedFiles.length > 0
+                                    ? selectedFiles.map((f) => f.name).join(", ")
+                                    : existingSubmission?.fileName}
+                                </p>
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("results")}
@@ -823,35 +870,24 @@ export default function StudentCourseDetailPage() {
                                     {selectedFiles.length > 0 ? (
                                         <div className="space-y-3">
                                           <p className="text-white font-medium">
-                                            Selected {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""}.
+                                            {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
                                           </p>
-                                          <div className="flex flex-col gap-2 items-center">
-                                            <p className="text-zinc-400 text-xs">Choose main file to submit:</p>
-                                            <p className="text-zinc-500 text-[11px]">
-                                              Only one file is submitted.
-                                            </p>
-                                            <div className="flex flex-wrap gap-2 justify-center">
-                                              {selectedFiles.map((f) => (
-                                                  <button
-                                                      key={f.name}
-                                                      type="button"
-                                                      onClick={(e) => { e.stopPropagation(); setSelectedFile(f); }}
-                                                      className={`px-3 py-2 text-xs rounded-lg border transition-colors ${
-                                                          selectedFile?.name === f.name
-                                                              ? "bg-zinc-700 border-zinc-600 text-white"
-                                                              : "bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700"
-                                                      }`}
-                                                  >
-                                                    {f.name}
-                                                  </button>
-                                              ))}
-                                            </div>
+                                          <div className="flex flex-wrap gap-2 justify-center">
+                                            {selectedFiles.map((f) => (
+                                                <span
+                                                    key={f.name}
+                                                    className="px-3 py-1.5 text-xs rounded-lg bg-zinc-700 border border-zinc-600 text-zinc-200"
+                                                >
+                                                  {f.name}
+                                                </span>
+                                            ))}
                                           </div>
+                                          <p className="text-zinc-500 text-xs">Click or drop to change selection</p>
                                         </div>
                                     ) : (
                                         <>
                                           <p className="text-white font-semibold text-lg">Ready to submit?</p>
-                                          <p className="text-zinc-400 text-sm mt-2">Drag and drop multiple files here or click to browse</p>
+                                          <p className="text-zinc-400 text-sm mt-2">Drag and drop up to 10 files here or click to browse</p>
                                         </>
                                     )}
                                     <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} className="hidden" />
@@ -874,7 +910,7 @@ export default function StudentCourseDetailPage() {
                                     <button
                                         type="button"
                                         onClick={handleSubmit}
-                                        disabled={!selectedFile || submitting}
+                                        disabled={selectedFiles.length === 0 || submitting}
                                         className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ background: "#7C1D2E" }}
                                     >
@@ -891,18 +927,24 @@ export default function StudentCourseDetailPage() {
                         <div className="flex items-center justify-between gap-3 p-3 bg-zinc-800 rounded-xl border border-zinc-700">
                           <div className="min-w-0">
                             <p className="text-zinc-300 text-sm font-medium">Submission</p>
-                            <p className="text-zinc-400 text-xs truncate">{existingSubmission?.fileName || "Unnamed file"}</p>
+                            <p className="text-zinc-400 text-xs truncate">
+                              {submissionFiles.length > 1
+                                ? `${submissionFiles.length} files`
+                                : existingSubmission?.fileName || "Unnamed file"}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <button
-                                type="button"
-                                onClick={handleSaveCode}
-                                disabled={!editorDirty || savingCode}
-                                className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                style={{ background: "#7C1D2E" }}
-                            >
-                              {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
-                            </button>
+                            {submissionFiles.length <= 1 && (
+                              <button
+                                  type="button"
+                                  onClick={handleSaveCode}
+                                  disabled={!editorDirty || savingCode}
+                                  className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  style={{ background: "#7C1D2E" }}
+                              >
+                                {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
+                              </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={runProfessorTests}
@@ -920,23 +962,49 @@ export default function StudentCourseDetailPage() {
                             </div>
                         )}
 
-                        <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                          <MonacoEditor
-                              height="32rem"
-                              language={editorLanguage}
-                              value={editorText}
-                              onChange={(val) => {
-                                setEditorText(val ?? "");
-                                setEditorDirty(true);
-                              }}
-                              options={{
-                                minimap: { enabled: false },
-                                scrollBeyondLastLine: false,
-                                fontSize: 13,
-                                automaticLayout: true,
-                              }}
-                            />
-                        </div>
+                        {submissionFiles.length > 1 ? (
+                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                              <div className="flex border-b border-zinc-700 overflow-x-auto">
+                                {submissionFiles.map((f, i) => (
+                                    <button
+                                        key={f.id}
+                                        type="button"
+                                        onClick={() => setActiveSubmissionFile(i)}
+                                        className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 shrink-0 ${
+                                            activeSubmissionFile === i
+                                                ? "text-white border-[#7C1D2E]"
+                                                : "text-zinc-400 border-transparent hover:text-zinc-200"
+                                        }`}
+                                    >
+                                      {f.fileName}
+                                    </button>
+                                ))}
+                              </div>
+                              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono p-4 overflow-auto max-h-[32rem]">
+                                {submissionFiles[activeSubmissionFile]?.fileContent
+                                    ? decodeBase64ToUtf8(submissionFiles[activeSubmissionFile].fileContent)
+                                    : "No file content available."}
+                              </pre>
+                            </div>
+                        ) : (
+                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                              <MonacoEditor
+                                  height="32rem"
+                                  language={editorLanguage}
+                                  value={editorText}
+                                  onChange={(val) => {
+                                    setEditorText(val ?? "");
+                                    setEditorDirty(true);
+                                  }}
+                                  options={{
+                                    minimap: { enabled: false },
+                                    scrollBeyondLastLine: false,
+                                    fontSize: 13,
+                                    automaticLayout: true,
+                                  }}
+                              />
+                            </div>
+                        )}
                       </div>
                   )}
 

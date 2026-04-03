@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import com.womm.backend.dto.SubmissionCodeUpdateRequest;
+import com.womm.backend.dto.MultiFileSubmissionRequest;
+import com.womm.backend.entity.SubmissionFile;
 
 @RestController
 @RequestMapping(path="/submission")
@@ -78,5 +80,20 @@ public class SubmissionController {
             @PathVariable String userId,
             @RequestBody Map<String, String> body) {
         return submissionService.saveFeedback(assignmentId, userId, body.get("feedback"));
+    }
+
+    @PostMapping("/submit-files/{assignmentId}/{userId}")
+    public Submission submitFiles(
+            @PathVariable Long assignmentId,
+            @PathVariable String userId,
+            @RequestBody MultiFileSubmissionRequest request) {
+        return submissionService.submitFiles(assignmentId, userId, request);
+    }
+
+    @GetMapping("/files/{assignmentId}/{userId}")
+    public List<SubmissionFile> getSubmissionFiles(
+            @PathVariable Long assignmentId,
+            @PathVariable String userId) {
+        return submissionService.getSubmissionFiles(assignmentId, userId);
     }
 }
