@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import ChangePasswordDialog from "@/components/shared/ChangePasswordDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function AccountView({
                                       displayName,
@@ -9,8 +12,40 @@ export default function AccountView({
                                       academicInfo = {},
                                       onEditProfile,
                                     }) {
+  const { user } = useAuth();
   const { institution = "", cwid, email = "" } = academicInfo;
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [fetchedPassword, setFetchedPassword] = useState(null);
+  const [loadingPassword, setLoadingPassword] = useState(false);
+
+  const handleTogglePassword = async () => {
+    if (showPassword) {
+      setShowPassword(false);
+      return;
+    }
+    if (fetchedPassword !== null) {
+      setShowPassword(true);
+      return;
+    }
+    setLoadingPassword(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${user.id}`);
+      const data = await res.json();
+      setFetchedPassword(data.passwordHash ?? "");
+      setShowPassword(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPassword(false);
+    }
+  };
+
+  // When password is changed, clear cached value so it re-fetches next time
+  const handlePasswordChanged = () => {
+    setFetchedPassword(null);
+    setShowPassword(false);
+  };
 
   return (
       <div className="p-8">
@@ -58,7 +93,21 @@ export default function AccountView({
           <section className="rounded-xl bg-zinc-900 border border-zinc-700 p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Security</h2>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-300">Password</span>
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-300">Password</span>
+                <span className="font-mono text-zinc-300 text-sm tracking-widest min-w-[8ch]">
+                  {showPassword && fetchedPassword !== null ? fetchedPassword : "••••••••"}
+                </span>
+                <button
+                    type="button"
+                    onClick={handleTogglePassword}
+                    disabled={loadingPassword}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 shrink-0"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <button
                   type="button"
                   onClick={() => setChangePasswordOpen(true)}
@@ -74,6 +123,7 @@ export default function AccountView({
         <ChangePasswordDialog
             isOpen={changePasswordOpen}
             onClose={() => setChangePasswordOpen(false)}
+            onSuccess={handlePasswordChanged}
         />
       </div>
   );
