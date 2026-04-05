@@ -13,4 +13,5 @@ public interface UserService {
     void deleteUser(String id);
     User register(RegisterRequest request);
     LoginResponse login(LoginRequest request);
+    boolean changePassword(String userId, String currentPassword, String newPassword);
 }

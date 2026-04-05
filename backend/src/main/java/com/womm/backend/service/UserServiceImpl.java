@@ -5,12 +5,14 @@ import com.womm.backend.dto.RegisterRequest;
 import com.womm.backend.entity.User;
 import com.womm.backend.enums.Role;
 import com.womm.backend.repository.UserRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
     UserRepository userRepository;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -58,18 +60,54 @@ public class UserServiceImpl implements UserService {
         // Faculty have null CWID
         String cwid = (request.getRole() == Role.FACULTY) ? null : request.getCwid();
 
-        User user = new User(cwid, request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword(), request.getRole());
+        String hashedPassword = encoder.encode(request.getPassword());
+        User user = new User(cwid, request.getFirstName(), request.getLastName(), request.getEmail(), hashedPassword, request.getRole());
         return userRepository.save(user);
     }
 
     @Override
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
-
-        if (user == null || !user.getPasswordHash().equals(request.getPassword())) {
+        if (user == null) {
             return new LoginResponse(false, null, null, null, null, null, null);
         }
 
+        String stored = user.getPasswordHash();
+        boolean matched;
+        if (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$")) {
+            matched = encoder.matches(request.getPassword(), stored);
+        } else {
+            // Plain-text legacy password — compare then migrate
+            matched = stored.equals(request.getPassword());
+            if (matched) {
+                user.setPasswordHash(encoder.encode(request.getPassword()));
+                userRepository.save(user);
+            }
+        }
+
+        if (!matched) {
+            return new LoginResponse(false, null, null, null, null, null, null);
+        }
         return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole(), user.getEmail());
+    }
+
+    @Override
+    public boolean changePassword(String userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return false;
+
+        String stored = user.getPasswordHash();
+        boolean matched;
+        if (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$")) {
+            matched = encoder.matches(currentPassword, stored);
+        } else {
+            matched = stored.equals(currentPassword);
+        }
+
+        if (!matched) return false;
+
+        user.setPasswordHash(encoder.encode(newPassword));
+        userRepository.save(user);
+        return true;
     }
 }
