@@ -66,6 +66,7 @@ export default function CourseDetailPage() {
       body: JSON.stringify({ ...classItem, archived: true, days: classItem.days.join(",") }),
     }).then(() => {
       setClasses((prev) => prev.map((c) => (c.crn === classItem.crn ? { ...c, archived: true } : c)));
+      router.push("/faculty/dashboard");
     });
   };
 

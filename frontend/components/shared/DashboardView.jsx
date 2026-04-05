@@ -25,7 +25,7 @@ export default function DashboardView({ title, showAddCourse = false, sidebar, v
                         <button
                             type="button"
                             onClick={handleAddCourseClick}
-                            className="text-white font-medium px-4 py-2 rounded-lg transition-colors hover:opacity-90"
+                            className="ml-auto text-white font-medium px-4 py-2 rounded-lg transition-colors hover:opacity-90"
                             style={{ background: "#7C1D2E" }}
                         >
                             Add course
