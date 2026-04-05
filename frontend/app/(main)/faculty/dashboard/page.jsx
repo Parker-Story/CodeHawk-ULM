@@ -80,6 +80,22 @@ export default function FacultyDashboardPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCourseError(null);
+
+    // Client-side validation
+    if (!/^\d{5}$/.test(formData.crn)) {
+      setCourseError("CRN must be exactly 5 digits (e.g. 12345).");
+      return;
+    }
+    const currentYear = new Date().getFullYear();
+    if (!formData.year || formData.year < 2000 || formData.year > currentYear + 5) {
+      setCourseError(`Year must be between 2000 and ${currentYear + 5}.`);
+      return;
+    }
+    if (classes.some((c) => c.crn === formData.crn)) {
+      setCourseError("A course with this CRN already exists.");
+      return;
+    }
+
     const existingCodes = classes.map((c) => c.code).filter(Boolean);
     const code = generateUniqueCode(existingCodes);
     const newCourse = { ...formData, code, archived: false, days: formData.days.join(",") };
@@ -91,7 +107,7 @@ export default function FacultyDashboardPage() {
       });
       if (!response.ok) {
         const msg = response.status === 409
-            ? "An active course exists with this CRN. Please try again."
+            ? "A course with this CRN already exists."
             : "Failed to create course.";
         setCourseError(msg);
         return;
@@ -176,7 +192,7 @@ export default function FacultyDashboardPage() {
               </div>
               <div>
                 <label htmlFor="crn" className={labelStyles}>CRN</label>
-                <input type="text" id="crn" name="crn" value={formData.crn} onChange={handleChange} placeholder="e.g. 12345" className={inputStyles} required />
+                <input type="text" id="crn" name="crn" value={formData.crn} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 5); setFormData((p) => ({ ...p, crn: v })); }} placeholder="e.g. 12345" maxLength={5} className={inputStyles} required />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

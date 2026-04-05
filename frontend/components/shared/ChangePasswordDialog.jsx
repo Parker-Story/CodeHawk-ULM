@@ -45,6 +45,10 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
       setError("All fields are required.");
       return;
     }
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      return;
+    }
     if (newPassword !== confirmNewPassword) {
       setError("New passwords do not match.");
       return;
@@ -84,17 +88,7 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
   };
 
   const inputClass = "w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-600 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent pr-10";
-
-  const EyeToggle = ({ show, onToggle }) => (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200"
-      tabIndex={-1}
-    >
-      {show ? <EyeOff size={16} /> : <Eye size={16} />}
-    </button>
-  );
+  const eyeBtnClass = "absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200";
 
   return (
     <>
@@ -104,21 +98,27 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
             <label htmlFor="current-password" className="block text-sm font-medium text-zinc-300 mb-1.5">Current Password</label>
             <div className="relative">
               <input id="current-password" type={showCurrent ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" className={inputClass} />
-              <EyeToggle show={showCurrent} onToggle={() => setShowCurrent(v => !v)} />
+              <button type="button" onClick={() => setShowCurrent((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
+                {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
           <div>
             <label htmlFor="new-password" className="block text-sm font-medium text-zinc-300 mb-1.5">New Password</label>
             <div className="relative">
               <input id="new-password" type={showNew ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className={inputClass} />
-              <EyeToggle show={showNew} onToggle={() => setShowNew(v => !v)} />
+              <button type="button" onClick={() => setShowNew((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
+                {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
           <div>
             <label htmlFor="confirm-new-password" className="block text-sm font-medium text-zinc-300 mb-1.5">Confirm New Password</label>
             <div className="relative">
               <input id="confirm-new-password" type={showConfirm ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className={inputClass} />
-              <EyeToggle show={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
+              <button type="button" onClick={() => setShowConfirm((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
+                {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
@@ -134,8 +134,8 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
       </Dialog>
 
       {showToast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-100 px-4 py-3 rounded-lg bg-zinc-700 text-white shadow-lg border border-zinc-600">
-          Password updated
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-lg bg-zinc-700 text-white shadow-lg border border-zinc-600">
+          Password updated successfully
         </div>
       )}
     </>
