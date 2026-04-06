@@ -53,7 +53,7 @@ public class TestCaseController {
         return testCaseService.runCustomTestsForSubmission(assignmentId, userId, request);
     }
 
-    @PostMapping("/run/preview/{assignmentId}")
+    @PostMapping("/preview/{assignmentId}")
     public List<CustomTestRunResult> runPreview(
             @PathVariable Long assignmentId,
             @RequestBody PreviewRunRequest request

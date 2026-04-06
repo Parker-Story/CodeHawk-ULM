@@ -397,23 +397,21 @@ export default function StudentCourseDetailPage() {
       }
 
       const entries = await readFilesToBase64(selectedFiles);
-      const primary = entries[0];
       const payload = {
-        fileName: primary.fileName,
-        fileContent: primary.fileContent,
+        files: entries,
         inputFileName: selectedAssignment.inputMode === "FILE" ? customInputFile.inputFileName : null,
         inputFileContentBase64: selectedAssignment.inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
       };
-      const res = await fetch(`${API_BASE}/testcase/run/preview/${selectedAssignment.id}`, {
+      const res = await fetch(`${API_BASE}/testcase/preview/${selectedAssignment.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Preview run failed");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const results = await res.json();
       setPreviewResults(Array.isArray(results) ? results : []);
     } catch (err) {
-      console.error(err);
+      console.error("runSampleTests error:", err.message);
       setPreviewError("Failed to run tests. Please try again.");
     } finally {
       setLoadingPreview(false);
@@ -478,20 +476,18 @@ export default function StudentCourseDetailPage() {
       if (selectedFiles.length > 0) {
         // Pre-submission: run against staged files via preview endpoint
         const entries = await readFilesToBase64(selectedFiles);
-        const primary = entries[0];
         const payload = {
-          fileName: primary.fileName,
-          fileContent: primary.fileContent,
+          files: entries,
           testCases,
           inputFileName: inputMode === "FILE" ? customInputFile.inputFileName : null,
           inputFileContentBase64: inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
         };
-        const response = await fetch(`${API_BASE}/testcase/run/preview/${selectedAssignment.id}`, {
+        const response = await fetch(`${API_BASE}/testcase/preview/${selectedAssignment.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!response.ok) throw new Error("Preview run failed");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const results = await response.json();
         setCustomTestResults(Array.isArray(results) ? results : []);
       } else {
@@ -1418,12 +1414,14 @@ export default function StudentCourseDetailPage() {
                               {r.testCase?.label || `Test Case ${r.testCase?.id}`} — {r.passed ? "Passed" : "Failed"}
                             </span>
                                     </div>
-                                    {r.testCase?.input && (
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase.input}</span></p>
-                                    )}
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase?.expectedOutput}</span></p>
                                     {!r.passed && (
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span></p>
+                                        <>
+                                          {r.testCase?.input && (
+                                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase.input}</span></p>
+                                          )}
+                                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{r.testCase?.expectedOutput || "(empty)"}</span></p>
+                                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Got: <span className="font-mono text-red-400 whitespace-pre-wrap">{r.actualOutput || "(no output)"}</span></p>
+                                        </>
                                     )}
                                   </div>
                               ))}
