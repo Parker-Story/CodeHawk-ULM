@@ -32,7 +32,9 @@ const calendarClass =
     "[&_.rbc-off-range]:text-zinc-400 [&_.rbc-off-range_a]:text-zinc-400 " +
     "[&_.rbc-today]:bg-amber-100 [&_.rbc-event]:text-white [&_.rbc-event]:border-0 [&_.rbc-event]:rounded";
 
-export default function CalendarView({ title = "Calendar", events = [] }) {
+const defaultEventPropGetter = () => ({ style: { backgroundColor: "#862633", border: "none" } });
+
+export default function CalendarView({ title = "Calendar", events = [], onSelectEvent, eventPropGetter }) {
   const [date, setDate] = useState(new Date());
 
   return (
@@ -50,7 +52,8 @@ export default function CalendarView({ title = "Calendar", events = [] }) {
                 view="month"
                 views={["month"]}
                 components={{ toolbar: MinimalToolbar }}
-                eventPropGetter={() => ({ style: { backgroundColor: "#862633", border: "none" } })}
+                eventPropGetter={eventPropGetter || defaultEventPropGetter}
+                onSelectEvent={onSelectEvent}
                 style={{ height: "100%", minHeight: "70vh" }}
             />
           </div>
