@@ -89,16 +89,22 @@ public class TestCaseServiceImpl implements TestCaseService {
         String inputFileName = isFileMode ? assignment.getInputFileName() : null;
         List<String[]> additionalFiles = getAdditionalFiles(userId, assignmentId, submission.getFileName());
 
-        // Run all test cases in parallel
-        List<TestResult> results = testCases.parallelStream().map(testCase -> {
-            CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
-                    submission.getFileContent(),
-                    submission.getFileName(),
-                    isFileMode ? null : testCase.getInput(),
-                    inputFileBase64,
-                    inputFileName,
-                    additionalFiles
-            );
+        // Execute code in parallel (CPU-bound, no JPA), then save results on this thread
+        List<CodeExecutionService.ExecutionResult> execResults = testCases.parallelStream()
+                .map(testCase -> codeExecutionService.execute(
+                        submission.getFileContent(),
+                        submission.getFileName(),
+                        isFileMode ? null : testCase.getInput(),
+                        inputFileBase64,
+                        inputFileName,
+                        additionalFiles
+                ))
+                .collect(java.util.stream.Collectors.toList());
+
+        List<TestResult> results = new ArrayList<>();
+        for (int i = 0; i < testCases.size(); i++) {
+            TestCase testCase = testCases.get(i);
+            CodeExecutionService.ExecutionResult execResult = execResults.get(i);
 
             TestResult result = new TestResult();
             result.setSubmission(submission);
@@ -114,8 +120,8 @@ public class TestCaseServiceImpl implements TestCaseService {
                             .equals(testCase.getExpectedOutput().trim().replace("\r\n", "\n").replace("\r", "\n"));
             result.setPassed(passed);
 
-            return testResultRepository.save(result);
-        }).collect(java.util.stream.Collectors.toList());
+            results.add(testResultRepository.save(result));
+        }
 
         long passed = results.stream().filter(TestResult::isPassed).count();
         int score = testCases.isEmpty() ? 0 : (int) Math.round((double) passed / testCases.size() * 100);
