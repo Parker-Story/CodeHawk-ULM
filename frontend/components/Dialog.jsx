@@ -11,14 +11,14 @@ export default function Dialog({ isOpen, onClose, title, children, size = "md" }
                 className="absolute inset-0 bg-black/60"
                 onClick={onClose}
             />
-            <div className={`relative z-10 w-full max-h-[90vh] flex flex-col bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl ${size === "sm" ? "max-w-md" : size === "lg" ? "max-w-2xl" : size === "xl" ? "max-w-4xl" : "max-w-xl"}`}>
+            <div className={`relative z-10 w-full max-h-[90vh] flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl ${size === "sm" ? "max-w-md" : size === "lg" ? "max-w-2xl" : size === "xl" ? "max-w-4xl" : "max-w-xl"}`}>
                 <div className="shrink-0 flex items-center justify-between p-6 pb-0">
                     {title && (
-                        <h2 className="text-xl font-bold text-white">{title}</h2>
+                        <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h2>
                     )}
                     <button
                         onClick={onClose}
-                        className="text-zinc-400 hover:text-white transition-colors"
+                        className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>

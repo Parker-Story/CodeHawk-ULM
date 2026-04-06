@@ -26,7 +26,7 @@ export default function DashboardView({ title, showAddCourse = false, sidebar, v
                             type="button"
                             onClick={handleAddCourseClick}
                             className="ml-auto text-white font-medium px-4 py-2 rounded-lg transition-colors hover:opacity-90"
-                            style={{ background: "#7C1D2E" }}
+                            style={{ background: "#862633" }}
                         >
                             Add course
                         </button>
@@ -36,7 +36,7 @@ export default function DashboardView({ title, showAddCourse = false, sidebar, v
             >
                 {children ?? (
                     <div className="flex items-center justify-center min-h-[60vh]">
-                        <p className="text-zinc-400">Welcome to your dashboard.</p>
+                        <p className="text-zinc-500 dark:text-zinc-400">Welcome to your dashboard.</p>
                     </div>
                 )}
             </DashboardLayout>

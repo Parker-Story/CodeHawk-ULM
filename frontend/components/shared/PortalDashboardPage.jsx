@@ -10,8 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 const DASHBOARD_SIDEBAR = {
     todo: (
         <>
-            <h2 className="text-lg font-semibold text-white mb-2">To-do</h2>
-            <p className="text-zinc-400 text-sm">No tasks have been assigned.</p>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">To-do</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm">No tasks have been assigned.</p>
         </>
     ),
 };
@@ -48,7 +48,7 @@ export default function PortalDashboardPage({ variant }) {
 
     const courseGrid = courseUsers.length === 0 ? (
         <div className="flex items-center justify-center min-h-[60vh]">
-            <p className="text-zinc-400">No courses yet.</p>
+            <p className="text-zinc-500 dark:text-zinc-400">No courses yet.</p>
         </div>
     ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -59,12 +59,12 @@ export default function PortalDashboardPage({ variant }) {
                     <div
                         key={course.crn}
                         onClick={() => handleCourseClick(courseUser)}
-                        className="relative bg-zinc-900 border border-zinc-700 rounded-xl p-6 transition-all duration-200 cursor-pointer hover:border-zinc-500 group"
+                        className="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 transition-all duration-200 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-500 shadow-sm group"
                     >
                         <div className="flex items-start gap-4">
                             <div
                                 className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-                                style={{ background: isTA ? "#C9A84C22" : "#7C1D2E33" }}
+                                style={{ background: isTA ? "#C9A84C22" : "#86263333" }}
                             >
                                 <BookOpen
                                     className="w-6 h-6"
@@ -73,7 +73,7 @@ export default function PortalDashboardPage({ variant }) {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-semibold text-white truncate">{course.courseName}</h3>
+                                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">{course.courseName}</h3>
                                     {isTA && (
                                         <span
                                             className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full"
@@ -92,12 +92,12 @@ export default function PortalDashboardPage({ variant }) {
                             </div>
                         </div>
                         <div className="mt-4">
-                            <p className="text-zinc-400 text-sm line-clamp-2">
+                            <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2">
                                 {course.courseDescription || "No description provided."}
                             </p>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-zinc-700">
-                            <p className="text-zinc-500 text-xs">
+                        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                            <p className="text-zinc-400 dark:text-zinc-500 text-xs">
                                 {course.semester?.charAt(0).toUpperCase() + course.semester?.slice(1)} {course.year}
                                 {" · "}CRN: {course.crn}
                             </p>

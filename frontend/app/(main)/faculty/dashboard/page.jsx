@@ -62,13 +62,13 @@ function TimeInput({ id, placeholder, onChange }) {
         autoComplete="off"
         className={inputStyles + " pr-10"}
       />
-      <button type="button" tabIndex={-1} onClick={() => setOpen((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200">
+      <button type="button" tabIndex={-1} onClick={() => setOpen((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
         <ChevronDown size={16} />
       </button>
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-zinc-800 border border-zinc-600 rounded-lg shadow-lg">
+        <ul className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-lg">
           {filtered.map((t) => (
-            <li key={t.value} onMouseDown={() => handleSelect(t)} className="px-4 py-2 text-sm text-white hover:bg-zinc-700 cursor-pointer">
+            <li key={t.value} onMouseDown={() => handleSelect(t)} className="px-4 py-2 text-sm text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer">
               {t.label}
             </li>
           ))}
@@ -91,8 +91,8 @@ const initialFormData = {
   semester: "", year: "", days: [], startTime: "", endTime: "",
 };
 
-const inputStyles = "w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 px-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent transition-all duration-200";
-const labelStyles = "text-sm font-medium text-zinc-300 block mb-2";
+const inputStyles = "w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl py-3 px-4 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent transition-all duration-200";
+const labelStyles = "text-sm font-medium text-zinc-700 dark:text-zinc-300 block mb-2";
 
 const CODE_CHARS = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
@@ -229,7 +229,7 @@ export default function FacultyDashboardPage() {
             <div
                 key={classItem.crn}
                 onClick={() => router.push(`/faculty/courses/${classItem.crn}`)}
-                className="relative bg-zinc-900 border border-zinc-700 rounded-xl p-6 hover:border-zinc-500 transition-all duration-200 cursor-pointer group"
+                className="relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 hover:border-zinc-300 dark:hover:border-zinc-500 shadow-sm transition-all duration-200 cursor-pointer group"
             >
               <button
                   onClick={(e) => { e.stopPropagation(); openDeleteConfirm(classItem); }}
@@ -238,26 +238,26 @@ export default function FacultyDashboardPage() {
                 <Trash2 className="w-4 h-4" />
               </button>
               <div className="flex items-start gap-4">
-                <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#7C1D2E33" }}>
+                <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
                   <BookOpen className="w-6 h-6" style={{ color: "#c0a080" }} />
                 </div>
                 <div className="flex-1 min-w-0 pr-6">
-                  <h3 className="text-lg font-semibold text-white truncate">{classItem.courseName}</h3>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">{classItem.courseName}</h3>
                   <p className="font-medium text-sm" style={{ color: "#C9A84C" }}>{classItem.courseAbbreviation}</p>
                 </div>
               </div>
               <div className="mt-4">
-                <p className="text-zinc-400 text-sm line-clamp-2">{classItem.courseDescription || "No description provided."}</p>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2">{classItem.courseDescription || "No description provided."}</p>
               </div>
-              <div className="mt-4 flex items-center gap-2 text-zinc-400 text-sm">
+              <div className="mt-4 flex items-center gap-2 text-zinc-500 dark:text-zinc-400 text-sm">
                 <Clock className="w-4 h-4" />
                 <span>
               {classItem.days.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}
                   {" · "}{formatTime(classItem.startTime)} – {formatTime(classItem.endTime)}
             </span>
               </div>
-              <div className="mt-4 pt-4 border-t border-zinc-700">
-                <p className="text-zinc-400 text-sm font-medium">
+              <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
                   {classItem.semester.charAt(0).toUpperCase() + classItem.semester.slice(1)} {classItem.year}
                   {" · "}CRN: {classItem.crn}
                 </p>
@@ -314,8 +314,8 @@ export default function FacultyDashboardPage() {
                         onClick={() => handleDayToggle(day.id)}
                         className="px-3 py-2 text-sm font-medium rounded-lg border transition-all duration-200"
                         style={formData.days.includes(day.id)
-                            ? { background: "#7C1D2E", borderColor: "#7C1D2E", color: "white" }
-                            : { background: "transparent", borderColor: "#3f3f46", color: "#a1a1aa" }
+                            ? { background: "#862633", borderColor: "#862633", color: "white" }
+                            : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
                         }
                     >
                       {day.label}
@@ -343,8 +343,8 @@ export default function FacultyDashboardPage() {
                 </div>
             )}
             <div className="flex gap-3 pt-4">
-              <button type="button" onClick={() => setIsDialogOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors duration-200">Cancel</button>
-              <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors duration-200" style={{ background: "#7C1D2E" }}>Add Class</button>
+              <button type="button" onClick={() => setIsDialogOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors duration-200">Cancel</button>
+              <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors duration-200" style={{ background: "#862633" }}>Add Class</button>
             </div>
           </form>
         </Dialog>
@@ -355,7 +355,7 @@ export default function FacultyDashboardPage() {
               Are you sure you want to delete <span className="font-semibold text-white">{deleteConfirm.className}</span>? This action cannot be undone.
             </p>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={closeDeleteConfirm} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors duration-200">Cancel</button>
+              <button type="button" onClick={closeDeleteConfirm} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors duration-200">Cancel</button>
               <button type="button" onClick={handleDelete} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors duration-200">Delete</button>
             </div>
           </div>

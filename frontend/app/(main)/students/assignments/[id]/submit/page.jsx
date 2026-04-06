@@ -32,8 +32,8 @@ export default function SubmitAssignmentPage() {
         <div className="flex items-center justify-center min-h-[80vh]">
           <div className="w-full max-w-2xl">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Submit Assignment</h1>
-              <p className="text-zinc-400">Upload your files to complete the assignment</p>
+              <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Submit Assignment</h1>
+              <p className="text-zinc-500 dark:text-zinc-400">Upload your files to complete the assignment</p>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -41,7 +41,7 @@ export default function SubmitAssignmentPage() {
 
               {files.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-sm font-medium text-zinc-300 mb-4">
+                    <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">
                       Selected Files ({files.length})
                     </h3>
                     <div className="space-y-3 max-h-64 overflow-y-auto">

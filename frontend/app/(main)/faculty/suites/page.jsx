@@ -20,8 +20,8 @@ export default function TestSuitesPage() {
     const [editingSuiteInfo, setEditingSuiteInfo] = useState(false);
     const [suiteEditForm, setSuiteEditForm] = useState({ name: "", description: "" });
 
-    const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm";
-    const labelClass = "text-xs font-medium text-zinc-400 block mb-1";
+    const inputClass = "w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm";
+    const labelClass = "text-xs font-medium text-zinc-500 dark:text-zinc-400 block mb-1";
 
     useEffect(() => {
         if (!user?.id) return;
@@ -120,38 +120,38 @@ export default function TestSuitesPage() {
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Test Suites</h1>
-                        <p className="text-zinc-400 text-sm mt-1">Create reusable test case collections to import into any assignment.</p>
+                        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Test Suites</h1>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">Create reusable test case collections to import into any assignment.</p>
                     </div>
-                    <button type="button" onClick={() => setNewSuiteOpen(true)} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
+                    <button type="button" onClick={() => setNewSuiteOpen(true)} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>
                         <Plus className="w-4 h-4" /> New Suite
                     </button>
                 </div>
 
                 {suites.length === 0 ? (
-                    <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-12 text-center">
-                        <FlaskConical className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-                        <p className="text-white font-medium">No test suites yet</p>
-                        <p className="text-zinc-400 text-sm mt-1">Create a suite to reuse test cases across multiple assignments.</p>
-                        <button type="button" onClick={() => setNewSuiteOpen(true)} className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-12 text-center shadow-sm">
+                        <FlaskConical className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-4" />
+                        <p className="text-zinc-900 dark:text-white font-medium">No test suites yet</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">Create a suite to reuse test cases across multiple assignments.</p>
+                        <button type="button" onClick={() => setNewSuiteOpen(true)} className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>
                             <Plus className="w-4 h-4" /> New Suite
                         </button>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {suites.map((suite) => (
-                            <div key={suite.id} className="bg-zinc-900 border border-zinc-700 rounded-xl flex items-center justify-between p-5">
+                            <div key={suite.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl flex items-center justify-between p-5 shadow-sm">
                                 <div className="flex items-center gap-4 min-w-0 flex-1">
                                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#C9A84C22" }}>
                                         <FlaskConical className="w-5 h-5" style={{ color: "#C9A84C" }} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-white font-semibold">{suite.name}</p>
-                                        {suite.description && <p className="text-zinc-400 text-sm truncate mt-0.5">{suite.description}</p>}
+                                        <p className="text-zinc-900 dark:text-white font-semibold">{suite.name}</p>
+                                        {suite.description && <p className="text-zinc-500 dark:text-zinc-400 text-sm truncate mt-0.5">{suite.description}</p>}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4 shrink-0">
-                                    <button type="button" onClick={() => handleOpenSuite(suite.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">
+                                    <button type="button" onClick={() => handleOpenSuite(suite.id)} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">
                                         <Pencil className="w-3.5 h-3.5" /> Edit
                                     </button>
                                     <button type="button" onClick={() => setDeleteConfirm({ isOpen: true, suite })} className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
@@ -167,23 +167,23 @@ export default function TestSuitesPage() {
             {/* Suite Editor Modal */}
             {openSuiteId && openSuite && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-                    <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-3xl h-[85vh] flex flex-col">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-3xl h-[85vh] flex flex-col">
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-700 shrink-0">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
                             <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#C9A84C22" }}>
                                     <FlaskConical className="w-4 h-4" style={{ color: "#C9A84C" }} />
                                 </div>
                                 <div className="min-w-0">
-                                    <h2 className="text-lg font-semibold text-white">{openSuite.name}</h2>
-                                    <p className="text-zinc-400 text-xs">
+                                    <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{openSuite.name}</h2>
+                                    <p className="text-zinc-500 dark:text-zinc-400 text-xs">
                                         {cases.length} test case{cases.length !== 1 ? "s" : ""}
                                         {openSuite.description && ` • ${openSuite.description}`}
                                     </p>
                                 </div>
                             </div>
-                            <button type="button" onClick={handleCloseSuite} className="ml-4 p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors shrink-0">
+                            <button type="button" onClick={handleCloseSuite} className="ml-4 p-2 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors shrink-0">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -193,7 +193,7 @@ export default function TestSuitesPage() {
 
                             {/* Suite info */}
                             {editingSuiteInfo ? (
-                                <div className="p-4 bg-zinc-800 border border-zinc-700 rounded-xl space-y-3">
+                                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-3">
                                     <div>
                                         <label className={labelClass}>Suite Name</label>
                                         <input type="text" value={suiteEditForm.name} onChange={(e) => setSuiteEditForm((p) => ({ ...p, name: e.target.value }))} className={inputClass} autoFocus />
@@ -203,44 +203,44 @@ export default function TestSuitesPage() {
                                         <textarea rows={2} value={suiteEditForm.description} onChange={(e) => setSuiteEditForm((p) => ({ ...p, description: e.target.value }))} className={inputClass} />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button type="button" onClick={() => setEditingSuiteInfo(false)} className="flex-1 py-2 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Cancel</button>
-                                        <button type="button" onClick={handleSaveSuiteInfo} disabled={!suiteEditForm.name} className="flex-1 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>Save</button>
+                                        <button type="button" onClick={() => setEditingSuiteInfo(false)} className="flex-1 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
+                                        <button type="button" onClick={handleSaveSuiteInfo} disabled={!suiteEditForm.name} className="flex-1 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>Save</button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-start justify-between gap-3 p-4 bg-zinc-800/50 border border-zinc-700/50 rounded-xl">
+                                <div className="flex items-start justify-between gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-xl">
                                     <div className="min-w-0">
-                                        <p className="text-white font-semibold">{openSuite.name}</p>
+                                        <p className="text-zinc-900 dark:text-white font-semibold">{openSuite.name}</p>
                                         {openSuite.description
-                                            ? <p className="text-zinc-400 text-sm mt-0.5">{openSuite.description}</p>
-                                            : <p className="text-zinc-600 text-sm mt-0.5 italic">No description</p>
+                                            ? <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">{openSuite.description}</p>
+                                            : <p className="text-zinc-400 dark:text-zinc-600 text-sm mt-0.5 italic">No description</p>
                                         }
                                     </div>
-                                    <button type="button" onClick={() => { setEditingSuiteInfo(true); setSuiteEditForm({ name: openSuite.name, description: openSuite.description || "" }); }} className="shrink-0 p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors">
+                                    <button type="button" onClick={() => { setEditingSuiteInfo(true); setSuiteEditForm({ name: openSuite.name, description: openSuite.description || "" }); }} className="shrink-0 p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors">
                                         <Pencil className="w-4 h-4" />
                                     </button>
                                 </div>
                             )}
 
-                            <div className="border-t border-zinc-700/50" />
+                            <div className="border-t border-zinc-200 dark:border-zinc-700/50" />
 
                             {cases.length === 0 && !addingCase ? (
-                                <p className="text-zinc-400 text-sm">No test cases yet. Add one below.</p>
+                                <p className="text-zinc-500 dark:text-zinc-400 text-sm">No test cases yet. Add one below.</p>
                             ) : (
                                 cases.map((tc) => (
-                                    <div key={tc.id} className="flex items-start justify-between gap-4 p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
+                                    <div key={tc.id} className="flex items-start justify-between gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                         <div className="flex items-start gap-3 min-w-0">
                                             {tc.hidden
                                                 ? <EyeOff className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
                                                 : <Eye className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#C9A84C" }} />
                                             }
                                             <div>
-                                                <p className="text-white text-sm font-medium">
+                                                <p className="text-zinc-900 dark:text-white text-sm font-medium">
                                                     {tc.label || `Test Case ${tc.id}`}
-                                                    {tc.hidden && <span className="ml-2 text-xs text-zinc-500">(hidden)</span>}
+                                                    {tc.hidden && <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">(hidden)</span>}
                                                 </p>
-                                                <p className="text-zinc-400 text-xs mt-0.5">Input: <span className="font-mono text-zinc-300">{tc.input || "(none)"}</span></p>
-                                                <p className="text-zinc-400 text-xs mt-0.5">Expected: <span className="font-mono text-zinc-300">{tc.expectedOutput}</span></p>
+                                                <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{tc.input || "(none)"}</span></p>
+                                                <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{tc.expectedOutput}</span></p>
                                             </div>
                                         </div>
                                         <button type="button" onClick={() => handleDeleteCase(tc.id)} className="shrink-0 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
@@ -251,7 +251,7 @@ export default function TestSuitesPage() {
                             )}
 
                             {addingCase && (
-                                <div className="p-4 bg-zinc-800 border rounded-xl space-y-3 mt-2" style={{ borderColor: "#7C1D2E66" }}>
+                                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border rounded-xl space-y-3 mt-2" style={{ borderColor: "#86263366" }}>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className={labelClass}>Label</label>
@@ -260,7 +260,7 @@ export default function TestSuitesPage() {
                                         <div className="flex items-end pb-1">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input type="checkbox" checked={newCase.hidden} onChange={(e) => setNewCase((p) => ({ ...p, hidden: e.target.checked }))} className="w-4 h-4 shrink-0" />
-                                                <span className="text-sm text-zinc-300 flex items-center gap-1"><EyeOff className="w-4 h-4" /> Hidden</span>
+                                                <span className="text-sm text-zinc-600 dark:text-zinc-300 flex items-center gap-1"><EyeOff className="w-4 h-4" /> Hidden</span>
                                             </label>
                                         </div>
                                     </div>
@@ -273,8 +273,8 @@ export default function TestSuitesPage() {
                                         <textarea rows={2} value={newCase.expectedOutput} onChange={(e) => setNewCase((p) => ({ ...p, expectedOutput: e.target.value }))} placeholder="Expected stdout output" className={inputClass} />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button type="button" onClick={() => { setAddingCase(false); setNewCase({ input: "", expectedOutput: "", hidden: false, label: "" }); }} className="flex-1 py-2 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Cancel</button>
-                                        <button type="button" onClick={handleAddCase} disabled={!newCase.expectedOutput} className="flex-1 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>Save Case</button>
+                                        <button type="button" onClick={() => { setAddingCase(false); setNewCase({ input: "", expectedOutput: "", hidden: false, label: "" }); }} className="flex-1 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
+                                        <button type="button" onClick={handleAddCase} disabled={!newCase.expectedOutput} className="flex-1 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>Save Case</button>
                                     </div>
                                 </div>
                             )}
@@ -282,8 +282,8 @@ export default function TestSuitesPage() {
 
                         {/* Footer */}
                         {!addingCase && (
-                            <div className="px-6 py-4 border-t border-zinc-700 shrink-0">
-                                <button type="button" onClick={() => setAddingCase(true)} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
+                            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-700 shrink-0">
+                                <button type="button" onClick={() => setAddingCase(true)} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>
                                     <Plus className="w-4 h-4" /> Add Test Case
                                 </button>
                             </div>
@@ -304,8 +304,8 @@ export default function TestSuitesPage() {
                         <textarea rows={3} value={newSuite.description} onChange={(e) => setNewSuite((p) => ({ ...p, description: e.target.value }))} placeholder="What is this suite for?" className={inputClass} />
                     </div>
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setNewSuiteOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
-                        <button type="button" onClick={handleCreateSuite} disabled={!newSuite.name} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#7C1D2E" }}>Create Suite</button>
+                        <button type="button" onClick={() => setNewSuiteOpen(false)} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
+                        <button type="button" onClick={handleCreateSuite} disabled={!newSuite.name} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>Create Suite</button>
                     </div>
                 </div>
             </Dialog>
@@ -313,9 +313,9 @@ export default function TestSuitesPage() {
             {/* Delete Confirm Dialog */}
             <Dialog isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, suite: null })} title="Delete Suite" size="sm">
                 <div className="space-y-4">
-                    <p className="text-zinc-300">Are you sure you want to delete <span className="font-semibold text-white">{deleteConfirm.suite?.name}</span>? This will delete all test cases in the suite. Assignments that already imported from this suite are unaffected.</p>
+                    <p className="text-zinc-600 dark:text-zinc-300">Are you sure you want to delete <span className="font-semibold text-zinc-900 dark:text-white">{deleteConfirm.suite?.name}</span>? This will delete all test cases in the suite. Assignments that already imported from this suite are unaffected.</p>
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setDeleteConfirm({ isOpen: false, suite: null })} className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
+                        <button type="button" onClick={() => setDeleteConfirm({ isOpen: false, suite: null })} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
                         <button type="button" onClick={handleDeleteSuite} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors">Delete</button>
                     </div>
                 </div>

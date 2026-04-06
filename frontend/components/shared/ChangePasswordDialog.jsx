@@ -87,15 +87,15 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const inputClass = "w-full px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-600 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent pr-10";
-  const eyeBtnClass = "absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200";
+  const inputClass = "w-full px-4 py-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent pr-10";
+  const eyeBtnClass = "absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200";
 
   return (
     <>
       <Dialog isOpen={isOpen} onClose={handleClose} title="Change Password">
         <div className="space-y-4 mb-6">
           <div>
-            <label htmlFor="current-password" className="block text-sm font-medium text-zinc-300 mb-1.5">Current Password</label>
+            <label htmlFor="current-password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Current Password</label>
             <div className="relative">
               <input id="current-password" type={showCurrent ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" className={inputClass} />
               <button type="button" onClick={() => setShowCurrent((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
@@ -104,7 +104,7 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
             </div>
           </div>
           <div>
-            <label htmlFor="new-password" className="block text-sm font-medium text-zinc-300 mb-1.5">New Password</label>
+            <label htmlFor="new-password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">New Password</label>
             <div className="relative">
               <input id="new-password" type={showNew ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className={inputClass} />
               <button type="button" onClick={() => setShowNew((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
@@ -113,7 +113,7 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
             </div>
           </div>
           <div>
-            <label htmlFor="confirm-new-password" className="block text-sm font-medium text-zinc-300 mb-1.5">Confirm New Password</label>
+            <label htmlFor="confirm-new-password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Confirm New Password</label>
             <div className="relative">
               <input id="confirm-new-password" type={showConfirm ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="••••••••" autoComplete="new-password" className={inputClass} />
               <button type="button" onClick={() => setShowConfirm((v) => !v)} className={eyeBtnClass} tabIndex={-1}>
@@ -124,17 +124,17 @@ export default function ChangePasswordDialog({ isOpen, onClose, onSuccess }) {
           {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={handleClose} disabled={loading} className="px-4 py-2 text-zinc-300 hover:text-white font-medium rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50">
+          <button type="button" onClick={handleClose} disabled={loading} className="px-4 py-2 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50">
             Cancel
           </button>
-          <button type="button" onClick={handleUpdate} disabled={loading} className="px-4 py-2 text-white font-medium rounded-lg transition-colors hover:opacity-90 disabled:opacity-50" style={{ background: "#7C1D2E" }}>
+          <button type="button" onClick={handleUpdate} disabled={loading} className="px-4 py-2 text-white font-medium rounded-lg transition-colors hover:opacity-90 disabled:opacity-50" style={{ background: "#862633" }}>
             {loading ? "Updating..." : "Update Password"}
           </button>
         </div>
       </Dialog>
 
       {showToast && (
-        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-lg bg-zinc-700 text-white shadow-lg border border-zinc-600">
+        <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-lg border border-zinc-200 dark:border-zinc-600">
           Password updated successfully
         </div>
       )}

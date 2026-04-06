@@ -46,17 +46,17 @@ export default function UserPage() {
     } catch (err) { console.error(err); alert("Delete failed"); }
   };
 
-  const inputClass = "w-full p-3 mb-4 border border-zinc-700 rounded-lg bg-zinc-900 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 transition-colors";
+  const inputClass = "w-full p-3 mb-4 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 transition-colors";
 
   return (
       <div className="p-8 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-6">Edit User</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Edit User</h1>
         <input type="text" placeholder="First Name" value={user.firstName} onChange={e => setUser({ ...user, firstName: e.target.value })} className={inputClass} />
         <input type="text" placeholder="Last Name" value={user.lastName} onChange={e => setUser({ ...user, lastName: e.target.value })} className={inputClass} />
         <input type="email" placeholder="Email" value={user.email} onChange={e => setUser({ ...user, email: e.target.value })} className={inputClass} />
         <input type="password" placeholder="Password" value={user.password} onChange={e => setUser({ ...user, password: e.target.value })} className={inputClass} />
         <div className="flex gap-2">
-          <button onClick={handleUpdate} className="flex-1 text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>Update</button>
+          <button onClick={handleUpdate} className="flex-1 text-white py-2 px-4 rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>Update</button>
           <button onClick={handleDelete} className="flex-1 bg-red-800 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors">Delete</button>
         </div>
       </div>
