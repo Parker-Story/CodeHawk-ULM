@@ -24,14 +24,14 @@ function VisibleTestCases({ assignmentId }) {
 
   return (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-zinc-300">Sample Test Cases</p>
+        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Sample Test Cases</p>
         {testCases.map((tc) => (
-            <div key={tc.id} className="p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-xs space-y-1">
-              <p className="font-medium text-zinc-300">{tc.label || `Test Case ${tc.id}`}</p>
+            <div key={tc.id} className="p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs space-y-1">
+              <p className="font-medium text-zinc-700 dark:text-zinc-300">{tc.label || `Test Case ${tc.id}`}</p>
               {tc.input && (
-                  <p className="text-zinc-400">Input: <span className="font-mono text-zinc-300">{tc.input}</span></p>
+                  <p className="text-zinc-500 dark:text-zinc-400">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{tc.input}</span></p>
               )}
-              <p className="text-zinc-400">Expected Output: <span className="font-mono text-zinc-300">{tc.expectedOutput}</span></p>
+              <p className="text-zinc-500 dark:text-zinc-400">Expected Output: <span className="font-mono text-zinc-700 dark:text-zinc-300">{tc.expectedOutput}</span></p>
             </div>
         ))}
       </div>
@@ -55,27 +55,27 @@ function AssignmentRubric({ assignmentId }) {
 
   return (
       <div className="space-y-2">
-        <p className="text-sm font-medium text-zinc-300">Grading Rubric</p>
-        <div className="border border-zinc-700 rounded-xl overflow-hidden">
+        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Grading Rubric</p>
+        <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
           {(rubric.criteria || []).map((criteria) => (
-              <div key={criteria.id} className="border-b border-zinc-700/50 last:border-b-0">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700/40" style={{ background: "#7C1D2E14" }}>
+              <div key={criteria.id} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-b-0">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700/40" style={{ background: "#86263314" }}>
                   <div className="flex items-center gap-2">
-                    <div className="w-0.5 h-3 rounded-full shrink-0" style={{ background: "#7C1D2E" }} />
-                    <p className="text-white text-xs font-semibold">{criteria.title}</p>
+                    <div className="w-0.5 h-3 rounded-full shrink-0" style={{ background: "#862633" }} />
+                    <p className="text-zinc-900 dark:text-white text-xs font-semibold">{criteria.title}</p>
                   </div>
-                  <p className="text-zinc-400 text-xs">
+                  <p className="text-zinc-500 dark:text-zinc-400 text-xs">
                     {rubric.weighted
                       ? `${(criteria.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}% weight`
                       : `${(criteria.items || []).reduce((sum, i) => sum + i.maxPoints, 0)} pts`}
                   </p>
                 </div>
-                <div className="bg-zinc-900 divide-y divide-zinc-800">
+                <div className="bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800">
                   {(criteria.items || []).map((item) => (
                       <div key={item.id} className="flex items-center justify-between px-3 py-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-zinc-600 text-xs shrink-0 select-none">›</span>
-                          <span className="text-zinc-300 text-xs">{item.label}</span>
+                          <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">›</span>
+                          <span className="text-zinc-700 dark:text-zinc-300 text-xs">{item.label}</span>
                         </div>
                         <span className="text-zinc-500 text-xs shrink-0 ml-2">
                           {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
@@ -85,9 +85,9 @@ function AssignmentRubric({ assignmentId }) {
                 </div>
               </div>
           ))}
-          <div className="flex items-center justify-between px-3 py-2 border-t border-zinc-700 bg-zinc-900">
-            <p className="text-white text-xs font-semibold">Total</p>
-            <p className="text-white text-xs font-semibold">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900">
+            <p className="text-zinc-900 dark:text-white text-xs font-semibold">Total</p>
+            <p className="text-zinc-900 dark:text-white text-xs font-semibold">
               {rubric.weighted
                 ? `${(rubric.criteria || []).flatMap((c) => c.items || []).reduce((sum, i) => sum + (i.weight || 0), 0)}%`
                 : `${rubric.totalPoints} pts`}
@@ -525,7 +525,7 @@ export default function StudentCourseDetailPage() {
   };
 
   if (loading) {
-    return <div className="p-8"><p className="text-zinc-400">Loading...</p></div>;
+    return <div className="p-8"><p className="text-zinc-500 dark:text-zinc-400">Loading...</p></div>;
   }
 
   return (
@@ -533,42 +533,42 @@ export default function StudentCourseDetailPage() {
         <div className="max-w-5xl mx-auto">
           <Link
               href="/students/dashboard"
-              className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-6"
+              className="inline-flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
 
           {!classItem ? (
-              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6">
-                <p className="text-zinc-400">Course not found.</p>
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6">
+                <p className="text-zinc-500 dark:text-zinc-400">Course not found.</p>
               </div>
           ) : (
               <>
-                <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-8">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 mb-8 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#7C1D2E33" }}>
+                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
                       <BookOpen className="w-8 h-8" style={{ color: "#c0a080" }} />
                     </div>
                     <div>
-                      <h1 className="text-2xl font-bold text-white">{classItem.courseName}</h1>
+                      <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{classItem.courseName}</h1>
                       <p className="font-medium mt-1" style={{ color: "#C9A84C" }}>{classItem.courseAbbreviation}</p>
                       <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                        <span className="text-zinc-300"><span className="text-zinc-500">CRN:</span> {classItem.crn}</span>
-                        <span className="text-zinc-300"><span className="text-zinc-500">Semester:</span> {classItem.semester?.charAt(0).toUpperCase() + classItem.semester?.slice(1)} {classItem.year}</span>
+                        <span className="text-zinc-700 dark:text-zinc-300"><span className="text-zinc-500">CRN:</span> {classItem.crn}</span>
+                        <span className="text-zinc-700 dark:text-zinc-300"><span className="text-zinc-500">Semester:</span> {classItem.semester?.charAt(0).toUpperCase() + classItem.semester?.slice(1)} {classItem.year}</span>
                       </div>
                     </div>
                   </div>
                   {classItem.courseDescription && (
-                      <p className="mt-4 text-zinc-400 text-sm">{classItem.courseDescription}</p>
+                      <p className="mt-4 text-zinc-500 dark:text-zinc-400 text-sm">{classItem.courseDescription}</p>
                   )}
                 </div>
 
                 <section>
-                  <h2 className="text-lg font-semibold text-white mb-4">Assignments</h2>
-                  <div className="bg-zinc-900 border border-zinc-700 rounded-xl divide-y divide-zinc-700/50">
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Assignments</h2>
+                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl divide-y divide-zinc-200 dark:divide-zinc-700/50 shadow-sm">
                     {assignments.length === 0 ? (
-                        <p className="text-zinc-400 p-4">No assignments yet.</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 p-4">No assignments yet.</p>
                     ) : (
                         assignments.map((a) => (
                             <button
@@ -587,13 +587,13 @@ export default function StudentCourseDetailPage() {
                                   setCustomTestResults([]);
                                   setCustomError(null);
                                 }}
-                                className="flex items-center gap-4 p-4 w-full text-left text-zinc-300 hover:bg-zinc-700/30 transition-colors rounded-lg"
+                                className="flex items-center gap-4 p-4 w-full text-left text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/30 transition-colors rounded-lg"
                             >
                               <FileText className="w-5 h-5 shrink-0" style={{ color: "#C9A84C" }} />
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-white">{a.title}</p>
+                                <p className="font-medium text-zinc-900 dark:text-white">{a.title}</p>
                                 {a.description && (
-                                    <p className="text-sm text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>
                                 )}
                               </div>
                               {submissions[a.id] && (
@@ -618,19 +618,19 @@ export default function StudentCourseDetailPage() {
         {/* Assignment Modal */}
         {selectedAssignment && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-2xl">
 
                 {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-zinc-700">
+                <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#7C1D2E33" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
                       <FileText className="w-5 h-5" style={{ color: "#C9A84C" }} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-white">{selectedAssignment.title}</h2>
+                      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{selectedAssignment.title}</h2>
                       {existingSubmission?.score !== null && existingSubmission?.score !== undefined && selectedAssignment?.scoresVisible && (
                           <p className="text-sm mt-1">
-                            <span className="text-zinc-400">Score: </span>
+                            <span className="text-zinc-500 dark:text-zinc-400">Score: </span>
                             <span className="font-semibold" style={{ color: "#C9A84C" }}>{existingSubmission.score} / 100</span>
                           </p>
                       )}
@@ -639,14 +639,14 @@ export default function StudentCourseDetailPage() {
                   <button
                       type="button"
                       onClick={closeModal}
-                      className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+                      className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-zinc-700">
+                <div className="flex border-b border-zinc-200 dark:border-zinc-700">
                   {["description", "upload", ...(existingSubmission ? ["submission", "custom", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
@@ -655,7 +655,7 @@ export default function StudentCourseDetailPage() {
                           className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                               activeTab === tab
                                   ? "border-b-2 text-amber-400"
-                                  : "text-zinc-400 hover:text-white"
+                                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                           }`}
                           style={activeTab === tab ? { borderColor: "#C9A84C", color: "#C9A84C" } : {}}
                       >
@@ -680,9 +680,9 @@ export default function StudentCourseDetailPage() {
                   {activeTab === "description" && (
                       <div className="space-y-4">
                         {selectedAssignment.description ? (
-                            <p className="text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
+                            <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
                         ) : (
-                            <p className="text-zinc-400 text-sm">No description provided.</p>
+                            <p className="text-zinc-500 dark:text-zinc-400 text-sm">No description provided.</p>
                         )}
                         <AssignmentRubric assignmentId={selectedAssignment.id} />
                         <VisibleTestCases assignmentId={selectedAssignment.id} />
@@ -690,7 +690,7 @@ export default function StudentCourseDetailPage() {
                             type="button"
                             onClick={() => setActiveTab("upload")}
                             className="mt-2 w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                            style={{ background: "#7C1D2E" }}
+                            style={{ background: "#862633" }}
                         >
                           Go to Upload Solution
                         </button>
@@ -715,7 +715,7 @@ export default function StudentCourseDetailPage() {
                                     type="button"
                                     onClick={() => setActiveTab("results")}
                                     className="mt-4 px-6 py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                    style={{ background: "#7C1D2E" }}
+                                    style={{ background: "#862633" }}
                                 >
                                   View Test Results
                                 </button>
@@ -723,7 +723,7 @@ export default function StudentCourseDetailPage() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("submission")}
-                                    className="mt-3 px-6 py-2 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                    className="mt-3 px-6 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                                 >
                                   View My Submission
                                 </button>
@@ -732,7 +732,7 @@ export default function StudentCourseDetailPage() {
                                     type="button"
                                     onClick={() => setActiveTab("custom")}
                                     className="mt-3 px-6 py-2 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                    style={{ background: "#7C1D2E" }}
+                                    style={{ background: "#862633" }}
                                 >
                                   Run With My Data
                                 </button>
@@ -741,7 +741,7 @@ export default function StudentCourseDetailPage() {
                                   type="button"
                                   onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); setSubmitted(false); }}
                                   className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                  style={{ background: "#7C1D2E" }}
+                                  style={{ background: "#862633" }}
                               >
                                 New Attempt
                               </button>
@@ -755,7 +755,7 @@ export default function StudentCourseDetailPage() {
                               <button
                                   type="button"
                                   onClick={closeModal}
-                                  className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                  className="w-full py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                               >
                                 Close
                               </button>
@@ -773,7 +773,7 @@ export default function StudentCourseDetailPage() {
                                   type="button"
                                   onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); }}
                                   className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                  style={{ background: "#7C1D2E" }}
+                                  style={{ background: "#862633" }}
                               >
                                 New Attempt
                               </button>
@@ -787,10 +787,10 @@ export default function StudentCourseDetailPage() {
                             </div>
                         ) : existingSubmission && newAttempt ? (
                                 <div className="space-y-4">
-                                  <div className="flex items-center justify-between gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
+                                  <div className="flex items-center justify-between gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                     <div className="min-w-0">
-                                      <p className="text-zinc-300 text-sm font-medium">Editing Submission</p>
-                                      <p className="text-zinc-400 text-xs truncate">{existingSubmission.fileName}</p>
+                                      <p className="text-zinc-700 dark:text-zinc-300 text-sm font-medium">Editing Submission</p>
+                                      <p className="text-zinc-500 dark:text-zinc-400 text-xs truncate">{existingSubmission.fileName}</p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                       <button
@@ -798,7 +798,7 @@ export default function StudentCourseDetailPage() {
                                           onClick={handleSaveCode}
                                           disabled={!editorDirty || savingCode}
                                           className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                          style={{ background: "#7C1D2E" }}
+                                          style={{ background: "#862633" }}
                                       >
                                         {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
                                       </button>
@@ -806,7 +806,7 @@ export default function StudentCourseDetailPage() {
                                           type="button"
                                           onClick={runProfessorTests}
                                           disabled={loadingResults || savingCode}
-                                          className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                          className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                       >
                                         Run Professor Tests
                                       </button>
@@ -819,7 +819,7 @@ export default function StudentCourseDetailPage() {
                                       </div>
                                   )}
 
-                                  <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                                  <div className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
                                     <MonacoEditor
                                         height="28rem"
                                         language={editorLanguage}
@@ -841,7 +841,7 @@ export default function StudentCourseDetailPage() {
                                     <button
                                         type="button"
                                         onClick={() => setNewAttempt(false)}
-                                        className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                        className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                                     >
                                       Cancel
                                     </button>
@@ -849,7 +849,7 @@ export default function StudentCourseDetailPage() {
                                         type="button"
                                         onClick={() => setActiveTab("custom")}
                                         className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                        style={{ background: "#7C1D2E" }}
+                                        style={{ background: "#862633" }}
                                     >
                                       Run With My Data
                                     </button>
@@ -858,25 +858,25 @@ export default function StudentCourseDetailPage() {
                             ) : (
                                 <>
                                   {newAttempt && (
-                                      <p className="text-zinc-400 text-sm mb-4">Submitting a new file will replace your current submission.</p>
+                                      <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">Submitting a new file will replace your current submission.</p>
                                   )}
                                   <div
                                       onDrop={handleDrop}
                                       onDragOver={(e) => e.preventDefault()}
                                       onClick={() => fileInputRef.current?.click()}
-                                      className="border-2 border-dashed border-zinc-600 rounded-xl p-12 text-center cursor-pointer hover:border-zinc-400 transition-colors"
+                                      className="border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-xl p-12 text-center cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-400 transition-colors"
                                   >
-                                    <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-4" />
+                                    <Upload className="w-10 h-10 text-zinc-400 dark:text-zinc-500 mx-auto mb-4" />
                                     {selectedFiles.length > 0 ? (
                                         <div className="space-y-3">
-                                          <p className="text-white font-medium">
+                                          <p className="text-zinc-900 dark:text-white font-medium">
                                             {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
                                           </p>
                                           <div className="flex flex-wrap gap-2 justify-center">
                                             {selectedFiles.map((f) => (
                                                 <span
                                                     key={f.name}
-                                                    className="px-3 py-1.5 text-xs rounded-lg bg-zinc-700 border border-zinc-600 text-zinc-200"
+                                                    className="px-3 py-1.5 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200"
                                                 >
                                                   {f.name}
                                                 </span>
@@ -886,8 +886,8 @@ export default function StudentCourseDetailPage() {
                                         </div>
                                     ) : (
                                         <>
-                                          <p className="text-white font-semibold text-lg">Ready to submit?</p>
-                                          <p className="text-zinc-400 text-sm mt-2">Drag and drop up to 10 files here or click to browse</p>
+                                          <p className="text-zinc-900 dark:text-white font-semibold text-lg">Ready to submit?</p>
+                                          <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">Drag and drop up to 10 files here or click to browse</p>
                                         </>
                                     )}
                                     <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} className="hidden" />
@@ -903,7 +903,7 @@ export default function StudentCourseDetailPage() {
                                     <button
                                         type="button"
                                         onClick={newAttempt ? () => setNewAttempt(false) : closeModal}
-                                        className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                                        className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                                     >
                                       Cancel
                                     </button>
@@ -912,7 +912,7 @@ export default function StudentCourseDetailPage() {
                                         onClick={handleSubmit}
                                         disabled={selectedFiles.length === 0 || submitting}
                                         className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        style={{ background: "#7C1D2E" }}
+                                        style={{ background: "#862633" }}
                                     >
                                       {submitting ? "Submitting..." : "Submit"}
                                     </button>
@@ -924,10 +924,10 @@ export default function StudentCourseDetailPage() {
 
                   {activeTab === "submission" && (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3 p-3 bg-zinc-800 rounded-xl border border-zinc-700">
+                        <div className="flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
                           <div className="min-w-0">
-                            <p className="text-zinc-300 text-sm font-medium">Submission</p>
-                            <p className="text-zinc-400 text-xs truncate">
+                            <p className="text-zinc-700 dark:text-zinc-300 text-sm font-medium">Submission</p>
+                            <p className="text-zinc-500 dark:text-zinc-400 text-xs truncate">
                               {submissionFiles.length > 1
                                 ? `${submissionFiles.length} files`
                                 : existingSubmission?.fileName || "Unnamed file"}
@@ -940,7 +940,7 @@ export default function StudentCourseDetailPage() {
                                   onClick={handleSaveCode}
                                   disabled={!editorDirty || savingCode}
                                   className="px-3 py-2 text-xs font-medium rounded-lg text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  style={{ background: "#7C1D2E" }}
+                                  style={{ background: "#862633" }}
                               >
                                 {savingCode ? "Saving..." : editorDirty ? "Save Code" : "Saved"}
                               </button>
@@ -949,7 +949,7 @@ export default function StudentCourseDetailPage() {
                                 type="button"
                                 onClick={runProfessorTests}
                                 disabled={loadingResults || savingCode}
-                                className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                               Run Professor Tests
                             </button>
@@ -963,8 +963,8 @@ export default function StudentCourseDetailPage() {
                         )}
 
                         {submissionFiles.length > 1 ? (
-                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                              <div className="flex border-b border-zinc-700 overflow-x-auto">
+                            <div className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                              <div className="flex border-b border-zinc-200 dark:border-zinc-700 overflow-x-auto">
                                 {submissionFiles.map((f, i) => (
                                     <button
                                         key={f.id}
@@ -972,22 +972,22 @@ export default function StudentCourseDetailPage() {
                                         onClick={() => setActiveSubmissionFile(i)}
                                         className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 shrink-0 ${
                                             activeSubmissionFile === i
-                                                ? "text-white border-[#7C1D2E]"
-                                                : "text-zinc-400 border-transparent hover:text-zinc-200"
+                                                ? "text-white border-[#862633]"
+                                                : "text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-700 dark:hover:text-zinc-200"
                                         }`}
                                     >
                                       {f.fileName}
                                     </button>
                                 ))}
                               </div>
-                              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono p-4 overflow-auto max-h-[32rem]">
+                              <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono p-4 overflow-auto max-h-[32rem]">
                                 {submissionFiles[activeSubmissionFile]?.fileContent
                                     ? decodeBase64ToUtf8(submissionFiles[activeSubmissionFile].fileContent)
                                     : "No file content available."}
                               </pre>
                             </div>
                         ) : (
-                            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
+                            <div className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
                               <MonacoEditor
                                   height="32rem"
                                   language={editorLanguage}
@@ -1010,31 +1010,31 @@ export default function StudentCourseDetailPage() {
 
                   {activeTab === "custom" && (
                       <div className="space-y-4">
-                        <div className="p-3 bg-zinc-800 border border-zinc-700 rounded-xl">
-                          <p className="text-sm font-medium text-white">Run With My Data</p>
-                          <p className="text-zinc-400 text-xs mt-1">Custom runs won’t change your score.</p>
+                        <div className="p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-white">Run With My Data</p>
+                          <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-1">Custom runs won’t change your score.</p>
                         </div>
 
                         {selectedAssignment?.inputMode === "FILE" ? (
                             <div className="space-y-2">
-                              <p className="text-sm font-medium text-zinc-300">Custom Input File</p>
+                              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Custom Input File</p>
                               <div className="flex items-center gap-3">
                                 <input
                                     type="file"
                                     onChange={handleCustomInputFileChange}
-                                    className="text-sm text-zinc-300"
+                                    className="text-sm text-zinc-600 dark:text-zinc-300"
                                 />
                                 {customInputFile.inputFileName && (
-                                    <span className="text-xs text-zinc-400">{customInputFile.inputFileName}</span>
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{customInputFile.inputFileName}</span>
                                 )}
                               </div>
                             </div>
                         ) : null}
 
                         <div className="space-y-3">
-                          <p className="text-sm font-medium text-zinc-300">Testcases</p>
+                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Testcases</p>
                           {customTestCases.map((tc, i) => (
-                              <div key={i} className="p-4 bg-zinc-900 border border-zinc-700 rounded-xl space-y-3">
+                              <div key={i} className="p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-3">
                                 <div className="flex items-center gap-3">
                                   <input
                                       value={tc.label}
@@ -1043,12 +1043,12 @@ export default function StudentCourseDetailPage() {
                                         setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, label: v } : x)));
                                       }}
                                       placeholder={`Label (optional)`}
-                                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40"
+                                      className="flex-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40"
                                   />
                                   <button
                                       type="button"
                                       onClick={() => setCustomTestCases((prev) => prev.filter((_, idx) => idx !== i))}
-                                      className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors"
+                                      className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                                       disabled={customTestCases.length <= 1}
                                   >
                                     Remove
@@ -1057,7 +1057,7 @@ export default function StudentCourseDetailPage() {
 
                                 {selectedAssignment?.inputMode !== "FILE" ? (
                                     <div className="space-y-2">
-                                      <p className="text-xs font-medium text-zinc-400">Input</p>
+                                      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Input</p>
                                       <textarea
                                           rows={4}
                                           value={tc.input}
@@ -1066,13 +1066,13 @@ export default function StudentCourseDetailPage() {
                                             setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, input: v } : x)));
                                           }}
                                           placeholder="stdin input"
-                                          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
+                                          className="w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
                                       />
                                     </div>
                                 ) : null}
 
                                 <div className="space-y-2">
-                                  <p className="text-xs font-medium text-zinc-400">Expected Output</p>
+                                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Expected Output</p>
                                   <textarea
                                       rows={4}
                                       value={tc.expectedOutput}
@@ -1081,7 +1081,7 @@ export default function StudentCourseDetailPage() {
                                         setCustomTestCases((prev) => prev.map((x, idx) => (idx === i ? { ...x, expectedOutput: v } : x)));
                                       }}
                                       placeholder="expected stdout"
-                                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2 px-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
+                                      className="w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 text-sm resize-none"
                                   />
                                 </div>
                               </div>
@@ -1090,7 +1090,7 @@ export default function StudentCourseDetailPage() {
                           <button
                               type="button"
                               onClick={() => setCustomTestCases((prev) => [...prev, { label: "", input: "", expectedOutput: "" }])}
-                              className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                              className="w-full py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                           >
                             Add Testcase
                           </button>
@@ -1103,7 +1103,7 @@ export default function StudentCourseDetailPage() {
                                 setCustomTestResults([]);
                                 setCustomError(null);
                               }}
-                              className="flex-1 py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors"
+                              className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                           >
                             Clear Results
                           </button>
@@ -1112,7 +1112,7 @@ export default function StudentCourseDetailPage() {
                               onClick={runCustomTests}
                               disabled={loadingCustomResults || customTestCases.length === 0}
                               className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              style={{ background: "#7C1D2E" }}
+                              style={{ background: "#862633" }}
                           >
                             {loadingCustomResults ? "Running..." : "Run My Tests"}
                           </button>
@@ -1126,13 +1126,13 @@ export default function StudentCourseDetailPage() {
 
                         {customTestResults.length > 0 && (
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl border border-zinc-700">
-                                <span className="text-zinc-300 text-sm font-medium">My Results</span>
+                              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                                <span className="text-zinc-700 dark:text-zinc-300 text-sm font-medium">My Results</span>
                                 <span className="text-sm font-semibold">
                                   <span className="text-green-400">{customTestResults.filter((r) => r.passed).length}</span>
-                                  <span className="text-zinc-500"> / </span>
-                                  <span className="text-white">{customTestResults.length}</span>
-                                  <span className="text-zinc-400"> passed</span>
+                                  <span className="text-zinc-400 dark:text-zinc-500"> / </span>
+                                  <span className="text-zinc-900 dark:text-white">{customTestResults.length}</span>
+                                  <span className="text-zinc-500 dark:text-zinc-400"> passed</span>
                                 </span>
                               </div>
                               {customTestResults.map((r, idx) => (
@@ -1148,11 +1148,11 @@ export default function StudentCourseDetailPage() {
                                         {r.label || `Test Case ${idx + 1}`} — {r.passed ? "Passed" : "Failed"}
                                       </span>
                                     </div>
-                                    <p className="text-xs text-zinc-400 mt-1">
-                                      Expected: <span className="font-mono text-zinc-300">{r.expectedOutput || ""}</span>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.expectedOutput || ""}</span>
                                     </p>
                                     {!r.passed && (
-                                        <p className="text-xs text-zinc-400 mt-1">
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                           Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span>
                                         </p>
                                     )}
@@ -1166,22 +1166,22 @@ export default function StudentCourseDetailPage() {
                   {activeTab === "results" && (
                       <div>
                         {loadingResults ? (
-                            <p className="text-zinc-400 text-sm text-center py-8">Loading results...</p>
+                            <p className="text-zinc-500 dark:text-zinc-400 text-sm text-center py-8">Loading results...</p>
                         ) : testResults.length === 0 ? (
                             <div className="text-center py-8">
-                              <FlaskConical className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-                              <p className="text-zinc-400 text-sm">No visible test results yet.</p>
+                              <FlaskConical className="w-10 h-10 text-zinc-400 dark:text-zinc-600 mx-auto mb-3" />
+                              <p className="text-zinc-500 dark:text-zinc-400 text-sm">No visible test results yet.</p>
                               <p className="text-zinc-500 text-xs mt-1">Test cases may be hidden or none have been added.</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-xl border border-zinc-700">
-                                <span className="text-zinc-300 text-sm font-medium">Results</span>
+                              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                                <span className="text-zinc-700 dark:text-zinc-300 text-sm font-medium">Results</span>
                                 <span className="text-sm font-semibold">
                           <span className="text-green-400">{testResults.filter(r => r.passed).length}</span>
-                          <span className="text-zinc-500"> / </span>
-                          <span className="text-white">{testResults.length}</span>
-                          <span className="text-zinc-400"> passed</span>
+                          <span className="text-zinc-400 dark:text-zinc-500"> / </span>
+                          <span className="text-zinc-900 dark:text-white">{testResults.length}</span>
+                          <span className="text-zinc-500 dark:text-zinc-400"> passed</span>
                         </span>
                               </div>
                               {testResults.map((r) => (
@@ -1196,11 +1196,11 @@ export default function StudentCourseDetailPage() {
                             </span>
                                     </div>
                                     {r.testCase?.input && (
-                                        <p className="text-xs text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-300">{r.testCase.input}</span></p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase.input}</span></p>
                                     )}
-                                    <p className="text-xs text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-300">{r.testCase?.expectedOutput}</span></p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase?.expectedOutput}</span></p>
                                     {!r.passed && (
-                                        <p className="text-xs text-zinc-400 mt-1">Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span></p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span></p>
                                     )}
                                   </div>
                               ))}
@@ -1210,9 +1210,9 @@ export default function StudentCourseDetailPage() {
                   )}
 
                   {activeTab === "feedback" && (
-                      <div className="p-4 bg-zinc-800 border border-zinc-700 rounded-xl">
-                        <p className="text-sm font-medium text-zinc-300 mb-2">Instructor Feedback</p>
-                        <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Instructor Feedback</p>
+                        <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
                           {existingSubmission.feedback}
                         </p>
                       </div>

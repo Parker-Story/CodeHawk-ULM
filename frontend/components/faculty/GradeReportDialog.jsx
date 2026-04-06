@@ -125,9 +125,9 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                   { label: "Completion Rate", value: completionRate() },
                   { label: "Ungraded", value: ungradedCount() },
                 ].map(({ label, value }) => (
-                    <div key={label} className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-center">
-                      <p className="text-zinc-400 text-sm">{label}</p>
-                      <p className="text-2xl font-bold text-white mt-1">{value}</p>
+                    <div key={label} className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 text-center shadow-sm">
+                      <p className="text-zinc-500 dark:text-zinc-400 text-sm">{label}</p>
+                      <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">{value}</p>
                     </div>
                 ))}
               </div>
@@ -135,7 +135,7 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
               {/* Student filter */}
               {roster.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Filter Students</p>
+                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">Filter Students</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                           type="button"
@@ -154,8 +154,8 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                               onClick={() => toggleStudent(cu.user.id)}
                               className="px-3 py-1 text-xs font-medium rounded-lg border transition-colors"
                               style={selectedStudents.includes(cu.user.id)
-                                  ? { background: "#7C1D2E", borderColor: "#7C1D2E", color: "white" }
-                                  : { background: "transparent", borderColor: "#3f3f46", color: "#a1a1aa" }
+                                  ? { background: "#862633", borderColor: "#862633", color: "white" }
+                                  : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
                               }
                           >
                             {cu.user.firstName} {cu.user.lastName}
@@ -166,15 +166,15 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
               )}
 
               {/* Table */}
-              <div className="overflow-x-auto rounded-xl border border-zinc-700">
+              <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700">
                 <table className="w-full text-sm">
                   <thead>
-                  <tr className="bg-zinc-700/50 border-b border-zinc-700">
-                    <th className="text-left py-3 px-4 font-semibold text-white whitespace-nowrap">Student</th>
+                  <tr className="bg-zinc-100 dark:bg-zinc-700/50 border-b border-zinc-200 dark:border-zinc-700">
+                    <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white whitespace-nowrap">Student</th>
                     {assignments.map(a => (
-                        <th key={a.id} className="text-left py-3 px-4 font-semibold text-white whitespace-nowrap">{a.title}</th>
+                        <th key={a.id} className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white whitespace-nowrap">{a.title}</th>
                     ))}
-                    <th className="text-left py-3 px-4 font-semibold text-white whitespace-nowrap">Average</th>
+                    <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white whitespace-nowrap">Average</th>
                   </tr>
                   </thead>
                   <tbody>
@@ -188,15 +188,15 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                             ? (numeric.reduce((a, b) => a + b, 0) / numeric.length).toFixed(1) + "%"
                             : "—";
                         return (
-                            <tr key={cu.user.id} className="border-b border-zinc-700/50 last:border-0">
+                            <tr key={cu.user.id} className="border-b border-zinc-100 dark:border-zinc-700/50 last:border-0">
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}>
+                                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#86263333" }}>
                               <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
                                 {cu.user.firstName?.charAt(0)}{cu.user.lastName?.charAt(0)}
                               </span>
                                   </div>
-                                  <span className="text-zinc-300 whitespace-nowrap">{cu.user.firstName} {cu.user.lastName}</span>
+                                  <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">{cu.user.firstName} {cu.user.lastName}</span>
                                 </div>
                               </td>
                               {assignments.map(a => {
@@ -228,8 +228,8 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
 
               {/* Actions */}
               <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-lg hover:bg-zinc-600 transition-colors">Close</button>
-                <button type="button" onClick={handleDownloadCSV} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#7C1D2E" }}>
+                <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Close</button>
+                <button type="button" onClick={handleDownloadCSV} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>
                   <FileDown className="w-4 h-4" /> Download CSV
                 </button>
               </div>
