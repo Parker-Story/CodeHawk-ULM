@@ -21,7 +21,7 @@ export default function StudentCalendarPage() {
             const res = await fetch(`${API_BASE}/assignment/course/${cu.course.crn}`);
             const assignments = await res.json();
             (Array.isArray(assignments) ? assignments : []).forEach((a) => {
-              if (a.dueDate) {
+              if (a.dueDate && a.published) {
                 const due = new Date(a.dueDate);
                 allEvents.push({
                   title: `${a.title} — ${cu.course.courseAbbreviation}`,
