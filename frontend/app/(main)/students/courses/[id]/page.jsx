@@ -161,6 +161,13 @@ export default function StudentCourseDetailPage() {
   const [loadingCustomResults, setLoadingCustomResults] = useState(false);
   const [customError, setCustomError] = useState(null);
 
+  const [suitePickerOpen, setSuitePickerOpen] = useState(false);
+  const [suitePickerList, setSuitePickerList] = useState(null);
+  const [loadingSuitePicker, setLoadingSuitePicker] = useState(false);
+  const [previewResults, setPreviewResults] = useState([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
+
   const [editorText, setEditorText] = useState("");
   const [editorDirty, setEditorDirty] = useState(false);
   const [savingCode, setSavingCode] = useState(false);
@@ -362,12 +369,98 @@ export default function StudentCourseDetailPage() {
     reader.readAsDataURL(file);
   };
 
-  const runCustomTests = async () => {
-    if (!user?.id || !selectedAssignment) return;
-    if (!existingSubmission) return;
+  const readFilesToBase64 = (files) =>
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({ fileName: file.name, fileContent: reader.result.split(",")[1] });
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          })
+      )
+    );
 
-    if (editorDirty) {
-      await handleSaveCode();
+  const runSampleTests = async () => {
+    if (!selectedAssignment || selectedFiles.length === 0) return;
+    setLoadingPreview(true);
+    setPreviewError(null);
+    setPreviewResults([]);
+    try {
+      // Check for visible test cases before running
+      const tcRes = await fetch(`${API_BASE}/testcase/assignment/${selectedAssignment.id}/visible`);
+      const visibleCases = tcRes.ok ? await tcRes.json() : [];
+      if (!Array.isArray(visibleCases) || visibleCases.length === 0) {
+        setPreviewError("The instructor hasn't added any visible test cases for this assignment yet.");
+        return;
+      }
+
+      const entries = await readFilesToBase64(selectedFiles);
+      const primary = entries[0];
+      const payload = {
+        fileName: primary.fileName,
+        fileContent: primary.fileContent,
+        inputFileName: selectedAssignment.inputMode === "FILE" ? customInputFile.inputFileName : null,
+        inputFileContentBase64: selectedAssignment.inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
+      };
+      const res = await fetch(`${API_BASE}/testcase/run/preview/${selectedAssignment.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Preview run failed");
+      const results = await res.json();
+      setPreviewResults(Array.isArray(results) ? results : []);
+    } catch (err) {
+      console.error(err);
+      setPreviewError("Failed to run tests. Please try again.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleOpenSuitePicker = async () => {
+    if (!user?.id) return;
+    setSuitePickerOpen(true);
+    if (suitePickerList === null) {
+      setLoadingSuitePicker(true);
+      try {
+        const res = await fetch(`${API_BASE}/testsuite/user/${user.id}`);
+        const data = await res.json();
+        setSuitePickerList(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setSuitePickerList([]);
+      } finally {
+        setLoadingSuitePicker(false);
+      }
+    }
+  };
+
+  const handleLoadSuite = async (suiteId) => {
+    setSuitePickerOpen(false);
+    try {
+      const res = await fetch(`${API_BASE}/testsuite/${suiteId}/cases`);
+      const data = await res.json();
+      const cases = (Array.isArray(data) ? data : []).map((tc) => ({
+        label: tc.label || "",
+        input: tc.input || "",
+        expectedOutput: tc.expectedOutput || "",
+      }));
+      setCustomTestCases((prev) => [...prev, ...cases]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const runCustomTests = async () => {
+    if (!selectedAssignment) return;
+
+    const incomplete = customTestCases.some((tc) => !tc.expectedOutput.trim());
+    if (incomplete) {
+      setCustomError("Please fill in the expected output for each test case before running.");
+      return;
     }
 
     setLoadingCustomResults(true);
@@ -376,30 +469,48 @@ export default function StudentCourseDetailPage() {
 
     try {
       const inputMode = selectedAssignment.inputMode || "STDIN";
+      const testCases = customTestCases.map((tc) => ({
+        label: tc.label,
+        input: inputMode === "STDIN" ? tc.input : null,
+        expectedOutput: tc.expectedOutput,
+      }));
 
-      const payload = {
-        inputFileName: inputMode === "FILE" ? customInputFile.inputFileName : null,
-        inputFileContentBase64: inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
-        testCases: customTestCases.map((tc) => ({
-          label: tc.label,
-          input: inputMode === "STDIN" ? tc.input : null,
-          expectedOutput: tc.expectedOutput,
-        })),
-      };
-
-      const response = await fetch(
-        `${API_BASE}/testcase/run/custom/${selectedAssignment.id}/${user.id}`,
-        {
+      if (selectedFiles.length > 0) {
+        // Pre-submission: run against staged files via preview endpoint
+        const entries = await readFilesToBase64(selectedFiles);
+        const primary = entries[0];
+        const payload = {
+          fileName: primary.fileName,
+          fileContent: primary.fileContent,
+          testCases,
+          inputFileName: inputMode === "FILE" ? customInputFile.inputFileName : null,
+          inputFileContentBase64: inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
+        };
+        const response = await fetch(`${API_BASE}/testcase/run/preview/${selectedAssignment.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) throw new Error("Custom test run failed");
-
-      const results = await response.json();
-      setCustomTestResults(Array.isArray(results) ? results : []);
+        });
+        if (!response.ok) throw new Error("Preview run failed");
+        const results = await response.json();
+        setCustomTestResults(Array.isArray(results) ? results : []);
+      } else {
+        // Post-submission: run against existing submission
+        if (!user?.id || !existingSubmission) return;
+        if (editorDirty) await handleSaveCode();
+        const payload = {
+          inputFileName: inputMode === "FILE" ? customInputFile.inputFileName : null,
+          inputFileContentBase64: inputMode === "FILE" ? customInputFile.inputFileContentBase64 : null,
+          testCases,
+        };
+        const response = await fetch(
+          `${API_BASE}/testcase/run/custom/${selectedAssignment.id}/${user.id}`,
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+        );
+        if (!response.ok) throw new Error("Custom test run failed");
+        const results = await response.json();
+        setCustomTestResults(Array.isArray(results) ? results : []);
+      }
     } catch (err) {
       console.error(err);
       setCustomError("Failed to run custom tests.");
@@ -475,6 +586,8 @@ export default function StudentCourseDetailPage() {
       setSubmitted(true);
       setNewAttempt(false);
       setSubmitting(false);
+      setPreviewResults([]);
+      setPreviewError(null);
     } catch (error) {
       console.error("Error submitting:", error);
       setSubmitting(false);
@@ -517,6 +630,9 @@ export default function StudentCourseDetailPage() {
     setCustomTestResults([]);
     setLoadingCustomResults(false);
     setCustomError(null);
+    setSuitePickerOpen(false);
+    setPreviewResults([]);
+    setPreviewError(null);
     setEditorDirty(false);
     setEditorText("");
     setCodeSaveError(null);
@@ -618,7 +734,7 @@ export default function StudentCourseDetailPage() {
         {/* Assignment Modal */}
         {selectedAssignment && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-2xl">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
 
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
@@ -647,7 +763,7 @@ export default function StudentCourseDetailPage() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-                  {["description", "upload", ...(existingSubmission ? ["submission", "custom", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
+                  {["description", "upload", ...(selectedFiles.length > 0 || existingSubmission ? ["custom"] : []), ...(existingSubmission ? ["submission", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
                           type="button"
@@ -676,7 +792,7 @@ export default function StudentCourseDetailPage() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto flex-1">
                   {activeTab === "description" && (
                       <div className="space-y-4">
                         {selectedAssignment.description ? (
@@ -899,6 +1015,70 @@ export default function StudentCourseDetailPage() {
                                       </div>
                                   )}
 
+                                  {selectedFiles.length > 0 && (
+                                      <div className="mt-4 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                          <button
+                                              type="button"
+                                              onClick={runSampleTests}
+                                              disabled={loadingPreview}
+                                              className="flex-1 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                          >
+                                            {loadingPreview ? "Running..." : "Run Professor Tests"}
+                                          </button>
+                                          <button
+                                              type="button"
+                                              onClick={() => setActiveTab("custom")}
+                                              className="flex-1 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                                          >
+                                            Run My Tests
+                                          </button>
+                                        </div>
+
+                                        {previewError && (
+                                            <div className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl">
+                                              <p className="text-red-400 text-sm">{previewError}</p>
+                                            </div>
+                                        )}
+
+                                        {previewResults.length > 0 && (
+                                            <div className="space-y-2">
+                                              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                                                <span className="text-zinc-700 dark:text-zinc-300 text-sm font-medium">Sample Test Results</span>
+                                                <span className="text-sm font-semibold">
+                                                  <span className="text-green-400">{previewResults.filter((r) => r.passed).length}</span>
+                                                  <span className="text-zinc-400 dark:text-zinc-500"> / </span>
+                                                  <span className="text-zinc-900 dark:text-white">{previewResults.length}</span>
+                                                  <span className="text-zinc-500 dark:text-zinc-400"> passed</span>
+                                                </span>
+                                              </div>
+                                              {previewResults.map((r, idx) => (
+                                                  <div
+                                                      key={idx}
+                                                      className={`p-3 rounded-xl border ${r.passed ? "bg-green-600/10 border-green-600/20" : "bg-red-600/10 border-red-600/20"}`}
+                                                  >
+                                                    <div className="flex items-center gap-2">
+                                                      <span className={`w-2 h-2 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                                      <span className={`text-sm font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>
+                                                        {r.label || `Test ${idx + 1}`} — {r.passed ? "Passed" : "Failed"}
+                                                      </span>
+                                                    </div>
+                                                    {!r.passed && (
+                                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 ml-4">
+                                                          Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span>
+                                                        </p>
+                                                    )}
+                                                  </div>
+                                              ))}
+                                            </div>
+                                        )}
+
+                                        {!loadingPreview && previewResults.length === 0 && !previewError && (
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">Test your code before submitting — results are not recorded.</p>
+                                        )}
+                                      </div>
+                                  )}
+
                                   <div className="flex gap-3 mt-4">
                                     <button
                                         type="button"
@@ -914,7 +1094,7 @@ export default function StudentCourseDetailPage() {
                                         className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ background: "#862633" }}
                                     >
-                                      {submitting ? "Submitting..." : "Submit"}
+                                      {submitting ? "Submitting..." : "Submit for Grading"}
                                     </button>
                                   </div>
                                 </>
@@ -1032,7 +1212,57 @@ export default function StudentCourseDetailPage() {
                         ) : null}
 
                         <div className="space-y-3">
-                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Testcases</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Testcases</p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                  type="button"
+                                  onClick={() => setCustomTestCases((prev) => [...prev, { label: "", input: "", expectedOutput: "" }])}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                              >
+                                + Add Test Case
+                              </button>
+                            <div className="relative">
+                              <button
+                                  type="button"
+                                  onClick={handleOpenSuitePicker}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                              >
+                                <FlaskConical className="w-3.5 h-3.5" />
+                                Load from Suite
+                              </button>
+                              {suitePickerOpen && (
+                                  <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-10 overflow-hidden">
+                                    <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-200 dark:border-zinc-700">
+                                      <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">My Test Suites</p>
+                                      <button type="button" onClick={() => setSuitePickerOpen(false)} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors">
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                    {loadingSuitePicker ? (
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 px-3 py-3">Loading...</p>
+                                    ) : suitePickerList?.length === 0 ? (
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 px-3 py-3">No suites yet. Create one in Test Suites.</p>
+                                    ) : (
+                                        <div className="max-h-48 overflow-y-auto py-1">
+                                          {suitePickerList?.map((suite) => (
+                                              <button
+                                                  key={suite.id}
+                                                  type="button"
+                                                  onClick={() => handleLoadSuite(suite.id)}
+                                                  className="w-full text-left px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                                              >
+                                                <p className="text-sm text-zinc-900 dark:text-white font-medium">{suite.name}</p>
+                                                {suite.description && <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{suite.description}</p>}
+                                              </button>
+                                          ))}
+                                        </div>
+                                    )}
+                                  </div>
+                              )}
+                            </div>
+                          </div>
+                          </div>
                           {customTestCases.map((tc, i) => (
                               <div key={i} className="p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-3">
                                 <div className="flex items-center gap-3">
@@ -1087,13 +1317,6 @@ export default function StudentCourseDetailPage() {
                               </div>
                           ))}
 
-                          <button
-                              type="button"
-                              onClick={() => setCustomTestCases((prev) => [...prev, { label: "", input: "", expectedOutput: "" }])}
-                              className="w-full py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
-                          >
-                            Add Testcase
-                          </button>
                         </div>
 
                         <div className="flex gap-3">

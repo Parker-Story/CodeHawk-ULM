@@ -3,6 +3,7 @@ package com.womm.backend.service;
 import com.womm.backend.dto.CustomTestCaseRequest;
 import com.womm.backend.dto.CustomTestRunRequest;
 import com.womm.backend.dto.CustomTestRunResult;
+import com.womm.backend.dto.PreviewRunRequest;
 import com.womm.backend.entity.*;
 import com.womm.backend.id.SubmissionId;
 import com.womm.backend.repository.*;
@@ -154,6 +155,69 @@ public class TestCaseServiceImpl implements TestCaseService {
             String expected = tc.getExpectedOutput() == null ? "" : tc.getExpectedOutput();
             String actual = execResult.stdout == null ? "" : execResult.stdout;
 
+            boolean passed = execResult.exitCode == 0 &&
+                    actual.trim().replace("\r\n", "\n").replace("\r", "\n")
+                            .equals(expected.trim().replace("\r\n", "\n").replace("\r", "\n"));
+
+            CustomTestRunResult result = new CustomTestRunResult();
+            result.setLabel(tc.getLabel());
+            result.setPassed(passed);
+            result.setExpectedOutput(expected);
+            result.setActualOutput(actual);
+            return result;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<CustomTestRunResult> runPreviewTests(Long assignmentId, PreviewRunRequest request) {
+        if (request == null || request.getFileContent() == null) return new ArrayList<>();
+
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
+
+        boolean isFileMode = "FILE".equals(assignment.getInputMode());
+
+        // Determine test cases: use provided ones, or fall back to visible professor tests
+        List<CustomTestCaseRequest> casesToRun;
+        if (request.getTestCases() != null && !request.getTestCases().isEmpty()) {
+            casesToRun = request.getTestCases();
+        } else {
+            casesToRun = testCaseRepository.findVisibleByAssignmentId(assignmentId)
+                    .stream()
+                    .map(tc -> {
+                        CustomTestCaseRequest req = new CustomTestCaseRequest();
+                        req.setLabel(tc.getLabel() != null ? tc.getLabel() : "Test Case " + tc.getId());
+                        req.setInput(tc.getInput());
+                        req.setExpectedOutput(tc.getExpectedOutput());
+                        return req;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        if (casesToRun.isEmpty()) return new ArrayList<>();
+
+        String inputFileBase64 = isFileMode
+                ? (request.getInputFileContentBase64() != null ? request.getInputFileContentBase64() : assignment.getInputFileContent())
+                : null;
+        String inputFileName = isFileMode
+                ? (request.getInputFileName() != null ? request.getInputFileName() : assignment.getInputFileName())
+                : null;
+
+        final String finalInputFileBase64 = inputFileBase64;
+        final String finalInputFileName = inputFileName;
+
+        return casesToRun.stream().map(tc -> {
+            String input = isFileMode ? null : tc.getInput();
+            CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
+                    request.getFileContent(),
+                    request.getFileName(),
+                    input,
+                    finalInputFileBase64,
+                    finalInputFileName
+            );
+
+            String expected = tc.getExpectedOutput() == null ? "" : tc.getExpectedOutput();
+            String actual = execResult.stdout == null ? "" : execResult.stdout;
             boolean passed = execResult.exitCode == 0 &&
                     actual.trim().replace("\r\n", "\n").replace("\r", "\n")
                             .equals(expected.trim().replace("\r\n", "\n").replace("\r", "\n"));

@@ -1011,7 +1011,7 @@ export default function GradingWorkspacePage() {
                         <div className="flex gap-3">
                           <button type="button" onClick={() => setGradingStudent(null)} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Close</button>
                           <button type="button" onClick={handleSaveRubricScores} disabled={savingRubricScore} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2" style={{ background: "#862633" }}>
-                            <CheckCircle className="w-4 h-4" />
+                        <CheckCircle className="w-4 h-4" />
                             {savingRubricScore ? "Saving..." : "Save & Apply Score"}
                           </button>
                         </div>
