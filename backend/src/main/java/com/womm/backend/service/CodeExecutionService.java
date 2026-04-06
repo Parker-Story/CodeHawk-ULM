@@ -3,9 +3,12 @@ package com.womm.backend.service;
 import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class CodeExecutionService {
@@ -13,17 +16,29 @@ public class CodeExecutionService {
     private static final int TIMEOUT_SECONDS = 10;
 
     public ExecutionResult execute(String base64Code, String fileName, String input, String inputFileBase64, String inputFileName) {
+        return execute(base64Code, fileName, input, inputFileBase64, inputFileName, null);
+    }
+
+    public ExecutionResult execute(String base64Code, String fileName, String input, String inputFileBase64, String inputFileName, List<String[]> additionalFiles) {
         String tempDir = System.getProperty("java.io.tmpdir");
         String uniqueId = UUID.randomUUID().toString().replace("-", "");
         Path workDir = Paths.get(tempDir, "codehawk_" + uniqueId);
 
         try {
             Files.createDirectories(workDir);
+
+            // Write additional files first so they're available during compilation
+            if (additionalFiles != null) {
+                for (String[] file : additionalFiles) {
+                    byte[] fileBytes = Base64.getDecoder().decode(file[1]);
+                    Files.write(workDir.resolve(file[0]), fileBytes);
+                }
+            }
+
             byte[] codeBytes = Base64.getDecoder().decode(base64Code);
             String code = new String(codeBytes);
             String extension = getExtension(fileName);
-            Path codeFile = workDir.resolve(fileName);
-            Files.writeString(codeFile, code);
+            Files.writeString(workDir.resolve(fileName), code);
 
             // Write input file to work directory if provided
             if (inputFileBase64 != null && !inputFileBase64.isEmpty() && inputFileName != null) {
@@ -47,14 +62,21 @@ public class CodeExecutionService {
 
     // Keep old signature for backward compatibility
     public ExecutionResult execute(String base64Code, String fileName, String input) {
-        return execute(base64Code, fileName, input, null, null);
+        return execute(base64Code, fileName, input, null, null, null);
     }
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CodeExecutionService.class);
 
     private ExecutionResult executeJava(Path workDir, String fileName, String input) throws Exception {
-        // Compile
-        ProcessBuilder compileBuilder = new ProcessBuilder("javac", fileName);
+        // Compile all .java files in the work directory
+        List<String> javaFiles = Files.list(workDir)
+                .filter(p -> p.toString().endsWith(".java"))
+                .map(p -> p.getFileName().toString())
+                .collect(Collectors.toList());
+        List<String> compileCmd = new ArrayList<>();
+        compileCmd.add("javac");
+        compileCmd.addAll(javaFiles);
+        ProcessBuilder compileBuilder = new ProcessBuilder(compileCmd);
         compileBuilder.directory(workDir.toFile());
         compileBuilder.redirectErrorStream(true);
         Process compileProcess = compileBuilder.start();
@@ -67,8 +89,13 @@ public class CodeExecutionService {
             return new ExecutionResult("", "Compilation error:\n" + compileOutput, compileProcess.exitValue());
         }
 
-        String className = fileName.replace(".java", "");
-        ProcessBuilder runBuilder = new ProcessBuilder("java", "-cp", ".", className);
+        // Find the class that contains the main method (handles multi-file submissions
+        // where the entry point may not be the first uploaded file).
+        String entryClassName = findMainClass(workDir, javaFiles);
+        if (entryClassName == null) {
+            entryClassName = fileName.replace(".java", "");
+        }
+        ProcessBuilder runBuilder = new ProcessBuilder("java", "-cp", ".", entryClassName);
         runBuilder.directory(workDir.toFile());
         Process runProcess = runBuilder.start();
 
@@ -110,6 +137,19 @@ public class CodeExecutionService {
         }
 
         return new ExecutionResult(stdout.toString().trim(), stderr.toString().trim(), runProcess.exitValue());
+    }
+
+    /** Scans source files for the one containing {@code public static void main} and returns its class name. */
+    private String findMainClass(Path workDir, List<String> javaFileNames) {
+        for (String javaFile : javaFileNames) {
+            try {
+                String source = Files.readString(workDir.resolve(javaFile));
+                if (source.contains("public static void main") || source.contains("static public void main")) {
+                    return javaFile.replace(".java", "");
+                }
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 
     private ExecutionResult executePython(Path workDir, String fileName, String input) throws Exception {

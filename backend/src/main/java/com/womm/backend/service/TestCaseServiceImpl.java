@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class TestCaseServiceImpl implements TestCaseService {
@@ -19,6 +20,7 @@ public class TestCaseServiceImpl implements TestCaseService {
     private final TestResultRepository testResultRepository;
     private final AssignmentRepository assignmentRepository;
     private final SubmissionRepository submissionRepository;
+    private final SubmissionFileRepository submissionFileRepository;
     private final CodeExecutionService codeExecutionService;
 
     public TestCaseServiceImpl(
@@ -26,12 +28,24 @@ public class TestCaseServiceImpl implements TestCaseService {
             TestResultRepository testResultRepository,
             AssignmentRepository assignmentRepository,
             SubmissionRepository submissionRepository,
+            SubmissionFileRepository submissionFileRepository,
             CodeExecutionService codeExecutionService) {
         this.testCaseRepository = testCaseRepository;
         this.testResultRepository = testResultRepository;
         this.assignmentRepository = assignmentRepository;
         this.submissionRepository = submissionRepository;
+        this.submissionFileRepository = submissionFileRepository;
         this.codeExecutionService = codeExecutionService;
+    }
+
+    /** Returns all submission files as [fileName, fileContent] pairs for multi-file execution. */
+    private List<String[]> getAdditionalFiles(String userId, Long assignmentId, String primaryFileName) {
+        List<SubmissionFile> allFiles = submissionFileRepository
+                .findByUserIdAndAssignmentIdOrderByFileOrder(userId, assignmentId);
+        return allFiles.stream()
+                .filter(f -> !f.getFileName().equals(primaryFileName))
+                .map(f -> new String[]{f.getFileName(), f.getFileContent()})
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -73,6 +87,7 @@ public class TestCaseServiceImpl implements TestCaseService {
         boolean isFileMode = "FILE".equals(assignment.getInputMode());
         String inputFileBase64 = isFileMode ? assignment.getInputFileContent() : null;
         String inputFileName = isFileMode ? assignment.getInputFileName() : null;
+        List<String[]> additionalFiles = getAdditionalFiles(userId, assignmentId, submission.getFileName());
 
         // Run all test cases in parallel
         List<TestResult> results = testCases.parallelStream().map(testCase -> {
@@ -81,13 +96,18 @@ public class TestCaseServiceImpl implements TestCaseService {
                     submission.getFileName(),
                     isFileMode ? null : testCase.getInput(),
                     inputFileBase64,
-                    inputFileName
+                    inputFileName,
+                    additionalFiles
             );
 
             TestResult result = new TestResult();
             result.setSubmission(submission);
             result.setTestCase(testCase);
-            result.setActualOutput(execResult.stdout);
+            String output = execResult.stdout;
+            if (output.isEmpty() && !execResult.stderr.isEmpty()) {
+                output = execResult.stderr;
+            }
+            result.setActualOutput(output);
 
             boolean passed = execResult.exitCode == 0 &&
                     execResult.stdout.trim().replace("\r\n", "\n").replace("\r", "\n")
@@ -140,6 +160,7 @@ public class TestCaseServiceImpl implements TestCaseService {
 
         final String finalInputFileBase64 = inputFileBase64;
         final String finalInputFileName = inputFileName;
+        final List<String[]> additionalFiles = getAdditionalFiles(userId, assignmentId, submission.getFileName());
 
         return request.getTestCases().stream().map(tc -> {
             String input = isFileMode ? null : tc.getInput();
@@ -149,7 +170,8 @@ public class TestCaseServiceImpl implements TestCaseService {
                     submission.getFileName(),
                     input,
                     finalInputFileBase64,
-                    finalInputFileName
+                    finalInputFileName,
+                    additionalFiles
             );
 
             String expected = tc.getExpectedOutput() == null ? "" : tc.getExpectedOutput();
@@ -170,7 +192,7 @@ public class TestCaseServiceImpl implements TestCaseService {
 
     @Override
     public List<CustomTestRunResult> runPreviewTests(Long assignmentId, PreviewRunRequest request) {
-        if (request == null || request.getFileContent() == null) return new ArrayList<>();
+        if (request == null || request.getFiles() == null || request.getFiles().isEmpty()) return new ArrayList<>();
 
         Assignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
@@ -196,6 +218,15 @@ public class TestCaseServiceImpl implements TestCaseService {
 
         if (casesToRun.isEmpty()) return new ArrayList<>();
 
+        // First file is the entry point; remaining files are additional
+        PreviewRunRequest.FileEntry primaryFile = request.getFiles().get(0);
+        List<String[]> additionalFiles = IntStream.range(1, request.getFiles().size())
+                .mapToObj(i -> new String[]{
+                        request.getFiles().get(i).getFileName(),
+                        request.getFiles().get(i).getFileContent()
+                })
+                .collect(Collectors.toList());
+
         String inputFileBase64 = isFileMode
                 ? (request.getInputFileContentBase64() != null ? request.getInputFileContentBase64() : assignment.getInputFileContent())
                 : null;
@@ -209,11 +240,12 @@ public class TestCaseServiceImpl implements TestCaseService {
         return casesToRun.stream().map(tc -> {
             String input = isFileMode ? null : tc.getInput();
             CodeExecutionService.ExecutionResult execResult = codeExecutionService.execute(
-                    request.getFileContent(),
-                    request.getFileName(),
+                    primaryFile.getFileContent(),
+                    primaryFile.getFileName(),
                     input,
                     finalInputFileBase64,
-                    finalInputFileName
+                    finalInputFileName,
+                    additionalFiles
             );
 
             String expected = tc.getExpectedOutput() == null ? "" : tc.getExpectedOutput();

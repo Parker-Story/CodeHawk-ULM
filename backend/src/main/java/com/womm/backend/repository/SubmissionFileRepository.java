@@ -10,7 +10,7 @@ import java.util.List;
 public interface SubmissionFileRepository extends JpaRepository<SubmissionFile, Long> {
     List<SubmissionFile> findByUserIdAndAssignmentIdOrderByFileOrder(String userId, Long assignmentId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM SubmissionFile sf WHERE sf.userId = :userId AND sf.assignmentId = :assignmentId")
     void deleteByUserIdAndAssignmentId(@Param("userId") String userId, @Param("assignmentId") Long assignmentId);
 }
