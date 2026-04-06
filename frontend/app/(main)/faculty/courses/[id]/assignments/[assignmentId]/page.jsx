@@ -580,7 +580,9 @@ export default function GradingWorkspacePage() {
               )}
             </div>
 
-            {assignedRubric ? (
+            {assignedRubric ? (() => {
+                const rubricTotal = (assignedRubric.criteria || []).reduce((sum, c) => sum + (c.items || []).reduce((s, i) => s + i.maxPoints, 0), 0);
+                return (
                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden">
                   <div className="flex items-center justify-between p-4 border-b border-zinc-700">
                     <div className="flex items-center gap-3">
@@ -589,7 +591,7 @@ export default function GradingWorkspacePage() {
                       </div>
                       <div>
                         <p className="text-white font-medium">{assignedRubric.name}</p>
-                        <p className="text-zinc-400 text-xs mt-0.5">{assignedRubric.totalPoints} pts in rubric</p>
+                        {!assignedRubric.weighted && <p className="text-zinc-400 text-xs mt-0.5">{rubricTotal} pts in rubric</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -599,9 +601,9 @@ export default function GradingWorkspacePage() {
                       }
                     </div>
                   </div>
-                  {!assignedRubric.weighted && assignedRubric.totalPoints !== (assignment?.totalPoints ?? 100) && (
+                  {!assignedRubric.weighted && rubricTotal !== (assignment?.totalPoints ?? 100) && (
                       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-yellow-600/30 bg-yellow-600/10">
-                        <span className="text-yellow-400 text-xs">⚠ Rubric totals {assignedRubric.totalPoints} pts but assignment is worth {assignment?.totalPoints ?? 100} pts</span>
+                        <span className="text-yellow-400 text-xs">⚠ Rubric totals {rubricTotal} pts but assignment is worth {assignment?.totalPoints ?? 100} pts</span>
                       </div>
                   )}
                   {(assignedRubric.criteria || []).map((criteria) => (
@@ -643,7 +645,8 @@ export default function GradingWorkspacePage() {
                       </div>
                   ))}
                 </div>
-            ) : (
+                );
+            })() : (
                 <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 text-center">
                   <ClipboardList className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
                   <p className="text-zinc-400 text-sm">No rubric attached. Attach one to enable structured grading.</p>
@@ -1114,21 +1117,41 @@ export default function GradingWorkspacePage() {
         {/* Attach Rubric Dialog */}
         <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
           <div className="space-y-3">
-            {availableRubrics.length === 0 ? (
-                <p className="text-zinc-400 text-sm">No rubrics available. Create one from the Rubrics page.</p>
-            ) : (
-                availableRubrics.map((rubric) => (
-                    <button key={rubric.id} type="button" onClick={() => handleAttachRubric(rubric.id)} className="w-full flex items-center gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-zinc-500 hover:bg-zinc-700/50 transition-colors text-left">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}>
-                        <ClipboardList className="w-4 h-4" style={{ color: "#c0a080" }} />
+            {(() => {
+              const assignmentPts = assignment?.totalPoints ?? 100;
+              const compatible = availableRubrics.filter((rubric) => {
+                if (rubric.weighted) return true;
+                const total = (rubric.criteria || []).reduce((sum, c) => sum + (c.items || []).reduce((s, i) => s + i.maxPoints, 0), 0);
+                return total === assignmentPts;
+              });
+              if (availableRubrics.length === 0) {
+                return <p className="text-zinc-400 text-sm">No rubrics available. Create one from the Rubrics page.</p>;
+              }
+              return availableRubrics.map((rubric) => {
+                const rubricTotal = (rubric.criteria || []).reduce((sum, c) => sum + (c.items || []).reduce((s, i) => s + i.maxPoints, 0), 0);
+                const isCompatible = rubric.weighted || rubricTotal === assignmentPts;
+                const subtitle = rubric.weighted ? `Weighted${rubric.description ? ` • ${rubric.description}` : ""}` : `${rubricTotal} pts${rubric.description ? ` • ${rubric.description}` : ""}`;
+                return (
+                  <button key={rubric.id} type="button" onClick={isCompatible ? () => handleAttachRubric(rubric.id) : undefined} disabled={!isCompatible} className={`w-full flex items-center gap-3 p-4 bg-zinc-800 border rounded-xl transition-colors text-left ${isCompatible ? "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-700/50" : "border-zinc-700 opacity-50 cursor-not-allowed"}`}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#7C1D2E33" }}>
+                      <ClipboardList className="w-4 h-4" style={{ color: "#c0a080" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium text-sm">{rubric.name}</p>
+                      <p className="text-zinc-400 text-xs mt-0.5">{subtitle}</p>
+                    </div>
+                    {!isCompatible && (
+                      <div className="relative group shrink-0">
+                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-red-600/20 text-red-400 text-xs font-bold cursor-default">!</span>
+                        <div className="absolute right-0 bottom-7 w-56 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-600 text-xs text-zinc-300 shadow-lg invisible group-hover:visible z-50 pointer-events-none">
+                          Point-based rubrics must total {assignmentPts} pts to match this assignment.
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-white font-medium text-sm">{rubric.name}</p>
-                        <p className="text-zinc-400 text-xs mt-0.5">{rubric.totalPoints} pts{rubric.description && ` • ${rubric.description}`}</p>
-                      </div>
-                    </button>
-                ))
-            )}
+                    )}
+                  </button>
+                );
+              });
+            })()}
             <button type="button" onClick={() => setAttachRubricOpen(false)} className="w-full py-3 text-sm font-medium text-zinc-300 bg-zinc-700 rounded-xl hover:bg-zinc-600 transition-colors">Cancel</button>
           </div>
         </Dialog>

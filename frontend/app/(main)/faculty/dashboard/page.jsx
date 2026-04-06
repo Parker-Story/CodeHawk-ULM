@@ -1,13 +1,82 @@
 "use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation";
-import { BookOpen, Clock, Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, Clock, Trash2 } from "lucide-react";
 import DashboardView from "@/components/shared/DashboardView";
 import Dialog from "@/components/Dialog";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
+
+const TIME_OPTIONS = (() => {
+  const opts = [];
+  for (let total = 7 * 60; total <= 24 * 60; total += 5) {
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    const ampm = h < 12 || h === 24 ? "AM" : "PM";
+    const label = `${hour12}:${String(m).padStart(2, "0")} ${ampm}`;
+    opts.push({ value, label });
+  }
+  return opts;
+})();
+
+function TimeInput({ id, placeholder, onChange }) {
+  const [inputVal, setInputVal] = useState("");
+  const [open, setOpen] = useState(false);
+  const [filtered, setFiltered] = useState(TIME_OPTIONS);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleInput = (typed) => {
+    setInputVal(typed);
+    setOpen(true);
+    const q = typed.toLowerCase().replace(/\s/g, "");
+    setFiltered(q ? TIME_OPTIONS.filter((t) => t.label.toLowerCase().replace(/\s/g, "").includes(q)) : TIME_OPTIONS);
+    const exact = TIME_OPTIONS.find((t) => t.label.toLowerCase() === typed.toLowerCase());
+    onChange(exact ? exact.value : "");
+  };
+
+  const handleSelect = (option) => {
+    setInputVal(option.label);
+    onChange(option.value);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        id={id}
+        type="text"
+        value={inputVal}
+        onChange={(e) => handleInput(e.target.value)}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+        className={inputStyles + " pr-10"}
+      />
+      <button type="button" tabIndex={-1} onClick={() => setOpen((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200">
+        <ChevronDown size={16} />
+      </button>
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto bg-zinc-800 border border-zinc-600 rounded-lg shadow-lg">
+          {filtered.map((t) => (
+            <li key={t.value} onMouseDown={() => handleSelect(t)} className="px-4 py-2 text-sm text-white hover:bg-zinc-700 cursor-pointer">
+              {t.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const daysOfWeek = [
   { id: "mon", label: "Mon" },
@@ -27,6 +96,14 @@ const labelStyles = "text-sm font-medium text-zinc-300 block mb-2";
 
 const CODE_CHARS = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
+function formatTime(hhmm) {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const ampm = h < 12 || h === 24 ? "AM" : "PM";
+  return `${hour12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 function generateUniqueCode(existingCodes) {
   let code;
   do {
@@ -44,6 +121,7 @@ export default function FacultyDashboardPage() {
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, crn: null, className: "" });
   const [formData, setFormData] = useState(initialFormData);
   const [courseError, setCourseError] = useState(null);
+  const [timeResetKey, setTimeResetKey] = useState(0);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -96,6 +174,21 @@ export default function FacultyDashboardPage() {
       return;
     }
 
+    if (!formData.startTime || !formData.endTime) {
+      setCourseError("Please select a valid start and end time.");
+      return;
+    }
+    if (formData.endTime <= formData.startTime) {
+      setCourseError("End time must be after start time.");
+      return;
+    }
+    const [sh, sm] = formData.startTime.split(":").map(Number);
+    const [eh, em] = formData.endTime.split(":").map(Number);
+    if ((eh * 60 + em) - (sh * 60 + sm) < 30) {
+      setCourseError("Course duration must be at least 30 minutes.");
+      return;
+    }
+
     const existingCodes = classes.map((c) => c.code).filter(Boolean);
     const code = generateUniqueCode(existingCodes);
     const newCourse = { ...formData, code, archived: false, days: formData.days.join(",") };
@@ -116,6 +209,7 @@ export default function FacultyDashboardPage() {
       setClasses((prev) => [...prev, { ...savedCourse, days: savedCourse.days ? savedCourse.days.split(",") : [] }]);
       setIsDialogOpen(false);
       setFormData(initialFormData);
+      setTimeResetKey((k) => k + 1);
       setCourseError(null);
     } catch (error) {
       console.error("Error creating course:", error);
@@ -159,7 +253,7 @@ export default function FacultyDashboardPage() {
                 <Clock className="w-4 h-4" />
                 <span>
               {classItem.days.map((d) => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")}
-                  {" · "}{classItem.startTime} - {classItem.endTime}
+                  {" · "}{formatTime(classItem.startTime)} – {formatTime(classItem.endTime)}
             </span>
               </div>
               <div className="mt-4 pt-4 border-t border-zinc-700">
@@ -232,11 +326,11 @@ export default function FacultyDashboardPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="startTime" className={labelStyles}>Start Time</label>
-                <input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} className={inputStyles} required />
+                <TimeInput key={`start-${timeResetKey}`} id="startTime" placeholder="e.g. 8:00 AM" onChange={(v) => setFormData((p) => ({ ...p, startTime: v }))} />
               </div>
               <div>
                 <label htmlFor="endTime" className={labelStyles}>End Time</label>
-                <input type="time" id="endTime" name="endTime" value={formData.endTime} onChange={handleChange} className={inputStyles} required />
+                <TimeInput key={`end-${timeResetKey}`} id="endTime" placeholder="e.g. 9:15 AM" onChange={(v) => setFormData((p) => ({ ...p, endTime: v }))} />
               </div>
             </div>
             <div>
