@@ -125,7 +125,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setAssignment(assignment);
         submission.setFileName(files.get(0).getFileName());
         submission.setFileContent(files.get(0).getFileContent());
-        Submission saved = submissionRepository.save(submission);
+        // saveAndFlush ensures the submission row is committed to DB immediately
+        // so the FK on submission_files is satisfied before we insert child rows.
+        Submission saved = submissionRepository.saveAndFlush(submission);
 
         // Replace submission files now that the parent row exists
         submissionFileRepository.deleteByUserIdAndAssignmentId(userId, assignmentId);
