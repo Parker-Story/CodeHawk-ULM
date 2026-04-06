@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import CalendarView from "@/components/shared/CalendarView";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function FacultyCalendarPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -25,6 +27,8 @@ export default function FacultyCalendarPage() {
                   title: `${a.title} — ${course.courseAbbreviation}`,
                   start: due,
                   end: due,
+                  assignmentId: a.id,
+                  courseId: course.crn,
                 });
               }
             });
@@ -34,5 +38,15 @@ export default function FacultyCalendarPage() {
         .catch((err) => console.error(err));
   }, [user?.id]);
 
-  return <CalendarView title="Calendar" events={events} />;
+  function handleAssignmentClick(event) {
+    router.push(`/faculty/courses/${event.courseId}/assignments/${event.assignmentId}`);
+  }
+
+  return (
+    <CalendarView
+      title="Calendar"
+      events={events}
+      onSelectEvent={handleAssignmentClick}
+    />
+  );
 }

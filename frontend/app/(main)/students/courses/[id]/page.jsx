@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical } from "lucide-react";
 import Link from "next/link";
@@ -131,6 +131,7 @@ function encodeUtf8ToBase64(text) {
 export default function StudentCourseDetailPage() {
   const params = useParams();
   const crn = params.id;
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [classItem, setClassItem] = useState(null);
   const [assignments, setAssignments] = useState([]);
@@ -196,6 +197,17 @@ export default function StudentCourseDetailPage() {
         .then((data) => setAssignments(Array.isArray(data) ? data.filter((a) => a.published) : []))
         .catch((err) => console.error("Error loading assignments:", err));
   }, [crn]);
+
+  // Auto-open a specific assignment when navigating from the calendar (?open=assignmentId)
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || assignments.length === 0 || selectedAssignment) return;
+    const match = assignments.find((a) => String(a.id) === String(openId));
+    if (match) {
+      setSelectedAssignment(match);
+      setActiveTab("description");
+    }
+  }, [searchParams, assignments]);
 
   useEffect(() => {
     if (!user?.id || assignments.length === 0) return;
