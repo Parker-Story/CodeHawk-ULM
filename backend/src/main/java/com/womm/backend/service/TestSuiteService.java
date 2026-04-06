@@ -13,4 +13,5 @@ public interface TestSuiteService {
     void deleteCaseFromSuite(Long caseId);
     List<TestSuiteCase> getCasesBySuite(Long suiteId);
     void importSuiteToAssignment(Long suiteId, Long assignmentId);
+    TestSuite updateSuite(Long id, String name, String description);
 }

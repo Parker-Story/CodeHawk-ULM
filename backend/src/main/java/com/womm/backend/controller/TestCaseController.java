@@ -2,6 +2,7 @@ package com.womm.backend.controller;
 
 import com.womm.backend.dto.CustomTestRunRequest;
 import com.womm.backend.dto.CustomTestRunResult;
+import com.womm.backend.dto.PreviewRunRequest;
 import com.womm.backend.entity.TestCase;
 import com.womm.backend.entity.TestResult;
 import com.womm.backend.service.TestCaseService;
@@ -50,6 +51,14 @@ public class TestCaseController {
             @RequestBody CustomTestRunRequest request
     ) {
         return testCaseService.runCustomTestsForSubmission(assignmentId, userId, request);
+    }
+
+    @PostMapping("/run/preview/{assignmentId}")
+    public List<CustomTestRunResult> runPreview(
+            @PathVariable Long assignmentId,
+            @RequestBody PreviewRunRequest request
+    ) {
+        return testCaseService.runPreviewTests(assignmentId, request);
     }
 
     @GetMapping("/results/{assignmentId}/{userId}")

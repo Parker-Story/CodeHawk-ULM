@@ -11,6 +11,7 @@ export const PORTAL_CONFIG = {
     ariaLabel: "Student navigation",
     sidebarItems: [
       { href: "/students/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+      { href: "/students/suites", label: "Test Suites", icon: "FlaskConical" },
       { href: "/students/calendar", label: "Calendar", icon: "Calendar" },
       { href: "/students/account", label: "Account", icon: "User" },
     ],

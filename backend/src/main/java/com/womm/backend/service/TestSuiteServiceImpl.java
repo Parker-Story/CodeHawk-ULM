@@ -73,6 +73,15 @@ public class TestSuiteServiceImpl implements TestSuiteService {
     }
 
     @Override
+    public TestSuite updateSuite(Long id, String name, String description) {
+        TestSuite suite = testSuiteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Suite not found: " + id));
+        suite.setName(name);
+        suite.setDescription(description);
+        return testSuiteRepository.save(suite);
+    }
+
+    @Override
     public void importSuiteToAssignment(Long suiteId, Long assignmentId) {
         Assignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Assignment not found: " + assignmentId));
