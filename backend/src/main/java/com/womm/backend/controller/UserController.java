@@ -34,7 +34,6 @@ public class UserController {
         user.setFirstName(updatedUser.getFirstName());
         user.setLastName(updatedUser.getLastName());
         user.setEmail(updatedUser.getEmail());
-        user.setPasswordHash(updatedUser.getPasswordHash());
         return userService.updateUser(user);
     }
 

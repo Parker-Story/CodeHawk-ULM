@@ -20,7 +20,7 @@ export default function PortalLayout({ variant, children, Provider }) {
     const items = sidebarItemsWithIcons(config.sidebarItems ?? []);
 
     const content = (
-        <div className="min-h-screen bg-zinc-800">
+        <div className="min-h-screen bg-zinc-100 dark:bg-zinc-800">
             <Navbar variant={variant} onMenuClick={() => setSidebarOpen((o) => !o)} />
             <Sidebar
                 isOpen={sidebarOpen}

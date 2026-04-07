@@ -45,3 +45,13 @@ CREATE TABLE submissions (
     FOREIGN KEY (assignment_id) REFERENCES assignments(id),
     FOREIGN KEY (user_cwid) REFERENCES users(cwid)
 );
+
+CREATE TABLE submission_files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    assignment_id BIGINT NOT NULL,
+    file_name VARCHAR(255),
+    file_content LONGTEXT,
+    file_order INT DEFAULT 0,
+    FOREIGN KEY (assignment_id, user_id) REFERENCES submissions(assignment_id, user_id)
+);

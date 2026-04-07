@@ -16,13 +16,14 @@ public interface RubricService {
     void deleteRubric(Long id);
     Rubric copyRubric(Long id);
 
-    RubricCriteria addCriteria(Long rubricId, String title, double weight, int displayOrder);
+    RubricCriteria addCriteria(Long rubricId, String title, int displayOrder);
     void deleteCriteria(Long criteriaId);
 
-    RubricItem addItem(Long criteriaId, String label, double maxPoints, boolean autoGrade, int displayOrder);
+    RubricItem addItem(Long criteriaId, String label, double weight, boolean autoGrade, int displayOrder);
+    void saveScoreLabels(Long itemId, Map<Integer, String> labels);
+
     List<AssignmentRubricItemTestCase> getLinkedTestCases(Long assignmentId, Long rubricItemId);
     void linkTestCasesToItem(Long assignmentId, Long rubricItemId, List<Long> testCaseIds);
-
     void deleteItem(Long itemId);
 
     void attachRubricToAssignment(Long rubricId, Long assignmentId);

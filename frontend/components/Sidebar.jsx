@@ -23,7 +23,7 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
             />
         )}
         <aside
-            className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-zinc-900 border-r border-zinc-700 shadow-xl transition-transform duration-300 ease-in-out ${
+            className={`fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-[#862633] dark:bg-zinc-900 border-r border-white/10 dark:border-zinc-700 shadow-xl transition-transform duration-300 ease-in-out ${
                 isOpen ? "translate-x-0" : "-translate-x-full"
             }`}
             aria-label={ariaLabel}
@@ -39,9 +39,9 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                             isActive
                                 ? activeClassName || ""
-                                : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                                : "text-white/70 dark:text-zinc-400 hover:bg-white/10 dark:hover:bg-zinc-800 hover:text-white dark:hover:text-white"
                         }`}
-                        style={isActive && !activeClassName ? { background: "#7C1D2E", color: "#F5E6C8" } : {}}
+                        style={isActive && !activeClassName ? { background: "#862633", color: "#F5E6C8" } : {}}
                     >
                       {Icon && <Icon className="w-5 h-5 shrink-0" />}
                       {label}
@@ -50,11 +50,11 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
               })}
             </nav>
             {showSignOut && (
-                <div className="mt-auto pt-4 border-t border-zinc-700">
+                <div className="mt-auto pt-4 border-t border-white/20 dark:border-zinc-700">
                   <button
                       type="button"
                       onClick={handleSignOut}
-                      className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+                      className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-lg text-sm font-medium text-white/70 dark:text-zinc-400 hover:bg-white/10 dark:hover:bg-zinc-800 hover:text-white dark:hover:text-white transition-colors"
                   >
                     <LogOut className="w-5 h-5 shrink-0" />
                     Sign out

@@ -7,10 +7,11 @@ export const PORTAL_VARIANTS = ["student", "faculty", "ta"];
 export const PORTAL_CONFIG = {
   student: {
     basePath: "/students",
-    activeClassName: "text-amber-100",
+    activeClassName: "bg-white/25 text-white dark:bg-[#862633] dark:text-[#F5E6C8]",
     ariaLabel: "Student navigation",
     sidebarItems: [
       { href: "/students/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+      { href: "/students/suites", label: "Test Suites", icon: "FlaskConical" },
       { href: "/students/calendar", label: "Calendar", icon: "Calendar" },
       { href: "/students/account", label: "Account", icon: "User" },
     ],
@@ -39,7 +40,7 @@ export const PORTAL_CONFIG = {
   },
   faculty: {
     basePath: "/faculty",
-    activeClassName: "text-amber-100",
+    activeClassName: "bg-white/25 text-white dark:bg-[#862633] dark:text-[#F5E6C8]",
     ariaLabel: "Faculty navigation",
     sidebarItems: [
       { href: "/faculty/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -68,7 +69,7 @@ export const PORTAL_CONFIG = {
   },
   ta: {
     basePath: "/ta",
-    activeClassName: "text-amber-100",
+    activeClassName: "bg-white/25 text-white dark:bg-[#862633] dark:text-[#F5E6C8]",
     ariaLabel: "TA navigation",
     sidebarItems: [
       { href: "/ta/dashboard", label: "Dashboard", icon: "LayoutDashboard" },

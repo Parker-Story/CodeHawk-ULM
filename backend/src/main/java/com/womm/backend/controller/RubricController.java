@@ -3,6 +3,7 @@ package com.womm.backend.controller;
 import com.womm.backend.entity.*;
 import com.womm.backend.service.RubricService;
 import org.springframework.web.bind.annotation.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import com.womm.backend.entity.AssignmentRubricItemTestCase;
@@ -63,7 +64,6 @@ public class RubricController {
         return rubricService.addCriteria(
                 rubricId,
                 (String) body.get("title"),
-                body.get("weight") != null ? ((Number) body.get("weight")).doubleValue() : 0,
                 body.get("displayOrder") != null ? (Integer) body.get("displayOrder") : 0
         );
     }
@@ -78,7 +78,7 @@ public class RubricController {
         return rubricService.addItem(
                 criteriaId,
                 (String) body.get("label"),
-                body.get("maxPoints") != null ? ((Number) body.get("maxPoints")).doubleValue() : 0,
+                body.get("weight") != null ? ((Number) body.get("weight")).doubleValue() : 0,
                 body.get("autoGrade") != null && (Boolean) body.get("autoGrade"),
                 body.get("displayOrder") != null ? (Integer) body.get("displayOrder") : 0
         );
@@ -135,6 +135,13 @@ public class RubricController {
                 userId,
                 ((Number) body.get("awardedPoints")).doubleValue()
         );
+    }
+
+    @PostMapping("/item/{itemId}/labels")
+    public void saveScoreLabels(@PathVariable Long itemId, @RequestBody Map<String, String> body) {
+        Map<Integer, String> labels = new HashMap<>();
+        body.forEach((k, v) -> labels.put(Integer.parseInt(k), v));
+        rubricService.saveScoreLabels(itemId, labels);
     }
 
     @PostMapping("/autograde/{assignmentId}/{userId}")
