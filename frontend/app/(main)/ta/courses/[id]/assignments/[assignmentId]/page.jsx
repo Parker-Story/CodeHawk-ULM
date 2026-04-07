@@ -236,7 +236,7 @@ export default function TAGradingWorkspacePage() {
                                             <tr className="border-b border-zinc-200 dark:border-zinc-700/50">
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#86263333" }}>
+                                                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
                                                             <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
                                                         </div>
                                                         <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
@@ -477,7 +477,7 @@ export default function TAGradingWorkspacePage() {
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <div className="flex items-center gap-2 min-w-0">
                                                                     <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">›</span>
-                                                                    {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#86263333", color: "#c0a080" }}>auto</span>}
+                                                                    {item.autoGrade && <span className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0" style={{ background: "#C9A84C1a", color: "#c0a080" }}>auto</span>}
                                                                     <span className="text-zinc-800 dark:text-zinc-200 text-sm font-medium">{item.label}</span>
                                                                 </div>
                                                                 <span className="text-zinc-500 text-xs shrink-0 ml-3">

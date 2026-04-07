@@ -191,7 +191,7 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                             <tr key={cu.user.id} className="border-b border-zinc-100 dark:border-zinc-700/50 last:border-0">
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#86263333" }}>
+                                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
                               <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
                                 {cu.user.firstName?.charAt(0)}{cu.user.lastName?.charAt(0)}
                               </span>

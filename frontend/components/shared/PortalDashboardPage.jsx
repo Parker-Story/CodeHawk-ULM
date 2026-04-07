@@ -64,7 +64,7 @@ export default function PortalDashboardPage({ variant }) {
                         <div className="flex items-start gap-4">
                             <div
                                 className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-                                style={{ background: isTA ? "#C9A84C22" : "#86263333" }}
+                                style={{ background: isTA ? "#C9A84C22" : "#C9A84C1a" }}
                             >
                                 <BookOpen
                                     className="w-6 h-6"

@@ -4,12 +4,11 @@ import { createContext, useContext, useState, useEffect } from "react";
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") return "dark";
     const stored = localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark") setTheme(stored);
-  }, []);
+    return stored === "light" ? "light" : "dark";
+  });
 
   useEffect(() => {
     if (theme === "dark") {

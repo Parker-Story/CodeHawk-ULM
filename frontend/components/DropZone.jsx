@@ -30,7 +30,7 @@ export default function DropZone({ onFilesAdded }) {
         <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
         <div
             className="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-2xl transition-colors"
-            style={{ background: isDragging ? "#86263355" : "#86263333" }}
+            style={{ background: isDragging ? "#C9A84C2a" : "#C9A84C1a" }}
         >
           <Upload className="w-10 h-10" style={{ color: "#c0a080" }} />
         </div>

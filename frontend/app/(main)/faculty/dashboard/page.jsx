@@ -238,7 +238,7 @@ export default function FacultyDashboardPage() {
                 <Trash2 className="w-4 h-4" />
               </button>
               <div className="flex items-start gap-4">
-                <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                   <BookOpen className="w-6 h-6" style={{ color: "#c0a080" }} />
                 </div>
                 <div className="flex-1 min-w-0 pr-6">

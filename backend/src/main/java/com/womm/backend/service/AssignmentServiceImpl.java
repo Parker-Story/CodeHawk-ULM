@@ -12,6 +12,8 @@ import com.womm.backend.repository.RubricScoreRepository;
 import com.womm.backend.repository.AssignmentRubricItemTestCaseRepository;
 import com.womm.backend.repository.TestCaseRepository;
 import com.womm.backend.repository.AssignmentRubricRepository;
+import com.womm.backend.repository.AssignmentGroupRepository;
+import com.womm.backend.repository.AssignmentGroupMemberRepository;
 
 @Service
 public class AssignmentServiceImpl implements AssignmentService {
@@ -23,6 +25,8 @@ public class AssignmentServiceImpl implements AssignmentService {
     private final AssignmentRubricItemTestCaseRepository articRepository;
     private final TestCaseRepository testCaseRepository;
     private final AssignmentRubricRepository assignmentRubricRepository;
+    private final AssignmentGroupRepository assignmentGroupRepository;
+    private final AssignmentGroupMemberRepository assignmentGroupMemberRepository;
 
     public AssignmentServiceImpl(
             AssignmentRepository assignmentRepository,
@@ -32,7 +36,9 @@ public class AssignmentServiceImpl implements AssignmentService {
             RubricScoreRepository rubricScoreRepository,
             AssignmentRubricItemTestCaseRepository articRepository,
             TestCaseRepository testCaseRepository,
-            AssignmentRubricRepository assignmentRubricRepository) {
+            AssignmentRubricRepository assignmentRubricRepository,
+            AssignmentGroupRepository assignmentGroupRepository,
+            AssignmentGroupMemberRepository assignmentGroupMemberRepository) {
         this.assignmentRepository = assignmentRepository;
         this.courseRepository = courseRepository;
         this.submissionRepository = submissionRepository;
@@ -41,6 +47,8 @@ public class AssignmentServiceImpl implements AssignmentService {
         this.articRepository = articRepository;
         this.testCaseRepository = testCaseRepository;
         this.assignmentRubricRepository = assignmentRubricRepository;
+        this.assignmentGroupRepository = assignmentGroupRepository;
+        this.assignmentGroupMemberRepository = assignmentGroupMemberRepository;
     }
 
     @Override
@@ -72,6 +80,10 @@ public class AssignmentServiceImpl implements AssignmentService {
         articRepository.deleteByAssignmentId(id);
         testCaseRepository.deleteByAssignmentId(id);
         assignmentRubricRepository.deleteByAssignmentId(id);
+        // Delete group members before groups (FK constraint)
+        assignmentGroupRepository.findByAssignmentId(id)
+                .forEach(g -> assignmentGroupMemberRepository.deleteByGroupId(g.getId()));
+        assignmentGroupRepository.deleteByAssignmentId(id);
         assignmentRepository.deleteById(id);
     }
 
