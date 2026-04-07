@@ -363,7 +363,7 @@ export default function RubricsPage() {
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-2 min-w-0">
-                                                                {item.autoGrade && <span className="shrink-0 text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#86263333", color: "#c0a080" }}>auto</span>}
+                                                                {item.autoGrade && <span className="shrink-0 text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "#C9A84C1a", color: "#c0a080" }}>auto</span>}
                                                                 <span className="text-zinc-700 dark:text-zinc-300 text-sm truncate">{item.label}</span>
                                                             </div>
                                                             <div className="flex items-center gap-3 shrink-0 ml-3">

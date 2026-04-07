@@ -244,7 +244,7 @@ export default function CourseDetailPage() {
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 mb-8 shadow-sm">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                      <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                         <BookOpen className="w-8 h-8" style={{ color: "#c0a080" }} />
                       </div>
                       <div>
@@ -475,7 +475,7 @@ export default function CourseDetailPage() {
                 roster.map((courseUser) => (
                     <div key={courseUser.user.id} className="group flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#86263333" }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
                     <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
                       {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
                     </span>
@@ -487,7 +487,7 @@ export default function CourseDetailPage() {
                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: "#C9A84C", background: "#C9A84C22" }}>TA</span>
                             )}
                             {courseUser.courseRole === "FACULTY" && (
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: "#c0a080", background: "#86263333" }}>Faculty</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: "#c0a080", background: "#C9A84C1a" }}>Faculty</span>
                             )}
                           </div>
                           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{courseUser.user.cwid ? `CWID: ${courseUser.user.cwid}` : courseUser.user.email}</p>

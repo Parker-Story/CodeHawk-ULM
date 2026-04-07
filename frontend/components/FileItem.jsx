@@ -15,7 +15,7 @@ export default function FileItem({ file, onRemove }) {
 
     return (
         <div className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors shadow-sm">
-            <div className="w-12 h-12 flex items-center justify-center rounded-lg" style={{ background: "#86263333" }}>
+            <div className="w-12 h-12 flex items-center justify-center rounded-lg" style={{ background: "#C9A84C1a" }}>
                 <File className="w-6 h-6" style={{ color: "#c0a080" }} />
             </div>
             <div className="flex-1 min-w-0">

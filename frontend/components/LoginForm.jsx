@@ -180,7 +180,7 @@ export default function LoginForm() {
                         >
                           <div
                               className="w-14 h-14 flex items-center justify-center rounded-xl bg-zinc-200 dark:bg-[#27272a]"
-                              style={selectedRole === role ? { background: "#86263333" } : {}}
+                              style={selectedRole === role ? { background: "#C9A84C1a" } : {}}
                           >
                             <RoleIcon className="w-7 h-7 text-zinc-500 dark:text-zinc-400" style={selectedRole === role ? { color: "#C9A84C" } : {}} />
                           </div>

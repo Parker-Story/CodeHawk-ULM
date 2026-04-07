@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical, Users } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -150,6 +150,7 @@ export default function StudentCourseDetailPage() {
   const [fileError, setFileError] = useState(null);
   const [submissionFiles, setSubmissionFiles] = useState([]);
   const [activeSubmissionFile, setActiveSubmissionFile] = useState(0);
+  const [myGroup, setMyGroup] = useState(null);
 
   const [customTestCases, setCustomTestCases] = useState([
     { label: "", input: "", expectedOutput: "" },
@@ -270,6 +271,14 @@ export default function StudentCourseDetailPage() {
         .then((data) => { setSubmissionFiles(Array.isArray(data) ? data : []); setActiveSubmissionFile(0); })
         .catch(() => { setSubmissionFiles([]); setActiveSubmissionFile(0); });
   }, [existingSubmission?.submissionId?.userId, selectedAssignment?.id, user?.id]);
+
+  useEffect(() => {
+    if (!selectedAssignment?.groupAssignment || !user?.id) { setMyGroup(null); return; }
+    fetch(`${API_BASE}/assignment/${selectedAssignment.id}/groups/user/${user.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => setMyGroup(data || null))
+        .catch(() => setMyGroup(null));
+  }, [selectedAssignment?.id, selectedAssignment?.groupAssignment, user?.id]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -646,6 +655,7 @@ export default function StudentCourseDetailPage() {
     setCodeSaveError(null);
     setSubmissionFiles([]);
     setActiveSubmissionFile(0);
+    setMyGroup(null);
   };
 
   if (loading) {
@@ -671,7 +681,7 @@ export default function StudentCourseDetailPage() {
               <>
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 mb-8 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                       <BookOpen className="w-8 h-8" style={{ color: "#c0a080" }} />
                     </div>
                     <div>
@@ -747,7 +757,7 @@ export default function StudentCourseDetailPage() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                       <FileText className="w-5 h-5" style={{ color: "#C9A84C" }} />
                     </div>
                     <div>
@@ -807,6 +817,33 @@ export default function StudentCourseDetailPage() {
                             <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
                         ) : (
                             <p className="text-zinc-500 dark:text-zinc-400 text-sm">No description provided.</p>
+                        )}
+                        {selectedAssignment.groupAssignment && (
+                            <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Users className="w-4 h-4 shrink-0" style={{ color: "#C9A84C" }} />
+                                <p className="text-sm font-medium text-zinc-900 dark:text-white">Your Group</p>
+                              </div>
+                              {myGroup ? (
+                                  <>
+                                    <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">{myGroup.name}</p>
+                                    <div className="space-y-1 mb-3">
+                                      {(myGroup.members || []).map((m) => (
+                                          <div key={m.user?.id} className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-medium" style={{ background: "#C9A84C1a", color: "#c0a080" }}>
+                                              {m.user?.firstName?.charAt(0)}{m.user?.lastName?.charAt(0)}
+                                            </div>
+                                            {m.user?.firstName} {m.user?.lastName}
+                                            {m.user?.id === user?.id && <span className="text-zinc-400">(you)</span>}
+                                          </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Any member may submit on behalf of the group.</p>
+                                  </>
+                              ) : (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">You have not been assigned to a group yet. Contact your instructor.</p>
+                              )}
+                            </div>
                         )}
                         <AssignmentRubric assignmentId={selectedAssignment.id} />
                         <VisibleTestCases assignmentId={selectedAssignment.id} />
