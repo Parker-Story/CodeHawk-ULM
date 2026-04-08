@@ -40,12 +40,25 @@ public class Assignment {
     @Column(name = "input_file_content", columnDefinition = "LONGTEXT")
     private String inputFileContent;
 
+    @Column(name = "total_points", nullable = false)
+    private int totalPoints = 100;
+
     @Column(name = "due_date")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dueDate;
 
+    @Column(name = "group_assignment", nullable = false)
+    private boolean groupAssignment = false;
+
+    @Column(name = "group_size")
+    private Integer groupSize;
+
     public LocalDateTime getDueDate() { return dueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+    public boolean isGroupAssignment() { return groupAssignment; }
+    public void setGroupAssignment(boolean groupAssignment) { this.groupAssignment = groupAssignment; }
+    public Integer getGroupSize() { return groupSize; }
+    public void setGroupSize(Integer groupSize) { this.groupSize = groupSize; }
 
     // ----- Constructors -----
     public Assignment() {}
@@ -73,4 +86,6 @@ public class Assignment {
     public void setInputFileName(String inputFileName) { this.inputFileName = inputFileName; }
     public String getInputFileContent() { return inputFileContent; }
     public void setInputFileContent(String inputFileContent) { this.inputFileContent = inputFileContent; }
+    public int getTotalPoints() { return totalPoints; }
+    public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
 }

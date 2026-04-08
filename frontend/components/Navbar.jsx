@@ -13,13 +13,13 @@ export default function Navbar({ variant = "student", onMenuClick }) {
   const showHamburger = typeof onMenuClick === "function";
 
   return (
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-900 border-b border-zinc-700 shadow-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#862633] dark:bg-zinc-900 border-b border-[#701E29] dark:border-zinc-700 shadow-md">
         <div className="px-4 flex items-center h-16">
             {showHamburger && (
                 <button
                     type="button"
                     onClick={onMenuClick}
-                    className="p-2 -ml-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-700 focus:outline-none transition-colors"
+                    className="p-2 -ml-2 rounded-lg text-white/80 dark:text-zinc-400 hover:text-white dark:hover:text-white hover:bg-white/10 dark:hover:bg-zinc-700 focus:outline-none transition-colors"
                     aria-label="Toggle sidebar menu"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -34,7 +34,7 @@ export default function Navbar({ variant = "student", onMenuClick }) {
             </span>
               <span
                   className="text-xs font-semibold px-2 py-0.5 rounded"
-                  style={{ background: "#7C1D2E", color: "#F5E6C8" }}
+                  style={{ background: "#862633", color: "#F5E6C8" }}
               >
               {config.label}
             </span>

@@ -52,6 +52,11 @@ public class TestSuiteController {
         return testSuiteService.getCasesBySuite(suiteId);
     }
 
+    @PutMapping("/{id}")
+    public TestSuite updateSuite(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return testSuiteService.updateSuite(id, body.get("name"), body.get("description"));
+    }
+
     @PostMapping("/{suiteId}/import/{assignmentId}")
     public void importToAssignment(@PathVariable Long suiteId, @PathVariable Long assignmentId) {
         testSuiteService.importSuiteToAssignment(suiteId, assignmentId);

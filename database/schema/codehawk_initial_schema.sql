@@ -45,3 +45,35 @@ CREATE TABLE submissions (
     FOREIGN KEY (assignment_id) REFERENCES assignments(id),
     FOREIGN KEY (user_cwid) REFERENCES users(cwid)
 );
+
+CREATE TABLE submission_files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    assignment_id BIGINT NOT NULL,
+    file_name VARCHAR(255),
+    file_content LONGTEXT,
+    file_order INT DEFAULT 0,
+    FOREIGN KEY (assignment_id, user_id) REFERENCES submissions(assignment_id, user_id)
+);
+-- ============================================================
+-- Group Assignments (migration — run against existing DB)
+-- ============================================================
+
+ALTER TABLE assignments
+    ADD COLUMN group_assignment BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN group_size INT DEFAULT NULL;
+
+CREATE TABLE assignment_groups (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id BIGINT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    FOREIGN KEY (assignment_id) REFERENCES assignments(id)
+);
+
+CREATE TABLE assignment_group_members (
+    group_id BIGINT NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    PRIMARY KEY (group_id, user_id),
+    FOREIGN KEY (group_id) REFERENCES assignment_groups(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
