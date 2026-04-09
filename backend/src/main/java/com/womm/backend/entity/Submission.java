@@ -1,6 +1,8 @@
 package com.womm.backend.entity;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.womm.backend.id.SubmissionId;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "submissions")
@@ -30,6 +32,10 @@ public class Submission {
     @Column(name = "feedback", columnDefinition = "TEXT")
     private String feedback;
 
+    @Column(name = "submitted_at")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime submittedAt;
+
     // ----- Constructors -----
     public Submission() {}
     public Submission(User user, Assignment assignment) {
@@ -52,4 +58,6 @@ public class Submission {
     public void setScore(Integer score) { this.score = score; }
     public String getFeedback() { return feedback; }
     public void setFeedback(String feedback) { this.feedback = feedback; }
+    public LocalDateTime getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 }

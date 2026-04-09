@@ -7,6 +7,39 @@ import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
+import dynamic from "next/dynamic";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
+function decodeBase64ToUtf8(base64) {
+  if (!base64) return "";
+  try {
+    const binary = atob(base64);
+    if (typeof TextDecoder === "undefined") return binary;
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  } catch {
+    try { return atob(base64); } catch { return ""; }
+  }
+}
+
+function encodeUtf8ToBase64(text) {
+  try {
+    const bytes = new TextEncoder().encode(text || "");
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  } catch {
+    return btoa(unescape(encodeURIComponent(text || "")));
+  }
+}
+
+function detectLanguage(fileName = "") {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  if (ext === "java") return "java";
+  if (ext === "py") return "python";
+  return "plaintext";
+}
 
 
 export default function GradingWorkspacePage() {
@@ -50,6 +83,32 @@ export default function GradingWorkspacePage() {
   const [activeGradingFile, setActiveGradingFile] = useState(0);
   const [solutionFiles, setSolutionFiles] = useState([]);
   const [activeSolutionFile, setActiveSolutionFile] = useState(0);
+
+  // Open Submission execution state
+  const [solutionEditMode, setSolutionEditMode] = useState(false);
+  const [solutionEdits, setSolutionEdits] = useState({});
+  const [solutionRunResults, setSolutionRunResults] = useState(null);
+  const [solutionRunning, setSolutionRunning] = useState(false);
+  const [solutionRunError, setSolutionRunError] = useState(null);
+  const [solutionCustomInput, setSolutionCustomInput] = useState("");
+  const [solutionCustomRunning, setSolutionCustomRunning] = useState(false);
+  const [solutionCustomResult, setSolutionCustomResult] = useState(null);
+  const [solutionCustomError, setSolutionCustomError] = useState(null);
+  const [solutionCustomInputFile, setSolutionCustomInputFile] = useState({ inputFileName: "", inputFileContentBase64: "" });
+  const [solutionRunTab, setSolutionRunTab] = useState("saved");
+
+  // Grade Rubric execution state
+  const [gradingEditMode, setGradingEditMode] = useState(false);
+  const [gradingEdits, setGradingEdits] = useState({});
+  const [gradingRunResults, setGradingRunResults] = useState(null);
+  const [gradingRunning, setGradingRunning] = useState(false);
+  const [gradingRunError, setGradingRunError] = useState(null);
+  const [gradingCustomInput, setGradingCustomInput] = useState("");
+  const [gradingCustomRunning, setGradingCustomRunning] = useState(false);
+  const [gradingCustomResult, setGradingCustomResult] = useState(null);
+  const [gradingCustomError, setGradingCustomError] = useState(null);
+  const [gradingCustomInputFile, setGradingCustomInputFile] = useState({ inputFileName: "", inputFileContentBase64: "" });
+  const [gradingRunTab, setGradingRunTab] = useState("saved");
 
   // Group assignment state
   const [groups, setGroups] = useState([]);
@@ -126,7 +185,8 @@ export default function GradingWorkspacePage() {
   }, [openMenuUserId]);
 
   useEffect(() => {
-    if (!openSolution) { setSolutionFiles([]); setActiveSolutionFile(0); return; }
+    if (!openSolution) { setSolutionFiles([]); setActiveSolutionFile(0); resetSolutionExecState(); return; }
+    resetSolutionExecState();
     const userId = openSolution.submissionId.userId;
     fetch(`${API_BASE}/submission/files/${assignmentId}/${userId}`)
         .then((res) => res.json())
@@ -166,7 +226,8 @@ export default function GradingWorkspacePage() {
   }, [attachRubricOpen, user?.id]);
 
   useEffect(() => {
-    if (!gradingStudent) { setGradingFiles([]); setActiveGradingFile(0); return; }
+    if (!gradingStudent) { setGradingFiles([]); setActiveGradingFile(0); resetGradingExecState(); return; }
+    resetGradingExecState();
     fetch(`${API_BASE}/submission/files/${assignmentId}/${gradingStudent}`)
         .then((res) => res.json())
         .then((data) => { setGradingFiles(Array.isArray(data) ? data : []); setActiveGradingFile(0); })
@@ -194,6 +255,16 @@ export default function GradingWorkspacePage() {
         .then((data) => setRubricTotals((prev) => ({ ...prev, [gradingStudent]: data })))
         .catch((err) => console.error(err));
   }, [gradingStudent, assignedRubric, assignmentId]);
+
+  const isSubmissionLate = (submission) => {
+    if (!submission?.submittedAt || !assignment?.dueDate) return false;
+    return new Date(submission.submittedAt) > new Date(assignment.dueDate);
+  };
+
+  const formatTimestamp = (ts) => {
+    if (!ts) return null;
+    return new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
 
   const handleOpenLinkDialog = (item) => { setLinkingItem(item); setLinkedTestCaseIds(itemLinkMap[item.id] || []); };
   const handleToggleTestCaseLink = (tcId) => { setLinkedTestCaseIds((prev) => prev.includes(tcId) ? prev.filter((id) => id !== tcId) : [...prev, tcId]); };
@@ -550,6 +621,7 @@ export default function GradingWorkspacePage() {
     if (nextIndex >= 0 && nextIndex < submissions.length) {
       setGradingStudent(submissions[nextIndex].submissionId.userId);
       setRubricScores({});
+      resetGradingExecState();
     }
   };
 
@@ -558,10 +630,129 @@ export default function GradingWorkspacePage() {
     const nextIndex = currentIndex + direction;
     if (nextIndex >= 0 && nextIndex < submissions.length) {
       setOpenSolution(submissions[nextIndex]);
+      resetSolutionExecState();
     }
   };
 
   const getResultsForStudent = (userId) => testResults.filter((r) => r.submission?.submissionId?.userId === userId);
+
+  const resetSolutionExecState = () => {
+    setSolutionEditMode(false); setSolutionEdits({}); setSolutionRunResults(null);
+    setSolutionRunError(null); setSolutionCustomInput(""); setSolutionCustomResult(null);
+    setSolutionCustomError(null); setSolutionCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
+    setSolutionRunTab("saved");
+  };
+
+  const resetGradingExecState = () => {
+    setGradingEditMode(false); setGradingEdits({}); setGradingRunResults(null);
+    setGradingRunError(null); setGradingCustomInput(""); setGradingCustomResult(null);
+    setGradingCustomError(null); setGradingCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
+    setGradingRunTab("saved");
+  };
+
+  const buildFilesPayload = (files, edits) =>
+    files.map((f, i) => ({
+      fileName: f.fileName,
+      fileContent: edits[i] !== undefined ? encodeUtf8ToBase64(edits[i]) : f.fileContent,
+    }));
+
+  // Fall back to openSolution.fileContent when submission_files table is empty
+  // (happens for code-editor submissions that use the save-code endpoint)
+  const getEffectiveSolutionFiles = () => {
+    if (solutionFiles.length > 0) return solutionFiles;
+    if (openSolution?.fileContent) return [{ fileName: openSolution.fileName || "solution", fileContent: openSolution.fileContent }];
+    return [];
+  };
+
+  const getEffectiveGradingFiles = (gradingSubmission) => {
+    if (gradingFiles.length > 0) return gradingFiles;
+    if (gradingSubmission?.fileContent) return [{ fileName: gradingSubmission.fileName || "solution", fileContent: gradingSubmission.fileContent }];
+    return [];
+  };
+
+  const handleSolutionRunSaved = async () => {
+    const userId = openSolution.submissionId.userId;
+    setSolutionRunning(true); setSolutionRunResults(null); setSolutionRunError(null);
+    try {
+      if (Object.keys(solutionEdits).length > 0) {
+        const files = getEffectiveSolutionFiles();
+        const res = await fetch(`${API_BASE}/testcase/preview/${assignmentId}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: buildFilesPayload(files, solutionEdits), testCases: testCases.map(tc => ({ label: tc.label, input: tc.input, expectedOutput: tc.expectedOutput })) }),
+        });
+        if (!res.ok) throw new Error();
+        setSolutionRunResults(await res.json());
+      } else {
+        const res = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${userId}`, { method: "POST" });
+        if (!res.ok) throw new Error();
+        const raw = await res.json();
+        setSolutionRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+      }
+    } catch { setSolutionRunError("Failed to run tests."); }
+    finally { setSolutionRunning(false); }
+  };
+
+  const handleSolutionRunCustom = async () => {
+    const userId = openSolution.submissionId.userId;
+    setSolutionCustomRunning(true); setSolutionCustomResult(null); setSolutionCustomError(null);
+    try {
+      const fileArgs = solutionCustomInputFile.inputFileName ? { inputFileName: solutionCustomInputFile.inputFileName, inputFileContentBase64: solutionCustomInputFile.inputFileContentBase64 } : {};
+      const tc = [{ label: "Custom", input: solutionCustomInput || null, expectedOutput: "" }];
+      const edited = Object.keys(solutionEdits).length > 0;
+      const files = getEffectiveSolutionFiles();
+      const res = await fetch(
+        edited ? `${API_BASE}/testcase/preview/${assignmentId}` : `${API_BASE}/testcase/run/custom/${assignmentId}/${userId}`,
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(edited ? { files: buildFilesPayload(files, solutionEdits), testCases: tc, ...fileArgs } : { testCases: tc, ...fileArgs }) }
+      );
+      if (!res.ok) throw new Error();
+      const results = await res.json();
+      setSolutionCustomResult(results[0] ?? null);
+    } catch { setSolutionCustomError("Failed to run."); }
+    finally { setSolutionCustomRunning(false); }
+  };
+
+  const handleGradingRunSaved = async () => {
+    setGradingRunning(true); setGradingRunResults(null); setGradingRunError(null);
+    try {
+      const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
+      if (Object.keys(gradingEdits).length > 0) {
+        const files = getEffectiveGradingFiles(gradingSubmission);
+        const res = await fetch(`${API_BASE}/testcase/preview/${assignmentId}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: buildFilesPayload(files, gradingEdits), testCases: testCases.map(tc => ({ label: tc.label, input: tc.input, expectedOutput: tc.expectedOutput })) }),
+        });
+        if (!res.ok) throw new Error();
+        setGradingRunResults(await res.json());
+      } else {
+        const res = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${gradingStudent}`, { method: "POST" });
+        if (!res.ok) throw new Error();
+        const raw = await res.json();
+        setGradingRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+      }
+    } catch { setGradingRunError("Failed to run tests."); }
+    finally { setGradingRunning(false); }
+  };
+
+  const handleGradingRunCustom = async () => {
+    setGradingCustomRunning(true); setGradingCustomResult(null); setGradingCustomError(null);
+    try {
+      const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
+      const fileArgs = gradingCustomInputFile.inputFileName ? { inputFileName: gradingCustomInputFile.inputFileName, inputFileContentBase64: gradingCustomInputFile.inputFileContentBase64 } : {};
+      const tc = [{ label: "Custom", input: gradingCustomInput || null, expectedOutput: "" }];
+      const edited = Object.keys(gradingEdits).length > 0;
+      const files = getEffectiveGradingFiles(gradingSubmission);
+      const res = await fetch(
+        edited ? `${API_BASE}/testcase/preview/${assignmentId}` : `${API_BASE}/testcase/run/custom/${assignmentId}/${gradingStudent}`,
+        { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(edited ? { files: buildFilesPayload(files, gradingEdits), testCases: tc, ...fileArgs } : { testCases: tc, ...fileArgs }) }
+      );
+      if (!res.ok) throw new Error();
+      const results = await res.json();
+      setGradingCustomResult(results[0] ?? null);
+    } catch { setGradingCustomError("Failed to run."); }
+    finally { setGradingCustomRunning(false); }
+  };
 
   if (loading) return <div className="p-8"><p className="text-zinc-500 dark:text-zinc-400">Loading...</p></div>;
 
@@ -674,12 +865,17 @@ export default function GradingWorkspacePage() {
                                     <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
                                   </div>
                                   <div>
-                                    <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
-                                    {group && groupColor && (
-                                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: groupColor.bg, color: groupColor.text, border: `1px solid ${groupColor.border}` }}>
-                                          <Users className="w-3 h-3" />{group.name}
-                                        </span>
-                                    )}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
+                                      {isSubmissionLate(s) && (
+                                          <span className="px-1.5 py-0.5 text-xs font-semibold rounded-full bg-red-600/15 text-red-400 border border-red-600/25">Late</span>
+                                      )}
+                                      {group && groupColor && (
+                                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: groupColor.bg, color: groupColor.text, border: `1px solid ${groupColor.border}` }}>
+                                            <Users className="w-3 h-3" />{group.name}
+                                          </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -1110,8 +1306,18 @@ export default function GradingWorkspacePage() {
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col">
                   <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
                     <div>
-                      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{openSolution.user?.firstName} {openSolution.user?.lastName}</h2>
-                      <p className="text-zinc-500 dark:text-zinc-400 text-sm">{openSolution.user?.cwid ? `(${openSolution.user.cwid})` : ""}</p>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{openSolution.user?.firstName} {openSolution.user?.lastName}</h2>
+                        {isSubmissionLate(openSolution) && (
+                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-600/15 text-red-400 border border-red-600/25">Late</span>
+                        )}
+                      </div>
+                      <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+                        {openSolution.user?.cwid ? `(${openSolution.user.cwid})` : ""}
+                        {openSolution.submittedAt && (
+                            <span className="ml-2">Submitted {formatTimestamp(openSolution.submittedAt)}</span>
+                        )}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-2 mr-3">
@@ -1151,12 +1357,87 @@ export default function GradingWorkspacePage() {
                         ))}
                       </div>
                   )}
-                  <div className="p-6 overflow-auto flex-1">
-                    <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-50 dark:bg-zinc-800 rounded-xl p-4">
-                      {solutionFiles.length > 0
-                          ? (solutionFiles[activeSolutionFile]?.fileContent ? atob(solutionFiles[activeSolutionFile].fileContent) : "No file content available.")
-                          : (openSolution.fileContent ? atob(openSolution.fileContent) : "No file content available.")}
-                    </pre>
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 shrink-0 bg-zinc-50 dark:bg-zinc-800/60">
+                      <button
+                          type="button"
+                          onClick={() => setSolutionEditMode(m => !m)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionEditMode ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`}
+                      >
+                        {solutionEditMode ? "Exit Edit" : "Edit"}
+                      </button>
+                      {solutionEditMode && <span className="text-xs text-amber-400 font-medium">Edit Mode — changes are temporary</span>}
+                      <div className="flex-1" />
+                      <button type="button" onClick={() => setSolutionRunTab("saved")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "saved" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "saved" ? { background: "#862633" } : {}}>Run Tests</button>
+                      <button type="button" onClick={() => setSolutionRunTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                    </div>
+                    {/* Monaco */}
+                    <div className="flex-1 min-h-0 overflow-hidden">
+                      <MonacoEditor
+                          height="100%"
+                          language={detectLanguage(solutionFiles[activeSolutionFile]?.fileName || openSolution?.fileName)}
+                          theme="vs-dark"
+                          value={solutionEdits[activeSolutionFile] !== undefined ? solutionEdits[activeSolutionFile] : decodeBase64ToUtf8(solutionFiles.length > 0 ? solutionFiles[activeSolutionFile]?.fileContent : openSolution?.fileContent)}
+                          onChange={(val) => {
+                            if (!solutionEditMode) return;
+                            setSolutionEdits(prev => ({ ...prev, [activeSolutionFile]: val ?? "" }));
+                          }}
+                          options={{ readOnly: !solutionEditMode, minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 13, automaticLayout: true }}
+                      />
+                    </div>
+                    {/* Run panel */}
+                    <div className="shrink-0 border-t border-zinc-700 bg-zinc-950" style={{ height: "220px" }}>
+                      {solutionRunTab === "saved" ? (
+                          <div className="h-full flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-zinc-800">
+                              <span className="text-xs text-zinc-400 uppercase tracking-wider">Test Cases ({testCases.length}){Object.keys(solutionEdits).length > 0 && <span className="ml-2 text-amber-400 normal-case">· edited code</span>}</span>
+                              <button type="button" onClick={handleSolutionRunSaved} disabled={solutionRunning || testCases.length === 0} className="px-3 py-1 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-colors" style={{ background: "#862633" }}>
+                                {solutionRunning ? "Running..." : "Run All"}
+                              </button>
+                            </div>
+                            {solutionRunError && <p className="text-red-400 text-xs px-4 py-1">{solutionRunError}</p>}
+                            <div className="flex-1 overflow-auto px-4 py-2 space-y-1">
+                              {solutionRunResults === null && !solutionRunning && <p className="text-xs text-zinc-500">Click Run All to execute tests against this submission.</p>}
+                              {solutionRunResults?.map((r, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-xs">
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                    <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
+                                    <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
+                                    {!r.passed && <span className="text-zinc-500 font-mono truncate">got: {r.actualOutput || "(no output)"}</span>}
+                                  </div>
+                              ))}
+                            </div>
+                          </div>
+                      ) : (
+                          <div className="h-full flex flex-col overflow-hidden p-3 gap-2">
+                            <textarea
+                                value={solutionCustomInput}
+                                onChange={(e) => setSolutionCustomInput(e.target.value)}
+                                placeholder="Enter stdin input..."
+                                className="flex-1 min-h-0 resize-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-300 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                            />
+                            {isFileMode && (
+                                <div className="flex items-center gap-2 p-2 bg-zinc-800 border border-zinc-700 rounded-lg shrink-0">
+                                  <span className="text-xs text-zinc-400 shrink-0">Input file (optional):</span>
+                                  <input type="file" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const b64 = ev.target.result.split(",")[1] ?? ""; setSolutionCustomInputFile({ inputFileName: f.name, inputFileContentBase64: b64 }); }; r.readAsDataURL(f); }} className="text-xs text-zinc-300 flex-1" />
+                                  {solutionCustomInputFile.inputFileName && <span className="text-xs text-zinc-500 shrink-0">{solutionCustomInputFile.inputFileName}</span>}
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button type="button" onClick={handleSolutionRunCustom} disabled={solutionCustomRunning} className="px-3 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-colors" style={{ background: "#862633" }}>
+                                {solutionCustomRunning ? "Running..." : "Run"}
+                              </button>
+                              {solutionCustomError && <span className="text-red-400 text-xs">{solutionCustomError}</span>}
+                            </div>
+                            {solutionCustomResult && (
+                                <div className="flex-1 min-h-0 overflow-auto">
+                                  <pre className="text-xs text-zinc-300 font-mono whitespace-pre-wrap bg-zinc-800 rounded-lg p-2 h-full">{solutionCustomResult.actualOutput || "(no output)"}</pre>
+                                </div>
+                            )}
+                          </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1198,9 +1479,17 @@ export default function GradingWorkspacePage() {
                   {/* Header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
                     <div>
-                      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Grade Rubric</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Grade Rubric</h2>
+                        {isSubmissionLate(gradingSubmission) && (
+                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-600/15 text-red-400 border border-red-600/25">Late</span>
+                        )}
+                      </div>
                       <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">
                         {gradingSubmission?.user?.firstName} {gradingSubmission?.user?.lastName}{gradingSubmission?.user?.cwid ? ` (${gradingSubmission.user.cwid})` : ""} • {assignedRubric.name}
+                        {gradingSubmission?.submittedAt && (
+                            <span className="ml-2">• Submitted {formatTimestamp(gradingSubmission.submittedAt)}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1248,12 +1537,85 @@ export default function GradingWorkspacePage() {
                             </p>
                           </div>
                       )}
-                      <div className="flex-1 overflow-auto p-5">
-                        <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-50 dark:bg-zinc-800 rounded-xl p-4 min-h-full">
-                          {gradingFiles.length > 0
-                              ? (gradingFiles[activeGradingFile]?.fileContent ? atob(gradingFiles[activeGradingFile].fileContent) : "No file content available.")
-                              : (gradingSubmission?.fileContent ? atob(gradingSubmission.fileContent) : "No file content available.")}
-                        </pre>
+                      {/* Toolbar */}
+                      <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 shrink-0 bg-zinc-50 dark:bg-zinc-800/60">
+                        <button
+                            type="button"
+                            onClick={() => setGradingEditMode(m => !m)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${gradingEditMode ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`}
+                        >
+                          {gradingEditMode ? "Exit Edit" : "Edit"}
+                        </button>
+                        {gradingEditMode && <span className="text-xs text-amber-400 font-medium">Edit Mode — temporary</span>}
+                        <div className="flex-1" />
+                        <button type="button" onClick={() => setGradingRunTab("saved")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${gradingRunTab === "saved" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={gradingRunTab === "saved" ? { background: "#862633" } : {}}>Run Tests</button>
+                        <button type="button" onClick={() => setGradingRunTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${gradingRunTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={gradingRunTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                      </div>
+                      {/* Monaco */}
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        <MonacoEditor
+                            height="100%"
+                            language={detectLanguage(gradingFiles[activeGradingFile]?.fileName || gradingSubmission?.fileName)}
+                            theme="vs-dark"
+                            value={gradingEdits[activeGradingFile] !== undefined ? gradingEdits[activeGradingFile] : decodeBase64ToUtf8(gradingFiles.length > 0 ? gradingFiles[activeGradingFile]?.fileContent : gradingSubmission?.fileContent)}
+                            onChange={(val) => {
+                              if (!gradingEditMode) return;
+                              setGradingEdits(prev => ({ ...prev, [activeGradingFile]: val ?? "" }));
+                            }}
+                            options={{ readOnly: !gradingEditMode, minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 13, automaticLayout: true }}
+                        />
+                      </div>
+                      {/* Run panel */}
+                      <div className="shrink-0 border-t border-zinc-700 bg-zinc-950" style={{ height: "200px" }}>
+                        {gradingRunTab === "saved" ? (
+                            <div className="h-full flex flex-col overflow-hidden">
+                              <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-zinc-800">
+                                <span className="text-xs text-zinc-400 uppercase tracking-wider">Test Cases ({testCases.length}){Object.keys(gradingEdits).length > 0 && <span className="ml-2 text-amber-400 normal-case">· edited code</span>}</span>
+                                <button type="button" onClick={handleGradingRunSaved} disabled={gradingRunning || testCases.length === 0} className="px-3 py-1 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-colors" style={{ background: "#862633" }}>
+                                  {gradingRunning ? "Running..." : "Run All"}
+                                </button>
+                              </div>
+                              {gradingRunError && <p className="text-red-400 text-xs px-4 py-1">{gradingRunError}</p>}
+                              <div className="flex-1 overflow-auto px-4 py-2 space-y-1">
+                                {gradingRunResults === null && !gradingRunning && <p className="text-xs text-zinc-500">Click Run All to execute tests against this submission.</p>}
+                                {gradingRunResults?.map((r, i) => (
+                                    <div key={i} className="flex items-start gap-2 text-xs">
+                                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                      <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
+                                      <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
+                                      {!r.passed && <span className="text-zinc-500 font-mono truncate">got: {r.actualOutput || "(no output)"}</span>}
+                                    </div>
+                                ))}
+                              </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col overflow-hidden p-3 gap-2">
+                              <textarea
+                                  value={gradingCustomInput}
+                                  onChange={(e) => setGradingCustomInput(e.target.value)}
+                                  placeholder="Enter stdin input..."
+                                  className="flex-1 min-h-0 resize-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-300 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                              />
+                              {isFileMode && (
+                                  <div className="flex items-center gap-2 p-2 bg-zinc-800 border border-zinc-700 rounded-lg shrink-0">
+                                    <span className="text-xs text-zinc-400 shrink-0">Input file (optional):</span>
+                                    <input type="file" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const b64 = ev.target.result.split(",")[1] ?? ""; setGradingCustomInputFile({ inputFileName: f.name, inputFileContentBase64: b64 }); }; r.readAsDataURL(f); }} className="text-xs text-zinc-300 flex-1" />
+                                    {gradingCustomInputFile.inputFileName && <span className="text-xs text-zinc-500 shrink-0">{gradingCustomInputFile.inputFileName}</span>}
+                                  </div>
+                              )}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button type="button" onClick={handleGradingRunCustom} disabled={gradingCustomRunning} className="px-3 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition-colors" style={{ background: "#862633" }}>
+                                  {gradingCustomRunning ? "Running..." : "Run"}
+                                </button>
+                                {gradingCustomError && <span className="text-red-400 text-xs">{gradingCustomError}</span>}
+                              </div>
+                              {gradingCustomResult && (
+                                  <div className="flex-1 min-h-0 overflow-auto">
+                                    <pre className="text-xs text-zinc-300 font-mono whitespace-pre-wrap bg-zinc-800 rounded-lg p-2 h-full">{gradingCustomResult.actualOutput || "(no output)"}</pre>
+                                  </div>
+                              )}
+                            </div>
+                        )}
                       </div>
                     </div>
 
