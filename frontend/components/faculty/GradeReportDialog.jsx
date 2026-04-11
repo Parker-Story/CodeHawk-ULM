@@ -69,10 +69,10 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
   const completionRate = () => {
     const total = visibleStudents.length * assignments.length;
     if (total === 0) return "—";
-    const submitted = visibleStudents.filter(cu =>
-        assignments.some(a => submissionMap[cu.user.id]?.[a.id])
-    ).length;
-    return Math.round((submitted / visibleStudents.length) * 100) + "%";
+    const submitted = visibleStudents.reduce((count, cu) =>
+        count + assignments.filter(a => submissionMap[cu.user.id]?.[a.id]).length, 0
+    );
+    return Math.round((submitted / total) * 100) + "%";
   };
 
   const ungradedCount = () => {
@@ -85,24 +85,60 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
   };
 
   const handleDownloadCSV = () => {
+    const quoteField = (val) => {
+      const str = String(val ?? "");
+      return str.includes(",") || str.includes('"') || str.includes("\n")
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+    };
     const headers = ["Student", ...assignments.map(a => a.title), "Average"];
     const rows = visibleStudents.map(cu => {
       const scores = assignments.map(a => {
         const sub = submissionMap[cu.user.id]?.[a.id];
-        return sub?.score ?? "";
+        if (!sub) return "Missing";
+        if (sub.score === null || sub.score === undefined) return "Ungraded";
+        return sub.score;
       });
-      const numericScores = scores.filter(s => s !== "");
+      const numericScores = scores.filter(s => typeof s === "number");
       const avg = numericScores.length > 0
           ? (numericScores.reduce((a, b) => a + b, 0) / numericScores.length).toFixed(1) + "%"
           : "—";
       return [`${cu.user.firstName} ${cu.user.lastName}`, ...scores, avg];
     });
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const csv = [headers, ...rows].map(r => r.map(quoteField).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `grade_report_${crn}.csv`; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const highestScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    );
+    if (scores.length === 0) return "—";
+    return Math.max(...scores) + "%";
+  };
+
+  const lowestScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    );
+    if (scores.length === 0) return "—";
+    return Math.min(...scores) + "%";
+  };
+
+  const medianScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    ).sort((a, b) => a - b);
+    if (scores.length === 0) return "—";
+    const mid = Math.floor(scores.length / 2);
+    const median = scores.length % 2 === 0
+        ? (scores[mid - 1] + scores[mid]) / 2
+        : scores[mid];
+    return median.toFixed(1) + "%";
   };
 
   const scoreColor = (score) => {
@@ -124,6 +160,9 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                   { label: "Class Average", value: classAverage() },
                   { label: "Completion Rate", value: completionRate() },
                   { label: "Ungraded", value: ungradedCount() },
+                  { label: "Highest Score", value: highestScore() },
+                  { label: "Lowest Score", value: lowestScore() },
+                  { label: "Median Score", value: medianScore() },
                 ].map(({ label, value }) => (
                     <div key={label} className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 text-center shadow-sm">
                       <p className="text-zinc-500 dark:text-zinc-400 text-sm">{label}</p>
