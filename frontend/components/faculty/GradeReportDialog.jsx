@@ -111,6 +111,34 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
     URL.revokeObjectURL(url);
   };
 
+  const highestScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    );
+    if (scores.length === 0) return "—";
+    return Math.max(...scores) + "%";
+  };
+
+  const lowestScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    );
+    if (scores.length === 0) return "—";
+    return Math.min(...scores) + "%";
+  };
+
+  const medianScore = () => {
+    const scores = visibleStudents.flatMap(cu =>
+        assignments.map(a => submissionMap[cu.user.id]?.[a.id]?.score).filter(s => s !== null && s !== undefined)
+    ).sort((a, b) => a - b);
+    if (scores.length === 0) return "—";
+    const mid = Math.floor(scores.length / 2);
+    const median = scores.length % 2 === 0
+        ? (scores[mid - 1] + scores[mid]) / 2
+        : scores[mid];
+    return median.toFixed(1) + "%";
+  };
+
   const scoreColor = (score) => {
     if (score === null || score === undefined || score === "—") return "text-zinc-500";
     if (score >= 90) return "text-green-400";
@@ -130,6 +158,9 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
                   { label: "Class Average", value: classAverage() },
                   { label: "Completion Rate", value: completionRate() },
                   { label: "Ungraded", value: ungradedCount() },
+                  { label: "Highest Score", value: highestScore() },
+                  { label: "Lowest Score", value: lowestScore() },
+                  { label: "Median Score", value: medianScore() },
                 ].map(({ label, value }) => (
                     <div key={label} className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 text-center shadow-sm">
                       <p className="text-zinc-500 dark:text-zinc-400 text-sm">{label}</p>
