@@ -95,9 +95,11 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
     const rows = visibleStudents.map(cu => {
       const scores = assignments.map(a => {
         const sub = submissionMap[cu.user.id]?.[a.id];
-        return sub?.score ?? "";
+        if (!sub) return "Missing";
+        if (sub.score === null || sub.score === undefined) return "Ungraded";
+        return sub.score;
       });
-      const numericScores = scores.filter(s => s !== "");
+      const numericScores = scores.filter(s => typeof s === "number");
       const avg = numericScores.length > 0
           ? (numericScores.reduce((a, b) => a + b, 0) / numericScores.length).toFixed(1) + "%"
           : "—";
