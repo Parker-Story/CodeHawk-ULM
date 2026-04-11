@@ -69,10 +69,10 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
   const completionRate = () => {
     const total = visibleStudents.length * assignments.length;
     if (total === 0) return "—";
-    const submitted = visibleStudents.filter(cu =>
-        assignments.some(a => submissionMap[cu.user.id]?.[a.id])
-    ).length;
-    return Math.round((submitted / visibleStudents.length) * 100) + "%";
+    const submitted = visibleStudents.reduce((count, cu) =>
+        count + assignments.filter(a => submissionMap[cu.user.id]?.[a.id]).length, 0
+    );
+    return Math.round((submitted / total) * 100) + "%";
   };
 
   const ungradedCount = () => {
@@ -85,6 +85,12 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
   };
 
   const handleDownloadCSV = () => {
+    const quoteField = (val) => {
+      const str = String(val ?? "");
+      return str.includes(",") || str.includes('"') || str.includes("\n")
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+    };
     const headers = ["Student", ...assignments.map(a => a.title), "Average"];
     const rows = visibleStudents.map(cu => {
       const scores = assignments.map(a => {
@@ -97,7 +103,7 @@ export default function GradeReportDialog({ isOpen, onClose, crn }) {
           : "—";
       return [`${cu.user.firstName} ${cu.user.lastName}`, ...scores, avg];
     });
-    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const csv = [headers, ...rows].map(r => r.map(quoteField).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
