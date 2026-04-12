@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link, MoreVertical, FileInput, Users, UserPlus, ChevronRight, Shuffle } from "lucide-react";
+import { ArrowLeft, FileText, X, Plus, Trash2, Eye, EyeOff, ChevronDown, ChevronUp, FlaskConical, ClipboardList, CheckCircle, Link, MoreVertical, FileInput, Users, UserPlus, ChevronRight, Shuffle, BarChart3 } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
+import AssignmentReportDialog from "@/components/faculty/AssignmentReportDialog";
 import dynamic from "next/dynamic";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -73,6 +74,7 @@ export default function GradingWorkspacePage() {
   const [itemLinkMap, setItemLinkMap] = useState({});
   const [plagiarismResults, setPlagiarismResults] = useState(null);
   const [plagiarismOpen, setPlagiarismOpen] = useState(false);
+  const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
   const [runningPlagiarism, setRunningPlagiarism] = useState(false);
   const [expandedPair, setExpandedPair] = useState(null);
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
@@ -805,6 +807,10 @@ export default function GradingWorkspacePage() {
                     <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${assignment?.scoresVisible ? "translate-x-6" : "translate-x-1"}`} />
                   </button>
                 </div>
+                <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+                <button type="button" onClick={() => setAssignmentReportOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
+                  <BarChart3 className="w-4 h-4" /> Assignment Report
+                </button>
                 <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
                 {plagiarismResults && (
                     <button type="button" onClick={() => setPlagiarismOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
@@ -1900,6 +1906,14 @@ export default function GradingWorkspacePage() {
             <button type="button" onClick={() => setImportSuiteOpen(false)} className="w-full py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
           </div>
         </Dialog>
+
+        <AssignmentReportDialog
+          isOpen={assignmentReportOpen}
+          onClose={() => setAssignmentReportOpen(false)}
+          assignment={assignment}
+          crn={crn}
+          submissions={submissions}
+        />
       </div>
   );
 }
