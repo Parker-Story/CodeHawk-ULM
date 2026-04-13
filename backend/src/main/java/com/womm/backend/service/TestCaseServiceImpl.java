@@ -22,6 +22,7 @@ public class TestCaseServiceImpl implements TestCaseService {
     private final SubmissionRepository submissionRepository;
     private final SubmissionFileRepository submissionFileRepository;
     private final CodeExecutionService codeExecutionService;
+    private final AssignmentRubricRepository assignmentRubricRepository;
 
     public TestCaseServiceImpl(
             TestCaseRepository testCaseRepository,
@@ -29,13 +30,15 @@ public class TestCaseServiceImpl implements TestCaseService {
             AssignmentRepository assignmentRepository,
             SubmissionRepository submissionRepository,
             SubmissionFileRepository submissionFileRepository,
-            CodeExecutionService codeExecutionService) {
+            CodeExecutionService codeExecutionService,
+            AssignmentRubricRepository assignmentRubricRepository) {
         this.testCaseRepository = testCaseRepository;
         this.testResultRepository = testResultRepository;
         this.assignmentRepository = assignmentRepository;
         this.submissionRepository = submissionRepository;
         this.submissionFileRepository = submissionFileRepository;
         this.codeExecutionService = codeExecutionService;
+        this.assignmentRubricRepository = assignmentRubricRepository;
     }
 
     /** Returns all submission files as [fileName, fileContent] pairs for multi-file execution. */
@@ -123,10 +126,15 @@ public class TestCaseServiceImpl implements TestCaseService {
             results.add(testResultRepository.save(result));
         }
 
-        long passed = results.stream().filter(TestResult::isPassed).count();
-        int score = testCases.isEmpty() ? 0 : (int) Math.round((double) passed / testCases.size() * 100);
-        submission.setScore(score);
-        submissionRepository.save(submission);
+        // Only update submission.score from the test pass rate when there is no rubric.
+        // When a rubric is attached, the rubric calculation is the source of truth for scoring.
+        boolean hasRubric = assignmentRubricRepository.findByAssignmentId(assignmentId).isPresent();
+        if (!hasRubric) {
+            long passed = results.stream().filter(TestResult::isPassed).count();
+            int score = testCases.isEmpty() ? 0 : (int) Math.round((double) passed / testCases.size() * 100);
+            submission.setScore(score);
+            submissionRepository.save(submission);
+        }
 
         return results;
     }
