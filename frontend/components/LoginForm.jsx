@@ -56,7 +56,7 @@ export default function LoginForm() {
       alert("Passwords do not match.");
       return;
     }
-    await fetch(`${API_BASE}/api/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -68,6 +68,11 @@ export default function LoginForm() {
         role: isStudent ? "STUDENT" : isTa ? "TA" : "FACULTY"
       })
     });
+    if (!res.ok) {
+      const msg = await res.text();
+      alert(msg || "Registration failed. Please try again.");
+      return;
+    }
     setMode("login");
     setSelectedRole(null);
   };

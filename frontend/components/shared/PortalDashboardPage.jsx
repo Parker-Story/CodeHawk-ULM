@@ -7,20 +7,12 @@ import { PORTAL_CONFIG } from "@/lib/portals";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
 
-const DASHBOARD_SIDEBAR = {
-    todo: (
-        <>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">To-do</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm">No tasks have been assigned.</p>
-        </>
-    ),
-};
-
 export default function PortalDashboardPage({ variant }) {
     const config = PORTAL_CONFIG[variant];
     const { user } = useAuth();
     const router = useRouter();
     const [courseUsers, setCourseUsers] = useState([]);
+    const [todoAssignments, setTodoAssignments] = useState([]);
 
     useEffect(() => {
         if (!user?.id) return;
@@ -34,9 +26,56 @@ export default function PortalDashboardPage({ variant }) {
             .catch((err) => console.error("Error loading courses:", err));
     }, [user?.id]);
 
+    useEffect(() => {
+        if (variant !== "student" || courseUsers.length === 0) return;
+        Promise.all(
+            courseUsers.map((cu) =>
+                fetch(`${API_BASE}/assignment/course/${cu.course.crn}`)
+                    .then((res) => (res.ok ? res.json() : []))
+                    .then((data) =>
+                        (Array.isArray(data) ? data : [])
+                            .filter((a) => a.published)
+                            .map((a) => ({ ...a, courseName: cu.course.courseAbbreviation }))
+                    )
+                    .catch(() => [])
+            )
+        ).then((results) => {
+            const all = results.flat().filter((a) => a.dueDate);
+            all.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            setTodoAssignments(all);
+        });
+    }, [courseUsers, variant]);
+
     if (!config?.dashboard) return null;
     const { title, showAddCourse, sidebarKey } = config.dashboard;
-    const sidebar = sidebarKey ? DASHBOARD_SIDEBAR[sidebarKey] : undefined;
+
+    const formatDueDate = (d) =>
+        new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const isOverdue = (d) => new Date() > new Date(d);
+
+    const sidebar = sidebarKey === "todo" ? (
+        <>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-3">To-do</h2>
+            {todoAssignments.length === 0 ? (
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm">No upcoming assignments.</p>
+            ) : (
+                <div className="space-y-2">
+                    {todoAssignments.map((a) => (
+                        <div
+                            key={`${a.id}-${a.courseName}`}
+                            className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2.5"
+                        >
+                            <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{a.title}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{a.courseName}</p>
+                            <p className={`text-xs font-medium mt-1 ${isOverdue(a.dueDate) ? "text-red-400" : "text-zinc-400 dark:text-zinc-500"}`}>
+                                {isOverdue(a.dueDate) ? "Overdue — " : "Due "}{formatDueDate(a.dueDate)}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </>
+    ) : sidebarKey ? undefined : undefined;
 
     const handleCourseClick = (courseUser) => {
         if (courseUser.courseRole === "TA") {

@@ -25,8 +25,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public User register(@RequestBody RegisterRequest request) {
-        return userService.register(request);
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        try {
+            return ResponseEntity.ok(userService.register(request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/change-password")
