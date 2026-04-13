@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for caching)
-COPY requirements.txt .
+COPY ai/requirements.txt .
 
 # Install Python deps
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the app
-COPY . .
+COPY ai/ .
 
 # Expose port (Render will override with $PORT)
 EXPOSE 8000
