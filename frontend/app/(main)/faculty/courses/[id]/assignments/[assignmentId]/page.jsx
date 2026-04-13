@@ -624,20 +624,20 @@ export default function GradingWorkspacePage() {
   };
 
   const navigateStudent = (direction) => {
-    const currentIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
+    const currentIndex = displayedSubmissions.findIndex(s => s.submissionId.userId === gradingStudent);
     const nextIndex = currentIndex + direction;
-    if (nextIndex >= 0 && nextIndex < submissions.length) {
-      setGradingStudent(submissions[nextIndex].submissionId.userId);
+    if (nextIndex >= 0 && nextIndex < displayedSubmissions.length) {
+      setGradingStudent(displayedSubmissions[nextIndex].submissionId.userId);
       setRubricScores({});
       resetGradingExecState();
     }
   };
 
   const navigateSolutionStudent = (direction) => {
-    const currentIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
+    const currentIndex = displayedSubmissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
     const nextIndex = currentIndex + direction;
-    if (nextIndex >= 0 && nextIndex < submissions.length) {
-      setOpenSolution(submissions[nextIndex]);
+    if (nextIndex >= 0 && nextIndex < displayedSubmissions.length) {
+      setOpenSolution(displayedSubmissions[nextIndex]);
       resetSolutionExecState();
     }
   };
@@ -1310,7 +1310,7 @@ export default function GradingWorkspacePage() {
 
         {/* All modals — unchanged from original */}
         {openSolution && (() => {
-          const solutionIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
+          const solutionIndex = displayedSubmissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
           const solutionUserId = openSolution.submissionId.userId;
           return (
               <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -1342,8 +1342,8 @@ export default function GradingWorkspacePage() {
                       <button type="button" onClick={() => navigateSolutionStudent(-1)} disabled={solutionIndex <= 0} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
                         <ChevronUp className="w-5 h-5" />
                       </button>
-                      <span className="text-zinc-500 text-xs">{solutionIndex + 1} / {submissions.length}</span>
-                      <button type="button" onClick={() => navigateSolutionStudent(1)} disabled={solutionIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                      <span className="text-zinc-500 text-xs">{solutionIndex + 1} / {displayedSubmissions.length}</span>
+                      <button type="button" onClick={() => navigateSolutionStudent(1)} disabled={solutionIndex >= displayedSubmissions.length - 1} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
                         <ChevronDown className="w-5 h-5" />
                       </button>
                       <div className="w-px h-5 bg-zinc-700 mx-1" />
@@ -1481,7 +1481,7 @@ export default function GradingWorkspacePage() {
         {/* Rubric Grading Panel */}
         {gradingStudent && assignedRubric && (() => {
           const gradingSubmission = submissions.find(s => s.submissionId.userId === gradingStudent);
-          const gradingIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
+          const gradingIndex = displayedSubmissions.findIndex(s => s.submissionId.userId === gradingStudent);
           return (
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-3">
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-[1600px] h-[95vh] flex flex-col">
@@ -1506,8 +1506,8 @@ export default function GradingWorkspacePage() {
                       <button type="button" onClick={() => navigateStudent(-1)} disabled={gradingIndex <= 0} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
                         <ChevronUp className="w-5 h-5" />
                       </button>
-                      <span className="text-zinc-500 text-sm">{gradingIndex + 1} / {submissions.length}</span>
-                      <button type="button" onClick={() => navigateStudent(1)} disabled={gradingIndex >= submissions.length - 1} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
+                      <span className="text-zinc-500 text-sm">{gradingIndex + 1} / {displayedSubmissions.length}</span>
+                      <button type="button" onClick={() => navigateStudent(1)} disabled={gradingIndex >= displayedSubmissions.length - 1} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30">
                         <ChevronDown className="w-5 h-5" />
                       </button>
                       <div className="w-px h-5 bg-zinc-700 mx-1" />
