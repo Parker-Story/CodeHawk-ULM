@@ -2,6 +2,8 @@ package com.womm.backend.dto;
 import com.womm.backend.enums.Role;
 
 public class LoginResponse {
+    /** When success is false: {@code USER_NOT_FOUND} or {@code INVALID_PASSWORD}. */
+    private String errorCode;
     private Boolean success;
     private String id;
     private String cwid;
@@ -11,8 +13,9 @@ public class LoginResponse {
     private String email;
 
     public LoginResponse() {}
-    public LoginResponse(Boolean success, String id, String cwid, String firstName, String lastName, Role role, String email) {
+    public LoginResponse(Boolean success, String errorCode, String id, String cwid, String firstName, String lastName, Role role, String email) {
         this.success = success;
+        this.errorCode = errorCode;
         this.id = id;
         this.cwid = cwid;
         this.firstName = firstName;
@@ -21,6 +24,8 @@ public class LoginResponse {
         this.email = email;
     }
 
+    public String getErrorCode() { return errorCode; }
+    public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
     public Boolean getSuccess() { return success; }
     public void setSuccess(Boolean success) { this.success = success; }
     public String getId() { return id; }

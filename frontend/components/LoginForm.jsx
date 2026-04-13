@@ -3,8 +3,33 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, ArrowLeft } from "lucide-react";
+import { BookOpen, Mail, Lock, Eye, EyeOff, Check, GraduationCap, User, ArrowLeft, AlertTriangle, X } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
+
+const INVALID_CREDENTIALS_TITLE = "Invalid username or password";
+const INVALID_CREDENTIALS_MESSAGE =
+  'The entered username or password is not valid. Please try again or use the "Forgot Password". If you need further assistance, please contact the ULM IT Help Desk at (318-342-3333).';
+
+const ULM_HELP_DESK_PHONE = "(318-342-3333)";
+const ULM_HELP_DESK_TEL = "tel:+13183423333";
+
+function DialogMessage({ text }) {
+  const i = text.indexOf(ULM_HELP_DESK_PHONE);
+  if (i < 0) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <a
+        href={ULM_HELP_DESK_TEL}
+        className="font-mono text-sm font-bold tracking-tight text-yellow-600 underline-offset-2 hover:text-yellow-500 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-1 dark:text-yellow-400 dark:hover:text-yellow-300 dark:focus-visible:ring-offset-zinc-900"
+        aria-label="Call ULM IT Help Desk at 318-342-3333"
+      >
+        {ULM_HELP_DESK_PHONE}
+      </a>
+      {text.slice(i + ULM_HELP_DESK_PHONE.length)}
+    </>
+  );
+}
 
 export default function LoginForm() {
   const router = useRouter();
@@ -19,6 +44,9 @@ export default function LoginForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  /** @type {{ title: string; message: string; showCreateCta: boolean } | null} */
+  const [loginDialog, setLoginDialog] = useState(null);
+  const [accountCreatedNotice, setAccountCreatedNotice] = useState(false);
 
   const isStudent = selectedRole === "student";
   const isTa = selectedRole === "ta";
@@ -26,28 +54,67 @@ export default function LoginForm() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json();
-    if (!data.success) {
-      alert("Login failed: Incorrect email or password.");
-      return;
+    setLoginDialog(null);
+    setAccountCreatedNotice(false);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const raw = await response.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        setLoginDialog({
+          title: "Sign-in failed",
+          message: "The server returned an unexpected response. Please try again.",
+          showCreateCta: false,
+        });
+        return;
+      }
+      if (!response.ok) {
+        setLoginDialog({
+          title: "Sign-in failed",
+          message: typeof data.message === "string" ? data.message : `Something went wrong (${response.status}). Please try again.`,
+          showCreateCta: false,
+        });
+        return;
+      }
+
+      const loginOk =
+        (data.success === true || data.success === "true") &&
+        data.id;
+
+      if (loginOk) {
+        setUser({
+          id: data.id,
+          cwid: data.cwid,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+          email: data.email,
+        });
+        const role = data.role?.toUpperCase();
+        if (role === "STUDENT") router.push("/students/dashboard");
+        else if (role === "TA") router.push("/ta/dashboard");
+        else if (role === "FACULTY") router.push("/faculty/dashboard");
+        return;
+      }
+
+      setLoginDialog({
+        title: INVALID_CREDENTIALS_TITLE,
+        message: INVALID_CREDENTIALS_MESSAGE,
+        showCreateCta: false,
+      });
+    } catch {
+      setLoginDialog({
+        title: "Could not reach server",
+        message: "Check your internet connection and that the CodeHawk server is running, then try again.",
+        showCreateCta: false,
+      });
     }
-    setUser({
-      id: data.id,
-      cwid: data.cwid,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role,
-      email: data.email,
-    });
-    const role = data.role?.toUpperCase();
-    if (role === "STUDENT") router.push("/students/dashboard");
-    else if (role === "TA") router.push("/ta/dashboard");
-    else if (role === "FACULTY") router.push("/faculty/dashboard");
   };
 
   const handleRegister = async (e) => {
@@ -73,8 +140,14 @@ export default function LoginForm() {
       alert(msg || "Registration failed. Please try again.");
       return;
     }
-    setMode("login");
+    setPassword("");
+    setConfirmPassword("");
+    setCwid("");
+    setFirstName("");
+    setLastName("");
     setSelectedRole(null);
+    setMode("login");
+    setAccountCreatedNotice(true);
   };
 
   const inputClass = "w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-xl py-3.5 pl-12 pr-4 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/50 focus:border-transparent transition-all duration-200";
@@ -82,6 +155,64 @@ export default function LoginForm() {
   return (
       <div className="min-h-screen bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center p-4">
         <div className="relative w-full max-w-md">
+          {loginDialog && (
+              <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-900/70"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="login-error-title"
+                  aria-describedby="login-error-desc"
+                  onClick={() => setLoginDialog(null)}
+              >
+                <div
+                    className="relative w-full max-w-md border border-zinc-300 bg-white text-zinc-900 shadow-lg dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                    onClick={(ev) => ev.stopPropagation()}
+                >
+                  <div className="flex items-center gap-2 border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/80">
+                    <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" strokeWidth={2.5} aria-hidden />
+                    <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Sign-in error</span>
+                    <button
+                        type="button"
+                        onClick={() => setLoginDialog(null)}
+                        className="ml-auto rounded px-2 py-1 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-white"
+                        aria-label="Dismiss"
+                    >
+                      <X className="h-5 w-5" strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div className="border-l-[3px] border-red-600 pl-3 pr-3 pb-3 pt-3 dark:border-red-500">
+                    <h2 id="login-error-title" className="text-base font-bold text-zinc-900 dark:text-white">
+                      {loginDialog.title}
+                    </h2>
+                    <p id="login-error-desc" className="mt-2 border border-zinc-200 bg-zinc-50 p-3 text-sm leading-snug text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-200">
+                      <DialogMessage text={loginDialog.message} />
+                    </p>
+                    <div className="mt-3 flex flex-col-reverse gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-700 sm:flex-row sm:justify-end">
+                      <button
+                          type="button"
+                          onClick={() => setLoginDialog(null)}
+                          className="w-full border border-zinc-400 bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 sm:w-auto dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                      >
+                        OK
+                      </button>
+                      {loginDialog.showCreateCta && (
+                          <button
+                              type="button"
+                              onClick={() => {
+                                setLoginDialog(null);
+                                setMode("role-select");
+                              }}
+                              className="w-full border border-[#701E29] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 sm:w-auto"
+                              style={{ background: "#862633" }}
+                          >
+                            Create account
+                          </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+          )}
           <div className="relative bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-8 shadow-2xl">
 
             {/* Header */}
@@ -104,7 +235,25 @@ export default function LoginForm() {
 
             {/* LOGIN FORM */}
             {mode === "login" && (
-                <form className="space-y-5" onSubmit={handleLogin}>
+                <>
+                  {accountCreatedNotice && (
+                      <div
+                          className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-50"
+                          role="status"
+                      >
+                        <Check className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} aria-hidden />
+                        <p className="min-w-0 flex-1 text-sm font-bold">Account successfully created!!</p>
+                        <button
+                            type="button"
+                            onClick={() => setAccountCreatedNotice(false)}
+                            className="shrink-0 rounded p-1 text-emerald-700 hover:bg-emerald-200/80 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                            aria-label="Dismiss"
+                        >
+                          <X className="h-4 w-4" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                  )}
+                  <form className="space-y-5" onSubmit={handleLogin}>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 block">Email Address</label>
                     <div className="relative">
@@ -160,11 +309,20 @@ export default function LoginForm() {
                   </button>
                   <p className="text-center text-zinc-500 dark:text-zinc-400">
                     Don&apos;t have an account?{" "}
-                    <button type="button" onClick={() => setMode("role-select")} className="font-medium transition-colors hover:underline focus:outline-none" style={{ color: "#C9A84C" }}>
+                    <button
+                        type="button"
+                        onClick={() => {
+                          setAccountCreatedNotice(false);
+                          setMode("role-select");
+                        }}
+                        className="font-medium transition-colors hover:underline focus:outline-none"
+                        style={{ color: "#C9A84C" }}
+                    >
                       Create account
                     </button>
                   </p>
-                </form>
+                  </form>
+                </>
             )}
 
             {/* ROLE SELECTION */}

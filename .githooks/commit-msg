@@ -1,0 +1,14 @@
+#!/bin/sh
+# Strips common IDE-added trailer lines from commit messages (portable sed).
+# Per-clone: git config core.hooksPath .githooks
+
+msg_file="$1"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+tmp="${msg_file}.strip.$$"
+sed -E \
+  -e '/[Mm]ade-[Ww]ith:.*[Cc]ursor/d' \
+  -e '/[Cc]o-authored-by:.*[Cc]ursor/d' \
+  "$msg_file" > "$tmp" && mv "$tmp" "$msg_file"
+
+exit 0

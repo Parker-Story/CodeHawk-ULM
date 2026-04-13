@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff, Moon, Sun } from "lucide-react";
+import { useState, useRef } from "react";
+import { Moon, Sun } from "lucide-react";
 import ChangePasswordDialog from "@/components/shared/ChangePasswordDialog";
 import Dialog from "@/components/Dialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +24,7 @@ export default function AccountView({
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [showToast, setShowToast] = useState(false);
-  const toastTimeout = useState(null);
+  const toastTimeoutRef = useRef(null);
 
   const openEdit = () => {
     setEditForm({ firstName: user.firstName ?? "", lastName: user.lastName ?? "", email: user.email ?? "" });
@@ -54,8 +54,8 @@ export default function AccountView({
       setUser({ ...user, firstName: editForm.firstName.trim(), lastName: editForm.lastName.trim(), email: editForm.email.trim() });
       setEditOpen(false);
       setShowToast(true);
-      if (toastTimeout.current) clearTimeout(toastTimeout.current);
-      toastTimeout.current = setTimeout(() => setShowToast(false), 3000);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setShowToast(false), 3000);
     } catch (err) {
       setEditError("Something went wrong. Please try again.");
     } finally {
