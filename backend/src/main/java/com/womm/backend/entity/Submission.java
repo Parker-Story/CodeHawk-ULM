@@ -43,6 +43,7 @@ public class Submission {
 
     @Column(name = "ai_confidence")
     private String aiConfidence;
+
     @Column(name = "submitted_at")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime submittedAt;

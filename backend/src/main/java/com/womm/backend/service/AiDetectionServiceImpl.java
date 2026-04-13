@@ -16,7 +16,7 @@ public class AiDetectionServiceImpl implements AiDetectionService {
 
     public AiDetectionServiceImpl(@Value("${ai.service.url}") String aiServiceUrl) {
         this.restTemplate = new RestTemplate();
-        this.aiServiceUrl = aiServiceUrl; // e.g. http://localhost:8000/detect or deployed URL
+        this.aiServiceUrl = aiServiceUrl;
     }
 
     @Override
@@ -39,7 +39,6 @@ public class AiDetectionServiceImpl implements AiDetectionService {
                 throw new RuntimeException("AI detection service returned error: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            // Optional: log error
             throw new RuntimeException("AI detection service failed", e);
         }
     }

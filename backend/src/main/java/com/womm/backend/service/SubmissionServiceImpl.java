@@ -148,6 +148,23 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setFileName(files.get(0).getFileName());
         submission.setFileContent(files.get(0).getFileContent());
         submission.setSubmittedAt(LocalDateTime.now());
+
+        // AI Detection
+        try {
+            DetectionResponse aiResult = aiDetectionService.detectAI(submission.getFileContent());
+
+            submission.setAiProbability(aiResult.getAi_probability());
+            submission.setAiPercentage(aiResult.getAi_percentage());
+            submission.setAiLabel(aiResult.getLabel());
+            submission.setAiConfidence(aiResult.getConfidence());
+
+        } catch (Exception e) {
+            submission.setAiProbability(0.0);
+            submission.setAiPercentage(0.0);
+            submission.setAiLabel("Unavailable");
+            submission.setAiConfidence("Low");
+        }
+
         // saveAndFlush ensures the submission row is committed to DB immediately
         // so the FK on submission_files is satisfied before we insert child rows.
         Submission saved = submissionRepository.saveAndFlush(submission);
