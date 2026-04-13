@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, Upload, X, CheckCircle, FlaskConical, Users } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -150,6 +150,7 @@ export default function StudentCourseDetailPage() {
   const [fileError, setFileError] = useState(null);
   const [submissionFiles, setSubmissionFiles] = useState([]);
   const [activeSubmissionFile, setActiveSubmissionFile] = useState(0);
+  const [myGroup, setMyGroup] = useState(null);
 
   const [customTestCases, setCustomTestCases] = useState([
     { label: "", input: "", expectedOutput: "" },
@@ -244,6 +245,26 @@ export default function StudentCourseDetailPage() {
 
   const existingSubmission = selectedAssignment ? submissions[selectedAssignment.id] : null;
 
+  const isPastDue = (assignment) => {
+    if (!assignment?.dueDate) return false;
+    return new Date() > new Date(assignment.dueDate);
+  };
+
+  const isSubmissionLate = (submission, assignment) => {
+    if (!submission?.submittedAt || !assignment?.dueDate) return false;
+    return new Date(submission.submittedAt) > new Date(assignment.dueDate);
+  };
+
+  const formatDueDate = (dueDate) => {
+    if (!dueDate) return null;
+    return new Date(dueDate).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatTimestamp = (ts) => {
+    if (!ts) return null;
+    return new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+
   useEffect(() => {
     if (!existingSubmission?.fileContent) return;
     // If the student edited, we only overwrite editor contents when submission itself changes
@@ -270,6 +291,14 @@ export default function StudentCourseDetailPage() {
         .then((data) => { setSubmissionFiles(Array.isArray(data) ? data : []); setActiveSubmissionFile(0); })
         .catch(() => { setSubmissionFiles([]); setActiveSubmissionFile(0); });
   }, [existingSubmission?.submissionId?.userId, selectedAssignment?.id, user?.id]);
+
+  useEffect(() => {
+    if (!selectedAssignment?.groupAssignment || !user?.id) { setMyGroup(null); return; }
+    fetch(`${API_BASE}/assignment/${selectedAssignment.id}/groups/user/${user.id}`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => setMyGroup(data || null))
+        .catch(() => setMyGroup(null));
+  }, [selectedAssignment?.id, selectedAssignment?.groupAssignment, user?.id]);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -646,6 +675,7 @@ export default function StudentCourseDetailPage() {
     setCodeSaveError(null);
     setSubmissionFiles([]);
     setActiveSubmissionFile(0);
+    setMyGroup(null);
   };
 
   if (loading) {
@@ -671,7 +701,7 @@ export default function StudentCourseDetailPage() {
               <>
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 mb-8 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                    <div className="shrink-0 w-16 h-16 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                       <BookOpen className="w-8 h-8" style={{ color: "#c0a080" }} />
                     </div>
                     <div>
@@ -719,6 +749,12 @@ export default function StudentCourseDetailPage() {
                                 {a.description && (
                                     <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1">{a.description}</p>
                                 )}
+                                {a.dueDate && (
+                                    <p className={`text-xs mt-1 font-medium ${isPastDue(a) && !submissions[a.id] ? "text-red-400" : "text-zinc-400 dark:text-zinc-500"}`}>
+                                      {isPastDue(a) && !submissions[a.id] ? "Overdue — " : "Due "}
+                                      {formatDueDate(a.dueDate)}
+                                    </p>
+                                )}
                               </div>
                               {submissions[a.id] && (
                                   <div className="flex items-center gap-2 shrink-0">
@@ -747,11 +783,17 @@ export default function StudentCourseDetailPage() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#86263333" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#C9A84C1a" }}>
                       <FileText className="w-5 h-5" style={{ color: "#C9A84C" }} />
                     </div>
                     <div>
                       <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{selectedAssignment.title}</h2>
+                      {selectedAssignment.dueDate && (
+                          <p className={`text-xs mt-0.5 font-medium ${isPastDue(selectedAssignment) ? "text-red-400" : "text-zinc-500 dark:text-zinc-400"}`}>
+                            {isPastDue(selectedAssignment) ? "Overdue — " : "Due "}
+                            {formatDueDate(selectedAssignment.dueDate)}
+                          </p>
+                      )}
                       {existingSubmission?.score !== null && existingSubmission?.score !== undefined && selectedAssignment?.scoresVisible && (
                           <p className="text-sm mt-1">
                             <span className="text-zinc-500 dark:text-zinc-400">Score: </span>
@@ -803,10 +845,49 @@ export default function StudentCourseDetailPage() {
                 <div className="p-6 overflow-y-auto flex-1">
                   {activeTab === "description" && (
                       <div className="space-y-4">
+                        {selectedAssignment.dueDate && (
+                            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${isPastDue(selectedAssignment) ? "bg-red-600/10 border-red-600/20" : "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"}`}>
+                              <div className="min-w-0">
+                                <p className={`text-xs font-semibold uppercase tracking-wider ${isPastDue(selectedAssignment) ? "text-red-400" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                  {isPastDue(selectedAssignment) ? "Overdue" : "Due Date"}
+                                </p>
+                                <p className={`text-sm font-medium mt-0.5 ${isPastDue(selectedAssignment) ? "text-red-300" : "text-zinc-700 dark:text-zinc-300"}`}>
+                                  {formatDueDate(selectedAssignment.dueDate)}
+                                </p>
+                              </div>
+                            </div>
+                        )}
                         {selectedAssignment.description ? (
                             <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
                         ) : (
                             <p className="text-zinc-500 dark:text-zinc-400 text-sm">No description provided.</p>
+                        )}
+                        {selectedAssignment.groupAssignment && (
+                            <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Users className="w-4 h-4 shrink-0" style={{ color: "#C9A84C" }} />
+                                <p className="text-sm font-medium text-zinc-900 dark:text-white">Your Group</p>
+                              </div>
+                              {myGroup ? (
+                                  <>
+                                    <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-2">{myGroup.name}</p>
+                                    <div className="space-y-1 mb-3">
+                                      {(myGroup.members || []).map((m) => (
+                                          <div key={m.user?.id} className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-medium" style={{ background: "#C9A84C1a", color: "#c0a080" }}>
+                                              {m.user?.firstName?.charAt(0)}{m.user?.lastName?.charAt(0)}
+                                            </div>
+                                            {m.user?.firstName} {m.user?.lastName}
+                                            {m.user?.id === user?.id && <span className="text-zinc-400">(you)</span>}
+                                          </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Any member may submit on behalf of the group.</p>
+                                  </>
+                              ) : (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">You have not been assigned to a group yet. Contact your instructor.</p>
+                              )}
+                            </div>
                         )}
                         <AssignmentRubric assignmentId={selectedAssignment.id} />
                         <VisibleTestCases assignmentId={selectedAssignment.id} />
@@ -835,6 +916,16 @@ export default function StudentCourseDetailPage() {
                                     ? selectedFiles.map((f) => f.name).join(", ")
                                     : existingSubmission?.fileName}
                                 </p>
+                                {existingSubmission?.submittedAt && (
+                                    <p className="text-zinc-500 text-xs mt-1">
+                                      Submitted {formatTimestamp(existingSubmission.submittedAt)}
+                                    </p>
+                                )}
+                                {isSubmissionLate(existingSubmission, selectedAssignment) && (
+                                    <span className="inline-block mt-2 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-600/15 text-red-400 border border-red-600/25">
+                                      Late Submission
+                                    </span>
+                                )}
                                 <button
                                     type="button"
                                     onClick={() => setActiveTab("results")}
@@ -886,11 +977,21 @@ export default function StudentCourseDetailPage() {
                             </div>
                         ) : existingSubmission && !newAttempt ? (
                             <div className="space-y-4">
-                              <div className="flex items-center gap-3 p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
-                                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
-                                <div className="min-w-0">
+                              <div className="flex items-start gap-3 p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
+                                <CheckCircle className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+                                <div className="min-w-0 flex-1">
                                   <p className="text-green-400 font-medium text-sm">Submitted</p>
                                   <p className="text-zinc-300 text-sm truncate">{existingSubmission.fileName}</p>
+                                  {existingSubmission.submittedAt && (
+                                      <p className="text-zinc-500 text-xs mt-0.5">
+                                        {formatTimestamp(existingSubmission.submittedAt)}
+                                      </p>
+                                  )}
+                                  {isSubmissionLate(existingSubmission, selectedAssignment) && (
+                                      <span className="inline-block mt-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-600/15 text-red-400 border border-red-600/25">
+                                        Late Submission
+                                      </span>
+                                  )}
                                 </div>
                               </div>
                               <button
@@ -1087,6 +1188,12 @@ export default function StudentCourseDetailPage() {
                                       </div>
                                   )}
 
+                                  {isPastDue(selectedAssignment) && (
+                                      <div className="mt-4 p-3 bg-red-600/10 border border-red-600/25 rounded-xl">
+                                        <p className="text-red-400 text-sm font-medium">This assignment is past due</p>
+                                        <p className="text-red-400/70 text-xs mt-0.5">You can still submit, but it will be marked as a late submission.</p>
+                                      </div>
+                                  )}
                                   <div className="flex gap-3 mt-4">
                                     <button
                                         type="button"
@@ -1102,7 +1209,7 @@ export default function StudentCourseDetailPage() {
                                         className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ background: "#862633" }}
                                     >
-                                      {submitting ? "Submitting..." : "Submit for Grading"}
+                                      {submitting ? "Submitting..." : isPastDue(selectedAssignment) ? "Submit Late" : "Submit for Grading"}
                                     </button>
                                   </div>
                                 </>

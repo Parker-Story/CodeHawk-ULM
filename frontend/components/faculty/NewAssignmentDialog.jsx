@@ -19,6 +19,8 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
   const fileInputRef = useRef(null);
   const [dueDate, setDueDate] = useState("");
   const [totalPoints, setTotalPoints] = useState(100);
+  const [groupAssignment, setGroupAssignment] = useState(false);
+  const [groupSize, setGroupSize] = useState(2);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -39,6 +41,8 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
     setInputFileContent(null);
     setDueDate("");
     setTotalPoints(100);
+    setGroupAssignment(false);
+    setGroupSize(2);
     onClose();
   };
 
@@ -58,6 +62,8 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
           inputFileContent: inputMode === "FILE" ? inputFileContent : null,
           dueDate: dueDate ? `${dueDate}:00` : null,
           totalPoints,
+          groupAssignment,
+          groupSize: groupAssignment ? groupSize : null,
         }),
       });
       if (!response.ok) throw new Error("Failed to create assignment");
@@ -139,6 +145,28 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
                 </div>
             )}
           </div>
+
+          {/* Group Assignment */}
+          <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
+            <div>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Group Assignment</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Students submit in groups. Faculty grades once and distributes to all members.</p>
+            </div>
+            <button
+                type="button"
+                onClick={() => setGroupAssignment((prev) => !prev)}
+                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                style={groupAssignment ? { background: "#862633" } : { background: "#52525b" }}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${groupAssignment ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+          {groupAssignment && (
+              <div>
+                <label htmlFor="group-size" className={labelClass}>Default Group Size <span className="text-zinc-500 font-normal">(used for auto-generate)</span></label>
+                <input id="group-size" type="number" min="2" max="20" className={inputClass} value={groupSize} onChange={(e) => setGroupSize(parseInt(e.target.value) || 2)} />
+              </div>
+          )}
 
           {/* Scores Visible */}
           <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">

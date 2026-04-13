@@ -56,7 +56,7 @@ export default function LoginForm() {
       alert("Passwords do not match.");
       return;
     }
-    await fetch(`${API_BASE}/api/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -68,6 +68,11 @@ export default function LoginForm() {
         role: isStudent ? "STUDENT" : isTa ? "TA" : "FACULTY"
       })
     });
+    if (!res.ok) {
+      const msg = await res.text();
+      alert(msg || "Registration failed. Please try again.");
+      return;
+    }
     setMode("login");
     setSelectedRole(null);
   };
@@ -180,7 +185,7 @@ export default function LoginForm() {
                         >
                           <div
                               className="w-14 h-14 flex items-center justify-center rounded-xl bg-zinc-200 dark:bg-[#27272a]"
-                              style={selectedRole === role ? { background: "#86263333" } : {}}
+                              style={selectedRole === role ? { background: "#C9A84C1a" } : {}}
                           >
                             <RoleIcon className="w-7 h-7 text-zinc-500 dark:text-zinc-400" style={selectedRole === role ? { color: "#C9A84C" } : {}} />
                           </div>

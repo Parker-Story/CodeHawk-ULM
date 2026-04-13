@@ -1,6 +1,8 @@
 package com.womm.backend.entity;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.womm.backend.id.SubmissionId;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "submissions")
@@ -41,6 +43,9 @@ public class Submission {
 
     @Column(name = "ai_confidence")
     private String aiConfidence;
+    @Column(name = "submitted_at")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime submittedAt;
 
     // ----- Constructors -----
     public Submission() {}
@@ -72,4 +77,6 @@ public class Submission {
     public void setAiLabel(String aiLabel) { this.aiLabel = aiLabel; }
     public String getAiConfidence() { return aiConfidence; }
     public void setAiConfidence(String aiConfidence) { this.aiConfidence = aiConfidence; }
+    public LocalDateTime getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 }

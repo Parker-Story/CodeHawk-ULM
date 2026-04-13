@@ -47,8 +47,18 @@ public class Assignment {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime dueDate;
 
+    @Column(name = "group_assignment", nullable = false)
+    private boolean groupAssignment = false;
+
+    @Column(name = "group_size")
+    private Integer groupSize;
+
     public LocalDateTime getDueDate() { return dueDate; }
     public void setDueDate(LocalDateTime dueDate) { this.dueDate = dueDate; }
+    public boolean isGroupAssignment() { return groupAssignment; }
+    public void setGroupAssignment(boolean groupAssignment) { this.groupAssignment = groupAssignment; }
+    public Integer getGroupSize() { return groupSize; }
+    public void setGroupSize(Integer groupSize) { this.groupSize = groupSize; }
 
     // ----- Constructors -----
     public Assignment() {}

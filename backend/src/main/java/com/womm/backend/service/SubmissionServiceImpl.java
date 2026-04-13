@@ -16,6 +16,7 @@ import com.womm.backend.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 import com.womm.backend.repository.RubricScoreRepository;
 
@@ -109,6 +110,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             submission.setAiConfidence("Low");
         }
 
+        submission.setSubmittedAt(LocalDateTime.now());
         Submission saved = submissionRepository.save(submission);
 
         if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {
@@ -145,6 +147,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setAssignment(assignment);
         submission.setFileName(files.get(0).getFileName());
         submission.setFileContent(files.get(0).getFileContent());
+        submission.setSubmittedAt(LocalDateTime.now());
         // saveAndFlush ensures the submission row is committed to DB immediately
         // so the FK on submission_files is satisfied before we insert child rows.
         Submission saved = submissionRepository.saveAndFlush(submission);
