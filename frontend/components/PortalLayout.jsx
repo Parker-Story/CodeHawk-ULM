@@ -24,6 +24,7 @@ export default function PortalLayout({ variant, children, Provider }) {
             <Navbar variant={variant} onMenuClick={() => setSidebarOpen((o) => !o)} />
             <Sidebar
                 isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
                 items={items}
                 activeClassName={config.activeClassName}
                 ariaLabel={config.ariaLabel}

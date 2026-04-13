@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel = "Navigation", showSignOut = false }) {
+export default function Sidebar({ isOpen, onClose, items = [], activeClassName, ariaLabel = "Navigation", showSignOut = false }) {
   const pathname = usePathname();
   const router = useRouter();
   const { setUser } = useAuth();
@@ -17,9 +17,11 @@ export default function Sidebar({ isOpen, items = [], activeClassName, ariaLabel
   return (
       <>
         {isOpen && (
-            <div
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-                aria-hidden="true"
+            <button
+                type="button"
+                className="fixed inset-0 z-40 cursor-pointer border-0 bg-black/50 p-0 lg:hidden"
+                aria-label="Close menu"
+                onClick={onClose}
             />
         )}
         <aside
