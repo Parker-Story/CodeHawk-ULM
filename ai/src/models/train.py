@@ -1,7 +1,3 @@
-"""
-train.py
-"""
-
 import os
 import numpy as np
 
@@ -15,27 +11,20 @@ PROCESSED_DIR = os.path.join(BASE_DIR, "data", "processed")
 WEIGHT_KEYS   = ["W1", "b1", "W2", "b2", "W3", "b3"]
 
 
-def _batch_generator(X, y, batch_size, rng):
+def batch_generator(X, y, batch_size, rng):
     idx = rng.permutation(len(X))
     for start in range(0, len(X), batch_size):
         b = idx[start:start + batch_size]
         yield X[b], y[b]
 
 
-def _accuracy(y_true, y_proba, threshold=0.5):
+def accuracy(y_true, y_proba, threshold=0.5):
     return float(np.mean((y_proba >= threshold).astype(int) == y_true.astype(int)))
 
 
-def train(epochs:       int   = 200,
-          batch_size:   int   = 32,
-          lr:           float = 5e-4,
-          dropout_rate: float = 0.3,
-          hidden1:      int   = 64,
-          hidden2:      int   = 32,
-          patience:     int   = 25,
-          l2_lambda:    float = 1e-4,
-          seed:         int   = 42,
-          reprocess:    bool  = False) -> NeuralNetwork:
+def train(epochs=200, batch_size=32, lr=5e-4, dropout_rate=0.3,
+          hidden1=64, hidden2=32, patience=25, l2_lambda=1e-4,
+          seed=42, reprocess=False) -> NeuralNetwork:
 
     cached = all(
         os.path.exists(os.path.join(PROCESSED_DIR, f))
@@ -49,25 +38,16 @@ def train(epochs:       int   = 200,
         print("[train] Loading cached arrays ...")
         X_train, X_test, y_train, y_test = load_processed(PROCESSED_DIR)
 
-    # Load pos_weight computed during preprocessing (replaces oversampling)
     pos_weight = load_pos_weight(MODELS_DIR)
-    print(f"[train] pos_weight={pos_weight:.3f}  "
-          f"(AI samples weighted {pos_weight:.1f}x in loss)")
+    input_dim  = X_train.shape[1]
 
-    input_dim = X_train.shape[1]
     print(f"[train] input_dim={input_dim}  train={len(X_train)}  test={len(X_test)}")
     print(f"[train] Train: Human={int((y_train==0).sum())}  AI={int((y_train==1).sum())}")
-    print(f"[train] Test:  Human={int((y_test==0).sum())}   AI={int((y_test==1).sum())}\n")
+    print(f"[train] Test:  Human={int((y_test==0).sum())}   AI={int((y_test==1).sum())}")
+    print(f"[train] pos_weight={pos_weight:.3f}\n")
 
-    model = NeuralNetwork(
-        input_dim    = input_dim,
-        hidden1      = hidden1,
-        hidden2      = hidden2,
-        lr           = lr,
-        dropout_rate = dropout_rate,
-        l2_lambda    = l2_lambda,
-        seed         = seed,
-    )
+    model = NeuralNetwork(input_dim=input_dim, hidden1=hidden1, hidden2=hidden2,
+                          lr=lr, dropout_rate=dropout_rate, l2_lambda=l2_lambda, seed=seed)
 
     rng     = np.random.default_rng(seed)
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
@@ -78,18 +58,17 @@ def train(epochs:       int   = 200,
 
     for epoch in range(1, epochs + 1):
         batch_losses = []
-        for X_b, y_b in _batch_generator(X_train, y_train, batch_size, rng):
+        for X_b, y_b in batch_generator(X_train, y_train, batch_size, rng):
             y_hat = model.forward(X_b, training=True)
-            # pos_weight applied here — no oversampling needed
             loss  = binary_cross_entropy(y_b, y_hat, pos_weight=pos_weight)
             model.backward(y_b, pos_weight=pos_weight)
             batch_losses.append(loss)
 
         train_loss = float(np.mean(batch_losses))
-        train_acc  = _accuracy(y_train, model.predict_proba(X_train))
+        train_acc  = accuracy(y_train, model.predict_proba(X_train))
         val_proba  = model.predict_proba(X_test)
         val_loss   = float(binary_cross_entropy(y_test, val_proba, pos_weight=pos_weight))
-        val_acc    = _accuracy(y_test, val_proba)
+        val_acc    = accuracy(y_test, val_proba)
 
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
