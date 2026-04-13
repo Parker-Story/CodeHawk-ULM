@@ -1166,17 +1166,20 @@ export default function StudentCourseDetailPage() {
                                                       key={idx}
                                                       className={`p-3 rounded-xl border ${r.passed ? "bg-green-600/10 border-green-600/20" : "bg-red-600/10 border-red-600/20"}`}
                                                   >
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 mb-1">
                                                       <span className={`w-2 h-2 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
                                                       <span className={`text-sm font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>
                                                         {r.label || `Test ${idx + 1}`} — {r.passed ? "Passed" : "Failed"}
                                                       </span>
                                                     </div>
-                                                    {!r.passed && (
+                                                    {r.expectedOutput != null && (
                                                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 ml-4">
-                                                          Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span>
+                                                          Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.expectedOutput || "(empty)"}</span>
                                                         </p>
                                                     )}
+                                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 ml-4">
+                                                      Got: <span className={`font-mono ${r.passed ? "text-zinc-700 dark:text-zinc-300" : "text-red-400"}`}>{r.actualOutput || "(no output)"}</span>
+                                                    </p>
                                                   </div>
                                               ))}
                                             </div>
@@ -1489,11 +1492,9 @@ export default function StudentCourseDetailPage() {
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                       Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.expectedOutput || ""}</span>
                                     </p>
-                                    {!r.passed && (
-                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                          Got: <span className="font-mono text-red-400">{r.actualOutput || "no output"}</span>
-                                        </p>
-                                    )}
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      Got: <span className={`font-mono ${r.passed ? "text-zinc-700 dark:text-zinc-300" : "text-red-400"}`}>{r.actualOutput || "(no output)"}</span>
+                                    </p>
                                   </div>
                               ))}
                             </div>
@@ -1533,15 +1534,11 @@ export default function StudentCourseDetailPage() {
                               {r.testCase?.label || `Test Case ${r.testCase?.id}`} — {r.passed ? "Passed" : "Failed"}
                             </span>
                                     </div>
-                                    {!r.passed && (
-                                        <>
-                                          {r.testCase?.input && (
-                                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase.input}</span></p>
-                                          )}
-                                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{r.testCase?.expectedOutput || "(empty)"}</span></p>
-                                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Got: <span className="font-mono text-red-400 whitespace-pre-wrap">{r.actualOutput || "(no output)"}</span></p>
-                                        </>
+                                    {r.testCase?.input && (
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Input: <span className="font-mono text-zinc-700 dark:text-zinc-300">{r.testCase.input}</span></p>
                                     )}
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Expected: <span className="font-mono text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">{r.testCase?.expectedOutput || "(empty)"}</span></p>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Got: <span className={`font-mono whitespace-pre-wrap ${r.passed ? "text-zinc-700 dark:text-zinc-300" : "text-red-400"}`}>{r.actualOutput || "(no output)"}</span></p>
                                   </div>
                               ))}
                             </div>

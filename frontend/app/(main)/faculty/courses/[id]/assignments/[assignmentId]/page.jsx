@@ -8,6 +8,7 @@ import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
 import AssignmentReportDialog from "@/components/faculty/AssignmentReportDialog";
+import Toast from "@/components/Toast";
 import dynamic from "next/dynamic";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -121,30 +122,34 @@ export default function GradingWorkspacePage() {
   const [courseStudents, setCourseStudents] = useState([]);
   const [expandedGroupRows, setExpandedGroupRows] = useState(new Set());
   const [distributingGrade, setDistributingGrade] = useState({});
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [showGroupsToast, setShowGroupsToast] = useState(false);
+  const [groupsToastMsg, setGroupsToastMsg] = useState("");
 
   const isFileMode = assignment?.inputMode === "FILE";
 
   useEffect(() => {
+    // Chain submissions after assignment so totalPoints is available for score conversion.
     fetch(`${API_BASE}/assignment/${assignmentId}`)
         .then((res) => res.json())
-        .then((data) => setAssignment(data))
-        .catch((err) => console.error(err));
-
-    fetch(`${API_BASE}/submission/assignment/${assignmentId}`)
-        .then((res) => { if (!res.ok) throw new Error("Failed to fetch submissions"); return res.json(); })
-        .then((data) => {
-          const list = Array.isArray(data) ? data : [];
-          setSubmissions(list);
-          const inputs = {};
-          const feedbacks = {};
-          const totalPts = assignment?.totalPoints ?? 100;
-          list.forEach((s) => {
-            inputs[s.submissionId.userId] = s.score != null ? Math.round(s.score / 100 * totalPts) : "";
-            feedbacks[s.submissionId.userId] = s.feedback ?? "";
-          });
-          setScoreInputs(inputs);
-          setFeedbackInputs(feedbacks);
-          setLoading(false);
+        .then((assignmentData) => {
+          setAssignment(assignmentData);
+          return fetch(`${API_BASE}/submission/assignment/${assignmentId}`)
+              .then((res) => { if (!res.ok) throw new Error("Failed to fetch submissions"); return res.json(); })
+              .then((data) => {
+                const list = Array.isArray(data) ? data : [];
+                setSubmissions(list);
+                const inputs = {};
+                const feedbacks = {};
+                const totalPts = assignmentData.totalPoints ?? 100;
+                list.forEach((s) => {
+                  inputs[s.submissionId.userId] = s.score != null ? Math.round(s.score / 100 * totalPts) : "";
+                  feedbacks[s.submissionId.userId] = s.feedback ?? "";
+                });
+                setScoreInputs(inputs);
+                setFeedbackInputs(feedbacks);
+                setLoading(false);
+              });
         })
         .catch((err) => { console.error(err); setLoading(false); });
 
@@ -388,13 +393,18 @@ export default function GradingWorkspacePage() {
   };
 
   const handleAutoGenerate = async () => {
+    setAutoGenerating(true);
     try {
       await fetch(`${API_BASE}/assignment/${assignmentId}/groups/auto-generate`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ groupSize: autoGroupSize, overwriteExisting: autoGroupOverwrite }),
       });
-      reloadGroups();
+      await reloadGroups();
+      setGroupsToastMsg("Groups generated successfully");
+      setShowGroupsToast(true);
+      setTimeout(() => setShowGroupsToast(false), 3000);
     } catch (err) { console.error(err); }
+    finally { setAutoGenerating(false); }
   };
 
   const handleDistributeGrade = async (groupId, submitterId) => {
@@ -696,7 +706,7 @@ export default function GradingWorkspacePage() {
         const res = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${userId}`, { method: "POST" });
         if (!res.ok) throw new Error();
         const raw = await res.json();
-        setSolutionRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+        setSolutionRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput, expectedOutput: r.testCase?.expectedOutput })));
       }
     } catch { setSolutionRunError("Failed to run tests."); }
     finally { setSolutionRunning(false); }
@@ -738,7 +748,7 @@ export default function GradingWorkspacePage() {
         const res = await fetch(`${API_BASE}/testcase/run/${assignmentId}/${gradingStudent}`, { method: "POST" });
         if (!res.ok) throw new Error();
         const raw = await res.json();
-        setGradingRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+        setGradingRunResults(raw.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput, expectedOutput: r.testCase?.expectedOutput })));
       }
     } catch { setGradingRunError("Failed to run tests."); }
     finally { setGradingRunning(false); }
@@ -1056,8 +1066,8 @@ export default function GradingWorkspacePage() {
                           <input type="checkbox" checked={autoGroupOverwrite} onChange={(e) => setAutoGroupOverwrite(e.target.checked)} className="w-3.5 h-3.5" />
                           Replace existing groups
                         </label>
-                        <button type="button" onClick={handleAutoGenerate} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors" style={{ background: "#862633" }}>
-                          <Shuffle className="w-3.5 h-3.5" /> Generate
+                        <button type="button" onClick={handleAutoGenerate} disabled={autoGenerating} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-60 transition-colors" style={{ background: "#862633" }}>
+                          <Shuffle className="w-3.5 h-3.5" /> {autoGenerating ? "Generating..." : "Generate"}
                         </button>
                         <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-600 mx-1" />
                         <div className="flex items-center gap-2">
@@ -1414,11 +1424,14 @@ export default function GradingWorkspacePage() {
                             <div className="flex-1 overflow-auto px-4 py-2 space-y-1">
                               {solutionRunResults === null && !solutionRunning && <p className="text-xs text-zinc-500">Click Run All to execute tests against this submission.</p>}
                               {solutionRunResults?.map((r, i) => (
-                                  <div key={i} className="flex items-start gap-2 text-xs">
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
-                                    <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
-                                    <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
-                                    {!r.passed && <span className="text-zinc-500 font-mono truncate">got: {r.actualOutput || "(no output)"}</span>}
+                                  <div key={i} className="flex flex-col gap-0.5 text-xs py-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                      <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
+                                      <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
+                                    </div>
+                                    {r.expectedOutput != null && <span className="text-zinc-500 font-mono ml-5">expected: <span className="text-zinc-300">{r.expectedOutput || "(empty)"}</span></span>}
+                                    <span className="text-zinc-500 font-mono ml-5">got: <span className={r.passed ? "text-zinc-300" : "text-red-400"}>{r.actualOutput || "(no output)"}</span></span>
                                   </div>
                               ))}
                             </div>
@@ -1593,11 +1606,14 @@ export default function GradingWorkspacePage() {
                               <div className="flex-1 overflow-auto px-4 py-2 space-y-1">
                                 {gradingRunResults === null && !gradingRunning && <p className="text-xs text-zinc-500">No test results yet. Click Run All to execute tests against this submission.</p>}
                                 {gradingRunResults?.map((r, i) => (
-                                    <div key={i} className="flex items-start gap-2 text-xs">
-                                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
-                                      <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
-                                      <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
-                                      {!r.passed && <span className="text-zinc-500 font-mono truncate">got: {r.actualOutput || "(no output)"}</span>}
+                                    <div key={i} className="flex flex-col gap-0.5 text-xs py-0.5">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
+                                        <span className="text-zinc-400 w-32 truncate shrink-0">{r.label || `Test ${i + 1}`}</span>
+                                        <span className={`shrink-0 font-medium ${r.passed ? "text-green-400" : "text-red-400"}`}>{r.passed ? "PASS" : "FAIL"}</span>
+                                      </div>
+                                      {r.expectedOutput != null && <span className="text-zinc-500 font-mono ml-5">expected: <span className="text-zinc-300">{r.expectedOutput || "(empty)"}</span></span>}
+                                      <span className="text-zinc-500 font-mono ml-5">got: <span className={r.passed ? "text-zinc-300" : "text-red-400"}>{r.actualOutput || "(no output)"}</span></span>
                                     </div>
                                 ))}
                               </div>
@@ -1922,6 +1938,8 @@ export default function GradingWorkspacePage() {
           crn={crn}
           submissions={submissions}
         />
+
+        <Toast message={groupsToastMsg} show={showGroupsToast} onClose={() => setShowGroupsToast(false)} />
       </div>
   );
 }
