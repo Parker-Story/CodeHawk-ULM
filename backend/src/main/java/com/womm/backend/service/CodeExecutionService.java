@@ -152,8 +152,27 @@ public class CodeExecutionService {
         return null;
     }
 
+    /** Scans .py files for the one containing {@code if __name__ == "__main__":} and returns its filename. */
+    private String findPythonEntryPoint(Path workDir, String fallbackFileName) {
+        try {
+            List<Path> pyFiles = Files.list(workDir)
+                    .filter(p -> p.toString().endsWith(".py"))
+                    .collect(Collectors.toList());
+            for (Path pyFile : pyFiles) {
+                try {
+                    String source = Files.readString(pyFile);
+                    if (source.contains("if __name__ == \"__main__\"") || source.contains("if __name__ == '__main__'")) {
+                        return pyFile.getFileName().toString();
+                    }
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
+        return fallbackFileName;
+    }
+
     private ExecutionResult executePython(Path workDir, String fileName, String input) throws Exception {
-        ProcessBuilder runBuilder = new ProcessBuilder("python3", fileName);
+        String entryPoint = findPythonEntryPoint(workDir, fileName);
+        ProcessBuilder runBuilder = new ProcessBuilder("python3", entryPoint);
         runBuilder.directory(workDir.toFile());
         Process runProcess = runBuilder.start();
 
@@ -183,6 +202,8 @@ public class CodeExecutionService {
 
         stdoutThread.join(2000);
         stderrThread.join(2000);
+
+        log.info("CODEHAWK python3 entry={} exit={} stdout={} stderr={}", entryPoint, finished ? runProcess.exitValue() : -1, stdout, stderr);
 
         if (!finished) {
             runProcess.destroyForcibly();
