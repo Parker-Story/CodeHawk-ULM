@@ -13,6 +13,8 @@ import com.womm.backend.repository.SubmissionFileRepository;
 import com.womm.backend.repository.TestCaseRepository;
 import com.womm.backend.repository.TestResultRepository;
 import com.womm.backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import com.womm.backend.repository.RubricScoreRepository;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
+    private static final Logger log = LoggerFactory.getLogger(SubmissionServiceImpl.class);
     SubmissionRepository submissionRepository;
     SubmissionFileRepository submissionFileRepository;
     UserRepository userRepository;
@@ -104,6 +107,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             submission.setAiConfidence(aiResult.getConfidence());
 
         } catch (Exception e) {
+            log.error("[AI Detection] submitAssignment fallback triggered: {}", e.getMessage());
             submission.setAiProbability(0.0);
             submission.setAiPercentage(0.0);
             submission.setAiLabel("Unavailable");
@@ -159,6 +163,7 @@ public class SubmissionServiceImpl implements SubmissionService {
             submission.setAiConfidence(aiResult.getConfidence());
 
         } catch (Exception e) {
+            log.error("[AI Detection] submitFiles fallback triggered: {}", e.getMessage());
             submission.setAiProbability(0.0);
             submission.setAiPercentage(0.0);
             submission.setAiLabel("Unavailable");
