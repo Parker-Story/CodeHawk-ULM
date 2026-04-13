@@ -13,9 +13,9 @@
  * }
  */
 export default function AiDetectionBadge({ submission }) {
-    const label      = submission?.label;
+    const label      = submission?.aiLabel;
     const percentage = submission?.aiPercentage;
-    const confidence = submission?.confidence;
+    const confidence = submission?.aiConfidence;
 
     // Not yet analyzed
     if (!label || label === "Unavailable") {
