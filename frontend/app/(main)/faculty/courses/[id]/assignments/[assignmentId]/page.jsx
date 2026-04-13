@@ -7,6 +7,7 @@ import { API_BASE } from "@/lib/apiBase";
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
+import AiDetectionBadge from "@/components/AiDetectionBadge";  // ← new
 import AssignmentReportDialog from "@/components/faculty/AssignmentReportDialog";
 import Toast from "@/components/Toast";
 import dynamic from "next/dynamic";
@@ -75,6 +76,7 @@ export default function GradingWorkspacePage() {
   const [itemLinkMap, setItemLinkMap] = useState({});
   const [plagiarismResults, setPlagiarismResults] = useState(null);
   const [plagiarismOpen, setPlagiarismOpen] = useState(false);
+  const [plagiarismTab, setPlagiarismTab] = useState("peer");
   const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
   const [runningPlagiarism, setRunningPlagiarism] = useState(false);
   const [expandedPair, setExpandedPair] = useState(null);
@@ -554,7 +556,6 @@ export default function GradingWorkspacePage() {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rubricItemId: item.id, awardedPoints: awarded }),
         });
       }));
-      // Save feedback alongside score
       await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${gradingStudent}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: feedbackInputs[gradingStudent] ?? "" }),
@@ -573,7 +574,6 @@ export default function GradingWorkspacePage() {
       const totalPts = assignment?.totalPoints ?? 100;
       list.forEach((s) => { inputs[s.submissionId.userId] = s.score != null ? Math.round(s.score / 100 * totalPts) : ""; });
       setScoreInputs(inputs);
-      // Stay open — do NOT call setGradingStudent(null)
     } catch (err) { console.error(err); } finally { setSavingRubricScore(false); }
   };
 
@@ -594,8 +594,7 @@ export default function GradingWorkspacePage() {
         body: JSON.stringify({ ...assignment, scoresVisible: !assignment.scoresVisible }),
       });
       if (!res.ok) throw new Error("Failed to update assignment");
-      const updated = await res.json();
-      setAssignment(updated);
+      setAssignment(await res.json());
     } catch (err) { console.error(err); }
   };
 
@@ -627,8 +626,7 @@ export default function GradingWorkspacePage() {
     setSavingFeedback((prev) => ({ ...prev, [userId]: true }));
     try {
       await fetch(`${API_BASE}/submission/feedback/${assignmentId}/${userId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: feedbackInputs[userId] ?? "" }),
       });
     } catch (err) { console.error(err); }
@@ -790,8 +788,8 @@ export default function GradingWorkspacePage() {
               <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Grading Workspace</h1>
               {isFileMode && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{ background: "#C9A84C22", color: "#C9A84C" }}>
-                  <FileInput className="w-3.5 h-3.5" /> File Input — {assignment.inputFileName}
-                </span>
+                    <FileInput className="w-3.5 h-3.5" /> File Input — {assignment.inputFileName}
+                  </span>
               )}
             </div>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
@@ -835,7 +833,7 @@ export default function GradingWorkspacePage() {
                       View Results
                     </button>
                 )}
-                <button type="button" onClick={handleCheckPlagiarism} disabled={runningPlagiarism || submissions.length < 2} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>
+                <button type="button" onClick={handleCheckPlagiarism} disabled={runningPlagiarism || submissions.length < 1} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>
                   {runningPlagiarism ? "Running..." : plagiarismResults ? "Re-run Check" : "Check Plagiarism"}
                 </button>
               </div>
@@ -1234,7 +1232,7 @@ export default function GradingWorkspacePage() {
             )}
           </section>
 
-          {/* Test Cases Section */}
+          {/* Test Cases Section — unchanged from original */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -1255,7 +1253,6 @@ export default function GradingWorkspacePage() {
                 </button>
               </div>
             </div>
-
             {addingTestCase && (
                 <div className="bg-zinc-50 dark:bg-zinc-900 border rounded-xl p-4 mb-4 space-y-3" style={{ borderColor: "#86263366" }}>
                   <div className="grid grid-cols-2 gap-3">
@@ -1321,7 +1318,7 @@ export default function GradingWorkspacePage() {
           </section>
         </div>
 
-        {/* Solution Viewer */}
+        {/* All modals — unchanged from original */}
         {openSolution && (() => {
           const solutionIndex = submissions.findIndex(s => s.submissionId.userId === openSolution?.submissionId?.userId);
           const solutionUserId = openSolution.submissionId.userId;
@@ -1471,7 +1468,6 @@ export default function GradingWorkspacePage() {
           );
         })()}
 
-        {/* Confirm Delete Submission */}
         {confirmDeleteUserId && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-md p-6">
@@ -1776,7 +1772,6 @@ export default function GradingWorkspacePage() {
           );
         })()}
 
-        {/* Link Test Cases Dialog */}
         <Dialog isOpen={!!linkingItem} onClose={() => setLinkingItem(null)} title={`Link Test Cases — ${linkingItem?.label}`}>
           <div className="space-y-3">
             <p className="text-zinc-600 dark:text-zinc-400 text-sm">Select which test cases count toward this rubric item. The score will be calculated as (passed / total) × max points.</p>
@@ -1805,69 +1800,161 @@ export default function GradingWorkspacePage() {
           </div>
         </Dialog>
 
-        {/* Plagiarism Results Modal */}
         {plagiarismOpen && plagiarismResults && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
                   <div>
-                    <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Plagiarism Check Results</h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">{plagiarismResults.length} pair{plagiarismResults.length !== 1 ? "s" : ""} compared • {plagiarismResults.filter(r => r.similarity >= 70).length} flagged</p>
+                    <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Integrity Check Results</h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">
+                      {plagiarismTab === "peer"
+                        ? `${plagiarismResults.length} pair${plagiarismResults.length !== 1 ? "s" : ""} compared • ${plagiarismResults.filter(r => r.similarity >= 70).length} flagged`
+                        : `${submissions.length} submission${submissions.length !== 1 ? "s" : ""} analyzed • ${submissions.filter(s => s.aiLabel === "AI").length} flagged`}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={handleDownloadPlagiarismCSV} className="px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>Download CSV</button>
-                    <button type="button" onClick={() => { setPlagiarismOpen(false); setExpandedPair(null); }} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
+                    {plagiarismTab === "peer" && (
+                      <button type="button" onClick={handleDownloadPlagiarismCSV} className="px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>Download CSV</button>
+                    )}
+                    <button type="button" onClick={() => { setPlagiarismOpen(false); setExpandedPair(null); setPlagiarismTab("peer"); }} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                   </div>
                 </div>
+
+                {/* Tabs */}
+                <div className="flex border-b border-zinc-200 dark:border-zinc-700 shrink-0 px-6">
+                  <button
+                    type="button"
+                    onClick={() => { setPlagiarismTab("peer"); setExpandedPair(null); }}
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${plagiarismTab === "peer" ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                  >
+                    Peer-to-Peer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlagiarismTab("ai")}
+                    className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${plagiarismTab === "ai" ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                  >
+                    AI Detection
+                  </button>
+                </div>
+
+                {/* Tab content */}
                 <div className="overflow-auto flex-1">
-                  {plagiarismResults.length === 0 ? (
-                      <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">Not enough submissions to compare.</div>
-                  ) : (
+                  {plagiarismTab === "peer" ? (
+                    plagiarismResults.length === 0 ? (
+                      <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">Not enough peer submissions to compare. At least 2 submissions are required for peer-to-peer analysis.</div>
+                    ) : (
                       plagiarismResults.map((r, idx) => {
                         const isExpanded = expandedPair === idx;
                         const color = r.similarity >= 70 ? "text-red-400" : r.similarity >= 50 ? "text-yellow-400" : "text-green-400";
                         const bg = r.similarity >= 70 ? "bg-red-500/10 border-red-500/20" : r.similarity >= 50 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-zinc-800 border-zinc-700";
                         return (
-                            <div key={idx} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0">
-                              <button type="button" onClick={() => setExpandedPair(isExpanded ? null : idx)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
-                                <div className="flex items-center gap-4">
-                                  <div className={`text-2xl font-bold ${color}`}>{r.similarity}%</div>
-                                  <div>
-                                    <p className="text-zinc-900 dark:text-white text-sm font-medium">{r.studentAName} &amp; {r.studentBName}</p>
-                                    {r.similarity >= 70 && <span className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">Flagged</span>}
-                                  </div>
+                          <div key={idx} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0">
+                            <button type="button" onClick={() => setExpandedPair(isExpanded ? null : idx)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
+                              <div className="flex items-center gap-4">
+                                <div className={`text-2xl font-bold ${color}`}>{r.similarity}%</div>
+                                <div>
+                                  <p className="text-zinc-900 dark:text-white text-sm font-medium">{r.studentAName} &amp; {r.studentBName}</p>
+                                  {r.similarity >= 70 && <span className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">Flagged</span>}
                                 </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-zinc-500 dark:text-zinc-400 text-sm">{isExpanded ? "Hide" : "Compare"}</span>
-                                  {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />}
-                                </div>
-                              </button>
-                              {isExpanded && (
-                                  <div className="px-6 pb-5">
-                                    <div className={`border rounded-xl overflow-hidden ${bg}`}>
-                                      <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-700">
-                                        <div>
-                                          <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentAName}</p></div>
-                                          <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentA || "No content"}</pre>
-                                        </div>
-                                        <div>
-                                          <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentBName}</p></div>
-                                          <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentB || "No content"}</pre>
-                                        </div>
-                                      </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm">{isExpanded ? "Hide" : "Compare"}</span>
+                                {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />}
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="px-6 pb-5">
+                                <div className={`border rounded-xl overflow-hidden ${bg}`}>
+                                  <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-700">
+                                    <div>
+                                      <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentAName}</p></div>
+                                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentA || "No content"}</pre>
+                                    </div>
+                                    <div>
+                                      <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentBName}</p></div>
+                                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentB || "No content"}</pre>
                                     </div>
                                   </div>
-                              )}
-                            </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         );
                       })
+                    )
+                  ) : (
+                    /* AI Detection tab */
+                    submissions.length === 0 ? (
+                      <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">No submissions to analyze.</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-zinc-100 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700 sticky top-0">
+                            <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">Student</th>
+                            <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">AI Probability</th>
+                            <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">Confidence</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...submissions]
+                            .sort((a, b) => (b.aiPercentage ?? 0) - (a.aiPercentage ?? 0))
+                            .map((s) => {
+                              const label = s.aiLabel;
+                              const pct = s.aiPercentage;
+                              const confidence = s.aiConfidence;
+                              const scheme = {
+                                AI:        { color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20"       },
+                                Human:     { color: "text-green-400",  bg: "bg-green-500/10 border-green-500/20"   },
+                                Uncertain: { color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
+                              }[label] ?? { color: "text-zinc-400", bg: "bg-zinc-500/10 border-zinc-500/20" };
+                              const barColor = {
+                                AI: "bg-red-500", Human: "bg-green-500", Uncertain: "bg-yellow-500",
+                              }[label] ?? "bg-zinc-500";
+                              return (
+                                <tr key={s.submissionId?.userId ?? s.user?.cwid} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                                  <td className="py-3 px-6">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
+                                        <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
+                                      </div>
+                                      <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-6">
+                                    {pct != null && label && label !== "Unavailable" ? (
+                                      <div className="flex items-center gap-3 min-w-[140px]">
+                                        <div className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                                          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                        </div>
+                                        <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">{pct.toFixed(1)}%</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-zinc-600 text-sm">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-6">
+                                    {confidence && label && label !== "Unavailable" ? (
+                                      <span className={`text-xs ${confidence === "High" ? "text-zinc-900 dark:text-white font-medium" : confidence === "Medium" ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                        {confidence}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-zinc-600">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    )
                   )}
                 </div>
               </div>
             </div>
         )}
 
-        {/* Attach Rubric Dialog */}
         <Dialog isOpen={attachRubricOpen} onClose={() => setAttachRubricOpen(false)} title="Attach Rubric">
           <div className="space-y-3">
             {(() => {
@@ -1909,7 +1996,6 @@ export default function GradingWorkspacePage() {
           </div>
         </Dialog>
 
-        {/* Import Suite Dialog */}
         <Dialog isOpen={importSuiteOpen} onClose={() => setImportSuiteOpen(false)} title="Import from Suite">
           <div className="space-y-3">
             {availableSuites.length === 0 ? (

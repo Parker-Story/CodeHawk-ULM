@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, X, ClipboardList, ChevronDown, ChevronUp, MoreVertical, CheckCircle } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
+import AiDetectionBadge from "@/components/AiDetectionBadge";  // ← new
 import dynamic from "next/dynamic";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -100,10 +101,7 @@ export default function TAGradingWorkspacePage() {
             .catch((err) => console.error(err));
 
         fetch(`${API_BASE}/rubric/assignment/${assignmentId}`)
-            .then((res) => {
-                if (!res.ok || res.status === 204) return null;
-                return res.text().then((text) => text ? JSON.parse(text) : null);
-            })
+            .then((res) => { if (!res.ok || res.status === 204) return null; return res.text().then((text) => text ? JSON.parse(text) : null); })
             .then((data) => { if (data) setRubric(data); })
             .catch((err) => console.error("Rubric fetch error:", err));
 
@@ -403,7 +401,6 @@ export default function TAGradingWorkspacePage() {
                     <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">{assignment?.title} • {submissions.length} Submission{submissions.length !== 1 ? "s" : ""}</p>
                 </div>
 
-                {/* Submissions Table */}
                 <section className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Submissions</h2>
@@ -464,6 +461,10 @@ export default function TAGradingWorkspacePage() {
                                                     ) : (
                                                         <span className="text-zinc-600 text-sm">—</span>
                                                     )}
+                                                </td>
+                                                {/* ── NEW: AI Detection cell ── */}
+                                                <td className="py-3 px-4">
+                                                    <AiDetectionBadge submission={s} />
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <div className="relative">
@@ -703,8 +704,6 @@ export default function TAGradingWorkspacePage() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Body */}
                             <div className="flex flex-1 overflow-hidden">
 
                                 {/* Left — Submission */}

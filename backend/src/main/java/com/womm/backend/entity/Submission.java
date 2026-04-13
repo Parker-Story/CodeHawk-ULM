@@ -32,6 +32,18 @@ public class Submission {
     @Column(name = "feedback", columnDefinition = "TEXT")
     private String feedback;
 
+    @Column(name = "ai_probability")
+    private Double aiProbability;
+
+    @Column(name = "ai_percentage")
+    private Double aiPercentage;
+
+    @Column(name = "ai_label")
+    private String aiLabel;
+
+    @Column(name = "ai_confidence")
+    private String aiConfidence;
+
     @Column(name = "submitted_at")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime submittedAt;
@@ -58,6 +70,14 @@ public class Submission {
     public void setScore(Integer score) { this.score = score; }
     public String getFeedback() { return feedback; }
     public void setFeedback(String feedback) { this.feedback = feedback; }
+    public Double getAiProbability() { return aiProbability; }
+    public void setAiProbability(Double aiProbability) { this.aiProbability = aiProbability; }
+    public Double getAiPercentage() { return aiPercentage; }
+    public void setAiPercentage(Double aiPercentage) { this.aiPercentage = aiPercentage; }
+    public String getAiLabel() { return aiLabel; }
+    public void setAiLabel(String aiLabel) { this.aiLabel = aiLabel; }
+    public String getAiConfidence() { return aiConfidence; }
+    public void setAiConfidence(String aiConfidence) { this.aiConfidence = aiConfidence; }
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 }
