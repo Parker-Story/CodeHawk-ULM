@@ -22,21 +22,6 @@ export default function SubmitAssignmentPage() {
     const [toastMessage, setToastMessage] = useState('');
     const [toastType,    setToastType]    = useState('success');
 
-    function addFiles(newFiles) {
-        setFiles(prev => [...prev, ...newFiles]);
-        setDetection(null);
-        setSubmitError(null);
-    }
-
-  return (
-      <div className="p-8">
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="w-full max-w-2xl">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Submit Assignment</h1>
-              <p className="text-zinc-500 dark:text-zinc-400">Upload your files to complete the assignment</p>
-            </div>
-
     function triggerToast(message, type = 'success') {
         setToastMessage(message);
         setToastType(type);
@@ -44,15 +29,70 @@ export default function SubmitAssignmentPage() {
         setTimeout(() => setShowToast(false), 3000);
     }
 
-              {files.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">
-                      Selected Files ({files.length})
-                    </h3>
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {files.map((file) => (
-                          <FileItem key={file.name} file={file} onRemove={removeFile} />
-                      ))}
+    function addFiles(newFiles) {
+        setFiles(prev => [...prev, ...newFiles]);
+        setDetection(null);
+        setSubmitError(null);
+    }
+
+    function removeFile(fileName) {
+        setFiles(prev => prev.filter(f => f.name !== fileName));
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (files.length === 0 || !user) return;
+
+        setSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            const fileEntries = await Promise.all(
+                files.map(async (file) => ({
+                    fileName: file.name,
+                    fileContent: await readFileAsText(file),
+                }))
+            );
+
+            const res = await fetch(
+                `${API_BASE}/submission/submit-files/${assignmentId}/${user.id}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: fileEntries }),
+                }
+            );
+
+            if (!res.ok) throw new Error('Submission failed');
+
+            const submission = await res.json();
+
+            if (submission.aiLabel && submission.aiLabel !== 'Unavailable') {
+                setDetection({
+                    ai_probability: submission.aiProbability,
+                    ai_percentage:  submission.aiPercentage,
+                    label:          submission.aiLabel,
+                    confidence:     submission.aiConfidence,
+                });
+            }
+
+            triggerToast('Submitted successfully!');
+            setFiles([]);
+        } catch (err) {
+            console.error('Error submitting:', err);
+            setSubmitError('Submission failed. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    return (
+        <div className="p-8">
+            <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">
+                <div className="w-full max-w-2xl">
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Submit Assignment</h1>
+                        <p className="text-zinc-500 dark:text-zinc-400">Upload your files to complete the assignment</p>
                     </div>
 
                     <form onSubmit={handleSubmit}>
@@ -60,7 +100,7 @@ export default function SubmitAssignmentPage() {
 
                         {files.length > 0 && (
                             <div className="mt-8">
-                                <h3 className="text-sm font-medium text-zinc-300 mb-4">
+                                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">
                                     Selected Files ({files.length})
                                 </h3>
                                 <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -85,20 +125,19 @@ export default function SubmitAssignmentPage() {
                     </form>
                 </div>
 
-                {/* AI Detection Result — shown after successful submission */}
                 {detection && (
                     <div className="w-full max-w-2xl">
                         <AiDetectionResult detection={detection} />
                     </div>
                 )}
-
-                <Toast
-                    message={toastMessage}
-                    show={showToast}
-                    type={toastType}
-                    onClose={() => setShowToast(false)}
-                />
             </div>
+
+            <Toast
+                message={toastMessage}
+                show={showToast}
+                type={toastType}
+                onClose={() => setShowToast(false)}
+            />
         </div>
     );
 }
