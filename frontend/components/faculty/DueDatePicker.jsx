@@ -1,3 +1,5 @@
+// Minor change to trigger commit so contribution appears under correct GitHub account
+
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
@@ -116,7 +118,8 @@ export default function DueDatePicker({ value, onChange, id = "due-date", option
     const next = new Date(day);
     if (selected) {
       next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
-    } else {
+    } else 
+    {
       next.setHours(23, 59, 0, 0);
     }
     onChange(formatLocalDatetime(next));
@@ -266,3 +269,7 @@ export default function DueDatePicker({ value, onChange, id = "due-date", option
     </div>
   );
 }
+
+
+
+
