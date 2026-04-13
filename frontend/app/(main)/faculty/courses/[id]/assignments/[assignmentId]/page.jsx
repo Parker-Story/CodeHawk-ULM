@@ -190,6 +190,10 @@ export default function GradingWorkspacePage() {
     if (!openSolution) { setSolutionFiles([]); setActiveSolutionFile(0); resetSolutionExecState(); return; }
     resetSolutionExecState();
     const userId = openSolution.submissionId.userId;
+    const cached = testResults.filter(r => r.submission?.submissionId?.userId === userId);
+    if (cached.length > 0) {
+      setSolutionRunResults(cached.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+    }
     fetch(`${API_BASE}/submission/files/${assignmentId}/${userId}`)
         .then((res) => res.json())
         .then((data) => { setSolutionFiles(Array.isArray(data) ? data : []); setActiveSolutionFile(0); })
@@ -230,6 +234,10 @@ export default function GradingWorkspacePage() {
   useEffect(() => {
     if (!gradingStudent) { setGradingFiles([]); setActiveGradingFile(0); resetGradingExecState(); return; }
     resetGradingExecState();
+    const cached = testResults.filter(r => r.submission?.submissionId?.userId === gradingStudent);
+    if (cached.length > 0) {
+      setGradingRunResults(cached.map(r => ({ label: r.testCase?.label ?? `Test ${r.id}`, passed: r.passed, actualOutput: r.actualOutput })));
+    }
     fetch(`${API_BASE}/submission/files/${assignmentId}/${gradingStudent}`)
         .then((res) => res.json())
         .then((data) => { setGradingFiles(Array.isArray(data) ? data : []); setActiveGradingFile(0); })
@@ -1583,7 +1591,7 @@ export default function GradingWorkspacePage() {
                               </div>
                               {gradingRunError && <p className="text-red-400 text-xs px-4 py-1">{gradingRunError}</p>}
                               <div className="flex-1 overflow-auto px-4 py-2 space-y-1">
-                                {gradingRunResults === null && !gradingRunning && <p className="text-xs text-zinc-500">Click Run All to execute tests against this submission.</p>}
+                                {gradingRunResults === null && !gradingRunning && <p className="text-xs text-zinc-500">No test results yet. Click Run All to execute tests against this submission.</p>}
                                 {gradingRunResults?.map((r, i) => (
                                     <div key={i} className="flex items-start gap-2 text-xs">
                                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${r.passed ? "bg-green-400" : "bg-red-400"}`} />
