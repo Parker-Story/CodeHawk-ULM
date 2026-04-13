@@ -193,9 +193,9 @@ def load_all_sources() -> pd.DataFrame:
             "limit": None,
         },
         {
-            "path": os.path.join(raw_dir, "human", "human_selected_dataset.csv"),
+            "path": os.path.join(raw_dir, "human", "human_code.csv"),
             "code_col": "code",
-            "name": "Human competitive",
+            "name": "Human normal",
             "limit": None,
         },
     ]
@@ -209,9 +209,9 @@ def load_all_sources() -> pd.DataFrame:
             "limit": None,
         },
         {
-            "path": os.path.join(raw_dir, "ai", "created_dataset_with_llms.csv"),
+            "path": os.path.join(raw_dir, "ai", "ai_generated_code.csv"),
             "code_col": "code",
-            "name": "AI (CodeStral/Gemini/LLaMA competitive)",
+            "name": "AI (Claude normal)",
             "limit": None,
         },
     ]
