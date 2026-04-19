@@ -7,6 +7,7 @@ import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, More
 import Link from "next/link";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import NewAssignmentDialog from "@/components/faculty/NewAssignmentDialog";
+import DueDatePicker from "@/components/faculty/DueDatePicker";
 import GradeReportDialog from "@/components/faculty/GradeReportDialog";
 import ArchiveClassDialog from "@/components/faculty/ArchiveClassDialog";
 import GradingWorkspaceDialog from "@/components/faculty/GradingWorkspaceDialog";
@@ -407,10 +408,14 @@ export default function CourseDetailPage() {
                   <label className={labelClass}>Total Points</label>
                   <input type="number" min="1" value={editAssignment.totalPoints ?? 100} onChange={(e) => setEditAssignment((prev) => ({ ...prev, totalPoints: parseInt(e.target.value) || 100 }))} className={inputClass} required />
                 </div>
-                <div>
-                  <label className={labelClass}>Due Date</label>
-                  <input type="datetime-local" value={editAssignment.dueDate ? editAssignment.dueDate.slice(0, 16) : ""} onChange={(e) => setEditAssignment((prev) => ({ ...prev, dueDate: e.target.value ? `${e.target.value}:00` : null }))} className={inputClass} style={{ colorScheme: "dark" }} />
-                </div>
+                <DueDatePicker
+                  key={editAssignment.id}
+                  id="edit-due-date"
+                  value={editAssignment.dueDate ? editAssignment.dueDate.slice(0, 16) : ""}
+                  onChange={(s) =>
+                    setEditAssignment((prev) => ({ ...prev, dueDate: s ? `${s}:00` : null }))
+                  }
+                />
                 <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
                   <button type="button" onClick={() => setEditAssignment(null)} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
                   <button type="submit" className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors" style={{ background: "#862633" }}>Save Changes</button>

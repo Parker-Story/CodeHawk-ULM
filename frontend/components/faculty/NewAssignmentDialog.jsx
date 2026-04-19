@@ -4,6 +4,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { useState, useRef } from "react";
 import { Upload, X } from "lucide-react";
 import Dialog from "@/components/Dialog";
+import DueDatePicker from "@/components/faculty/DueDatePicker";
 
 const inputClass = "w-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl py-2.5 px-4 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-600/40 focus:border-transparent";
 const labelClass = "text-sm font-medium text-zinc-700 dark:text-zinc-300 block mb-1.5";
@@ -85,17 +86,12 @@ export default function NewAssignmentDialog({ isOpen, onClose, crn, onAssignment
             <textarea id="assignment-description" rows={4} placeholder="Provide clear instructions for students..." className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
 
-          <div>
-            <label htmlFor="due-date" className={labelClass}>Due Date <span className="text-zinc-500 font-normal">(optional)</span></label>
-            <input
-                id="due-date"
-                type="datetime-local"
-                className={inputClass}
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                style={{ colorScheme: "dark" }}
-            />
-          </div>
+          <DueDatePicker
+            id="due-date"
+            value={dueDate}
+            onChange={setDueDate}
+            optionalLabel={<span className="text-zinc-500 font-normal">(optional)</span>}
+          />
 
           <div>
             <label htmlFor="total-points" className={labelClass}>Total Points</label>

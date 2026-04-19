@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService {
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (user == null) {
-            return new LoginResponse(false, null, null, null, null, null, null);
+            return new LoginResponse(false, "USER_NOT_FOUND", null, null, null, null, null, null);
         }
 
         String stored = user.getPasswordHash();
@@ -86,9 +86,9 @@ public class UserServiceImpl implements UserService {
         }
 
         if (!matched) {
-            return new LoginResponse(false, null, null, null, null, null, null);
+            return new LoginResponse(false, "INVALID_PASSWORD", null, null, null, null, null, null);
         }
-        return new LoginResponse(true, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole(), user.getEmail());
+        return new LoginResponse(true, null, user.getId(), user.getCwid(), user.getFirstName(), user.getLastName(), user.getRole(), user.getEmail());
     }
 
     @Override
