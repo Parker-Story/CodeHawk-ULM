@@ -160,6 +160,10 @@ export default function FacultyDashboardPage() {
     setCourseError(null);
 
     // Client-side validation
+    if (!/^[A-Z]{4} \d{4}$/.test(formData.courseAbbreviation)) {
+      setCourseError("Course abbreviation must be 4 capital letters, a space, then 4 digits (e.g. CSCI 4060).");
+      return;
+    }
     if (!/^\d{5}$/.test(formData.crn)) {
       setCourseError("CRN must be exactly 5 digits (e.g. 12345).");
       return;
@@ -282,7 +286,21 @@ export default function FacultyDashboardPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="courseAbbreviation" className={labelStyles}>Course Abbreviation</label>
-                <input type="text" id="courseAbbreviation" name="courseAbbreviation" value={formData.courseAbbreviation} onChange={handleChange} placeholder="e.g. CS101" className={inputStyles} required />
+                <input
+                  type="text" id="courseAbbreviation" name="courseAbbreviation"
+                  value={formData.courseAbbreviation}
+                  onChange={(e) => {
+                    const raw = e.target.value.toUpperCase();
+                    const letters = raw.replace(/[^A-Z]/g, "").slice(0, 4);
+                    const digits = raw.replace(/[^0-9]/g, "").slice(0, 4);
+                    let formatted = letters;
+                    if (letters.length === 4 && (raw.includes(" ") || raw.length > 4)) {
+                      formatted = letters + " " + digits;
+                    }
+                    setFormData((p) => ({ ...p, courseAbbreviation: formatted }));
+                  }}
+                  placeholder="e.g. CSCI 4060" maxLength={9} className={inputStyles} required
+                />
               </div>
               <div>
                 <label htmlFor="crn" className={labelStyles}>CRN</label>
