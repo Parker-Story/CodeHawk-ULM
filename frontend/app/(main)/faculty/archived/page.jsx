@@ -1,8 +1,9 @@
 "use client";
 
 import { BookOpen, Trash2, ChevronDown, ChevronRight, Clock, Calendar, Users } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Dialog from "@/components/Dialog";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -47,7 +48,16 @@ function RosterSection({ title, people, emptyText }) {
 
 export default function FacultyArchivedPage() {
     const { classes, setClasses } = useFacultyClasses();
+    const { user } = useAuth();
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, crn: null, className: "" });
+
+    useEffect(() => {
+        if (!user?.id || classes.length > 0) return;
+        fetch(`${API_BASE}/course/user/${user.id}`)
+            .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+            .then((data) => setClasses(Array.isArray(data) ? data.map((c) => ({ ...c, days: c.days ? c.days.split(",") : [] })) : []))
+            .catch((err) => console.error("Error loading courses:", err));
+    }, [user]);
     const [openGroups, setOpenGroups] = useState({});
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [enrollments, setEnrollments] = useState({});
