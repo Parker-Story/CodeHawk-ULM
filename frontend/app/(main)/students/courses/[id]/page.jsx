@@ -147,6 +147,7 @@ export default function StudentCourseDetailPage() {
   const [testResults, setTestResults] = useState([]);
   const [loadingResults, setLoadingResults] = useState(false);
   const fileInputRef = useRef(null);
+  const customInputFileRef = useRef(null);
   const [fileError, setFileError] = useState(null);
   const [submissionFiles, setSubmissionFiles] = useState([]);
   const [activeSubmissionFile, setActiveSubmissionFile] = useState(0);
@@ -1033,7 +1034,7 @@ export default function StudentCourseDetailPage() {
                                           disabled={loadingResults || savingCode}
                                           className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                       >
-                                        Run Professor Tests
+                                        Run Instructor Tests
                                       </button>
                                     </div>
                                   </div>
@@ -1133,7 +1134,7 @@ export default function StudentCourseDetailPage() {
                                               disabled={loadingPreview}
                                               className="flex-1 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                           >
-                                            {loadingPreview ? "Running..." : "Run Professor Tests"}
+                                            {loadingPreview ? "Running..." : "Run Instructor Tests"}
                                           </button>
                                           <button
                                               type="button"
@@ -1249,7 +1250,7 @@ export default function StudentCourseDetailPage() {
                                 disabled={loadingResults || savingCode}
                                 className="px-3 py-2 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                              Run Professor Tests
+                              Run Instructor Tests
                             </button>
                           </div>
                         </div>
@@ -1316,16 +1317,29 @@ export default function StudentCourseDetailPage() {
                         {selectedAssignment?.inputMode === "FILE" ? (
                             <div className="space-y-2">
                               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Custom Input File</p>
-                              <div className="flex items-center gap-3">
-                                <input
-                                    type="file"
-                                    onChange={handleCustomInputFileChange}
-                                    className="text-sm text-zinc-600 dark:text-zinc-300"
-                                />
-                                {customInputFile.inputFileName && (
-                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{customInputFile.inputFileName}</span>
+                              <div
+                                  onClick={() => customInputFileRef.current?.click()}
+                                  className="flex flex-col items-center justify-center gap-2 w-full border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-xl p-5 cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors"
+                              >
+                                <Upload className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
+                                {customInputFile.inputFileName ? (
+                                    <div className="text-center">
+                                      <p className="text-sm font-medium text-zinc-900 dark:text-white">{customInputFile.inputFileName}</p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Click to replace</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                      <p className="text-sm text-zinc-600 dark:text-zinc-300">Click to upload input file</p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Any file type accepted</p>
+                                    </div>
                                 )}
                               </div>
+                              <input
+                                  ref={customInputFileRef}
+                                  type="file"
+                                  onChange={handleCustomInputFileChange}
+                                  className="hidden"
+                              />
                             </div>
                         ) : null}
 
