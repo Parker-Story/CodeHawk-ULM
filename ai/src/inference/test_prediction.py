@@ -11,8 +11,7 @@ MODELS_DIR   = os.path.join(BASE_DIR, "models")
 METADATA_DIR = os.path.join(BASE_DIR, "data", "metadata")
 WEIGHT_KEYS  = ["W1", "b1", "W2", "b2", "W3", "b3"]
 
-CODE_EXTENSIONS = {".py", ".java", ".c", ".cpp", ".cc", ".js", ".ts",
-                   ".cs", ".go", ".rb", ".php", ".swift", ".kt", ".rs"}
+CODE_EXTENSIONS = {".py", ".java"}
 
 
 def load_model():
@@ -39,11 +38,18 @@ def _normalise(X_raw, mean, std, clip_p1, clip_p99):
 
 
 def _label(prob: float) -> tuple:
-    if prob < 0.20:   return "Human",     "High"
-    elif prob < 0.35: return "Human",     "Medium"
-    elif prob < 0.65: return "Uncertain", "Low"
-    elif prob < 0.80: return "AI",        "Medium"
-    else:             return "AI",        "High"
+    if prob < 0.20:
+        return "Human",     "High"
+    elif prob < 0.40:
+        return "Human",     "Medium"
+    elif prob < 0.50:
+        return "Human",     "Low"
+    elif prob < 0.60:
+        return "AI",        "Low"
+    elif prob < 0.80:
+        return "AI",        "Medium"
+    else:
+        return "AI",        "High"
 
 
 def _predict_codes(codes, model, mean, std, clip_p1, clip_p99):
@@ -142,8 +148,8 @@ def save_results(results: list) -> None:
 
 def main():
     # EDIT THESE FOR TESTING
-    INPUT_MODE = "csv"
-    PATH = os.path.join(BASE_DIR, "data", "predict", "Human_Java.csv")
+    INPUT_MODE = "file"
+    PATH = os.path.join(BASE_DIR, "data", "predict", "gemini.py")
 
     model, mean, std, clip_p1, clip_p99 = load_model()
 

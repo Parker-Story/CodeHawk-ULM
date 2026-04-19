@@ -54,7 +54,7 @@ FEATURE_NAMES = [
     "comment_word_count_avg",   # AI > H: AI comments are more verbose
 
     # Control flow density
-    "cyclomatic_density",       # H > H: humans branch more in all domains
+    "cyclomatic_density",       # H > AI: humans branch more in all domains
     "operator_density",         # H > AI: human code is more operator-dense
 
     # Keyword usage
@@ -189,14 +189,38 @@ def load_all_sources() -> pd.DataFrame:
         {
             "path": os.path.join(raw_dir, "human", "human_style_varied_v2.csv"),
             "code_col": "code",
-            "name": "Human normal",
+            "name": "Human",
             "limit": None,
+        },
+        {
+            "path": os.path.join(raw_dir, "human", "Human_Python.csv"),
+            "code_col": "code",
+            "name": "Human",
+            "limit": 3000,
+        },
+        {
+            "path": os.path.join(raw_dir, "human", "Human_Java.csv"),
+            "code_col": "code",
+            "name": "Human",
+            "limit": 3000,
+        },
+        {
+            "path": os.path.join(raw_dir, "human", "human_code.csv"),
+            "code_col": "code",
+            "name": "Human",
+            "limit": None,
+        },
+        {
+            "path": os.path.join(raw_dir, "human", "code_dataset_human_like.csv"),
+            "code_col": "code",
+            "name": "Human",
+            "limit": 1000,
         },
         {
             "path": os.path.join(raw_dir, "human", "human_selected_dataset.csv"),
             "code_col": "code",
-            "name": "Human competitive",
-            "limit": None,
+            "name": "Human",
+            "limit": 1000,
         },
     ]
 
@@ -205,19 +229,43 @@ def load_all_sources() -> pd.DataFrame:
         {
             "path": os.path.join(raw_dir, "ai", "llm_style_varied_v2.csv"),
             "code_col": "code",
-            "name": "AI (Gemini normal)",
+            "name": "AI (Gemini)",
             "limit": None,
+        },
+        {
+            "path": os.path.join(raw_dir, "ai", "AI_Python_Full_Rewritten.csv"),
+            "code_col": "code",
+            "name": "AI (Gemini)",
+            "limit": 3000,
+        },
+        {
+            "path": os.path.join(raw_dir, "ai", "AI_Generated_Java.csv"),
+            "code_col": "code",
+            "name": "AI (Gemini)",
+            "limit": 3000,
+        },
+        {
+            "path": os.path.join(raw_dir, "ai", "ai_generated_code.csv"),
+            "code_col": "code",
+            "name": "AI",
+            "limit": None,
+        },
+        {
+            "path": os.path.join(raw_dir, "ai", "code_dataset_llm_style.csv"),
+            "code_col": "code",
+            "name": "AI",
+            "limit": 1000,
         },
         {
             "path": os.path.join(raw_dir, "ai", "created_dataset_with_llms.csv"),
             "code_col": "code",
-            "name": "AI (CodeStral/Gemini/LLaMA competitive)",
-            "limit": None,
+            "name": "AI",
+            "limit": 1000,
         },
     ]
 
     # Mixed sources
-    mixed_path = os.path.join(raw_dir, "human_and_ai", "HumanVsAI_CodeDataset.csv")
+    mixed_path = os.path.join(raw_dir, "human_and_ai", "HumanVsAI_CodeDataset1.csv")
 
     frames = []
 
