@@ -3,6 +3,7 @@ main.py
 """
 
 import os
+import base64
 import numpy as np
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
@@ -10,7 +11,7 @@ from pydantic import BaseModel
 
 from src.models.neural_network import NeuralNetwork
 from src.utils.save_load       import load_weights, load_norm_stats
-from src.data.preprocess       import extract_features
+from src.data.preprocess       import extract_feature_matrix
 
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MODELS_DIR  = os.path.join(BASE_DIR, "models")
@@ -60,6 +61,12 @@ class DetectResponse(BaseModel):
     confidence:     str
 
 
+def _normalise(X_raw: np.ndarray) -> np.ndarray:
+    if _clip_p1 is not None:
+        X_raw = np.clip(X_raw, _clip_p1, _clip_p99)
+    return (X_raw - _norm_mean) / np.clip(_norm_std, 1e-8, None)
+
+
 def label(prob: float) -> tuple[str, str]:
     if prob < 0.20:
         return "Human",     "High"
@@ -67,6 +74,8 @@ def label(prob: float) -> tuple[str, str]:
         return "Human",     "Medium"
     elif prob < 0.50:
         return "Human",     "Low"
+    elif prob < 0.55:
+        return "Uncertain", "Low"
     elif prob < 0.60:
         return "AI",        "Low"
     elif prob < 0.80:
@@ -87,16 +96,14 @@ def detect(req: DetectRequest):
     if not req.code.strip():
         raise HTTPException(400, "code must not be empty")
 
-    x = extract_features(req.code)                            # (24,) raw
+    try:
+        code = base64.b64decode(req.code).decode("utf-8")
+    except Exception:
+        code = req.code  # not base64, use as-is
 
-    if _clip_p1 is not None:
-        x = np.clip(x, _clip_p1, _clip_p99)                  # clip to training range
-
-    x = (x - _norm_mean) / np.clip(_norm_std, 1e-8, None)    # z-score
-
-    prob = float(np.clip(
-        _model.predict_proba(x.reshape(1, -1))[0], 0.0, 1.0
-    ))
+    X_raw  = extract_feature_matrix([code])   # shape: (1, 14) — identical to test_prediction
+    X_norm = _normalise(X_raw)
+    prob   = float(np.clip(_model.predict_proba(X_norm)[0], 0.0, 1.0))
 
     lab, conf = label(prob)
     return DetectResponse(

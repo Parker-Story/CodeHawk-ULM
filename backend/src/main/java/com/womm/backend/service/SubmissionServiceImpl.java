@@ -101,8 +101,8 @@ public class SubmissionServiceImpl implements SubmissionService {
         try {
             DetectionResponse aiResult = aiDetectionService.detectAI(submission.getFileContent());
 
-            submission.setAiProbability(aiResult.getAiProbability());
-            submission.setAiPercentage(aiResult.getAiPercentage());
+            submission.setAiProbability(aiResult.getAi_probability());
+            submission.setAiPercentage(aiResult.getAi_percentage());
             submission.setAiLabel(aiResult.getLabel());
             submission.setAiConfidence(aiResult.getConfidence());
 
@@ -153,6 +153,11 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setFileContent(files.get(0).getFileContent());
         submission.setSubmittedAt(LocalDateTime.now());
 
+        double maxAiProbability = 0.0;
+        double maxAiPercentage = 0.0;
+        String bestLabel = "Human";
+        String bestConfidence = "Low";
+
         // saveAndFlush ensures the submission row is committed to DB immediately
         // so the FK on submission_files is satisfied before we insert child rows.
         Submission saved = submissionRepository.saveAndFlush(submission);
@@ -171,21 +176,35 @@ public class SubmissionServiceImpl implements SubmissionService {
             try {
                 DetectionResponse aiResult = aiDetectionService.detectAI(sf.getFileContent());
 
-                sf.setAiProbability(aiResult.getAiProbability());
-                sf.setAiPercentage(aiResult.getAiPercentage());
+                sf.setAiProbability(aiResult.getAi_probability());
+                sf.setAiPercentage(aiResult.getAi_percentage());
                 sf.setAiLabel(aiResult.getLabel());
                 sf.setAiConfidence(aiResult.getConfidence());
 
+                // keep the highest probability found
+                if (aiResult.getAi_percentage() > maxAiPercentage) {
+                    maxAiProbability = aiResult.getAi_probability();
+                    maxAiPercentage = aiResult.getAi_percentage();
+                    bestLabel = aiResult.getLabel();
+                    bestConfidence = aiResult.getConfidence();
+                }
             } catch (Exception e) {
                 log.error("[AI Detection] submitFiles fallback triggered: {}", e.getMessage());
-                submission.setAiProbability(0.0);
-                submission.setAiPercentage(0.0);
-                submission.setAiLabel("Unavailable");
-                submission.setAiConfidence("Low");
+                sf.setAiProbability(0.0);
+                sf.setAiPercentage(0.0);
+                sf.setAiLabel("Unavailable");
+                sf.setAiConfidence("Low");
             }
 
             submissionFileRepository.save(sf);
         }
+
+        // set highest ai file recorded
+        saved.setAiProbability(maxAiProbability);
+        saved.setAiPercentage(maxAiPercentage);
+        saved.setAiLabel(bestLabel);
+        saved.setAiConfidence(bestConfidence);
+        saved = submissionRepository.saveAndFlush(saved);
 
         if (!testCaseRepository.findByAssignmentId(assignmentId).isEmpty()) {
             testCaseService.runTestsForSubmission(assignmentId, userId);

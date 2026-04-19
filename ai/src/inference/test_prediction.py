@@ -11,8 +11,7 @@ MODELS_DIR   = os.path.join(BASE_DIR, "models")
 METADATA_DIR = os.path.join(BASE_DIR, "data", "metadata")
 WEIGHT_KEYS  = ["W1", "b1", "W2", "b2", "W3", "b3"]
 
-CODE_EXTENSIONS = {".py", ".java", ".c", ".cpp", ".cc", ".js", ".ts",
-                   ".cs", ".go", ".rb", ".php", ".swift", ".kt", ".rs"}
+CODE_EXTENSIONS = {".py", ".java"}
 
 
 def load_model():
@@ -150,7 +149,7 @@ def save_results(results: list) -> None:
 def main():
     # EDIT THESE FOR TESTING
     INPUT_MODE = "file"
-    PATH = os.path.join(BASE_DIR, "data", "predict", "human.py")
+    PATH = os.path.join(BASE_DIR, "data", "predict", "gemini.py")
 
     model, mean, std, clip_p1, clip_p99 = load_model()
 
