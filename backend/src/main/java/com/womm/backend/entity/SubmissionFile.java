@@ -24,6 +24,18 @@ public class SubmissionFile {
     @Column(name = "file_order")
     private Integer fileOrder;
 
+    @Column(name = "ai_probability")
+    private Double aiProbability;
+
+    @Column(name = "ai_percentage")
+    private Double aiPercentage;
+
+    @Column(name = "ai_label")
+    private String aiLabel;
+
+    @Column(name = "ai_confidence")
+    private String aiConfidence;
+
     public SubmissionFile() {}
 
     public Long getId() { return id; }
@@ -38,4 +50,28 @@ public class SubmissionFile {
     public void setFileContent(String fileContent) { this.fileContent = fileContent; }
     public Integer getFileOrder() { return fileOrder; }
     public void setFileOrder(Integer fileOrder) { this.fileOrder = fileOrder; }
+    public Double getAiProbability() {
+        return aiProbability;
+    }
+    public void setAiProbability(Double aiProbability) {
+        this.aiProbability = aiProbability;
+    }
+    public Double getAiPercentage() {
+        return aiPercentage;
+    }
+    public void setAiPercentage(Double aiPercentage) {
+        this.aiPercentage = aiPercentage;
+    }
+    public String getAiLabel() {
+        return aiLabel;
+    }
+    public void setAiLabel(String aiLabel) {
+        this.aiLabel = aiLabel;
+    }
+    public String getAiConfidence() {
+        return aiConfidence;
+    }
+    public void setAiConfidence(String aiConfidence) {
+        this.aiConfidence = aiConfidence;
+    }
 }

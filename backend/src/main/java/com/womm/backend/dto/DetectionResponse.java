@@ -7,11 +7,11 @@ public class DetectionResponse {
     private String confidence;
 
     // ----- Getters/Setters -----
-    public Double getAi_probability() { return ai_probability; }
-    public void setAi_probability(Double ai_probability) { this.ai_probability = ai_probability; }
+    public Double getAiProbability() { return ai_probability; }
+    public void setAiProbability(Double ai_probability) { this.ai_probability = ai_probability; }
 
-    public Double getAi_percentage() { return ai_percentage; }
-    public void setAi_percentage(Double ai_percentage) { this.ai_percentage = ai_percentage; }
+    public Double getAiPercentage() { return ai_percentage; }
+    public void setAiPercentage(Double ai_percentage) { this.ai_percentage = ai_percentage; }
 
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = label; }

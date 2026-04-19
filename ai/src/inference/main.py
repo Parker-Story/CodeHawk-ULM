@@ -60,12 +60,19 @@ class DetectResponse(BaseModel):
     confidence:     str
 
 
-def _label(prob: float) -> tuple[str, str]:
-    if prob < 0.20:   return "Human",     "High"
-    elif prob < 0.35: return "Human",     "Medium"
-    elif prob < 0.65: return "Uncertain", "Low"
-    elif prob < 0.80: return "AI",        "Medium"
-    else:             return "AI",        "High"
+def label(prob: float) -> tuple[str, str]:
+    if prob < 0.20:
+        return "Human",     "High"
+    elif prob < 0.40:
+        return "Human",     "Medium"
+    elif prob < 0.50:
+        return "Human",     "Low"
+    elif prob < 0.60:
+        return "AI",        "Low"
+    elif prob < 0.80:
+        return "AI",        "Medium"
+    else:
+        return "AI",        "High"
 
 
 @app.get("/health")
@@ -91,11 +98,11 @@ def detect(req: DetectRequest):
         _model.predict_proba(x.reshape(1, -1))[0], 0.0, 1.0
     ))
 
-    label, conf = _label(prob)
+    lab, conf = label(prob)
     return DetectResponse(
         ai_probability = round(prob, 4),
         ai_percentage  = round(prob * 100, 2),
-        label          = label,
+        label          = lab,
         confidence     = conf,
     )
 

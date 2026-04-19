@@ -101,8 +101,8 @@ public class SubmissionServiceImpl implements SubmissionService {
         try {
             DetectionResponse aiResult = aiDetectionService.detectAI(submission.getFileContent());
 
-            submission.setAiProbability(aiResult.getAi_probability());
-            submission.setAiPercentage(aiResult.getAi_percentage());
+            submission.setAiProbability(aiResult.getAiProbability());
+            submission.setAiPercentage(aiResult.getAiPercentage());
             submission.setAiLabel(aiResult.getLabel());
             submission.setAiConfidence(aiResult.getConfidence());
 
@@ -153,23 +153,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setFileContent(files.get(0).getFileContent());
         submission.setSubmittedAt(LocalDateTime.now());
 
-        // AI Detection
-        try {
-            DetectionResponse aiResult = aiDetectionService.detectAI(submission.getFileContent());
-
-            submission.setAiProbability(aiResult.getAi_probability());
-            submission.setAiPercentage(aiResult.getAi_percentage());
-            submission.setAiLabel(aiResult.getLabel());
-            submission.setAiConfidence(aiResult.getConfidence());
-
-        } catch (Exception e) {
-            log.error("[AI Detection] submitFiles fallback triggered: {}", e.getMessage());
-            submission.setAiProbability(0.0);
-            submission.setAiPercentage(0.0);
-            submission.setAiLabel("Unavailable");
-            submission.setAiConfidence("Low");
-        }
-
         // saveAndFlush ensures the submission row is committed to DB immediately
         // so the FK on submission_files is satisfied before we insert child rows.
         Submission saved = submissionRepository.saveAndFlush(submission);
@@ -183,6 +166,24 @@ public class SubmissionServiceImpl implements SubmissionService {
             sf.setFileName(files.get(i).getFileName());
             sf.setFileContent(files.get(i).getFileContent());
             sf.setFileOrder(i);
+
+            // AI Detection
+            try {
+                DetectionResponse aiResult = aiDetectionService.detectAI(sf.getFileContent());
+
+                sf.setAiProbability(aiResult.getAiProbability());
+                sf.setAiPercentage(aiResult.getAiPercentage());
+                sf.setAiLabel(aiResult.getLabel());
+                sf.setAiConfidence(aiResult.getConfidence());
+
+            } catch (Exception e) {
+                log.error("[AI Detection] submitFiles fallback triggered: {}", e.getMessage());
+                submission.setAiProbability(0.0);
+                submission.setAiPercentage(0.0);
+                submission.setAiLabel("Unavailable");
+                submission.setAiConfidence("Low");
+            }
+
             submissionFileRepository.save(sf);
         }
 
