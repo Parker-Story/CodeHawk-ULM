@@ -3,7 +3,7 @@
 import { API_BASE } from "@/lib/apiBase";
 import { useState, useEffect, useRef} from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog, Upload, Eye, EyeOff, Maximize2 } from "lucide-react";
+import { ArrowLeft, BookOpen, FileText, FileDown, Archive, BarChart3, Plus, MoreVertical, Pencil, Trash2, UserCog, Upload, Eye, EyeOff, Maximize2, Copy } from "lucide-react";
 import Link from "next/link";
 import { useFacultyClasses } from "@/contexts/FacultyClassesContext";
 import NewAssignmentDialog from "@/components/faculty/NewAssignmentDialog";
@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function CourseDetailPage() {
   const params = useParams();
   const crn = params.id;
-  const { setClasses } = useFacultyClasses();
+  const { classes, setClasses } = useFacultyClasses();
   const [classItem, setClassItem] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +44,11 @@ export default function CourseDetailPage() {
   const [promoteTaError, setPromoteTaError] = useState(null);
   const [codeVisible, setCodeVisible] = useState(false);
   const [codeDisplayOpen, setCodeDisplayOpen] = useState(false);
+  const [copyAssignment, setCopyAssignment] = useState(null);
+  const [copyDestCrn, setCopyDestCrn] = useState("");
+  const [copyDueDate, setCopyDueDate] = useState("");
+  const [copyLoading, setCopyLoading] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/course/${crn}`)
@@ -221,6 +226,39 @@ export default function CourseDetailPage() {
     } catch (error) { console.error("Error deleting assignment:", error); }
   };
 
+  const handleCopyToOtherCourse = async () => {
+    if (!copyDestCrn || !copyAssignment) return;
+    setCopyLoading(true);
+    setCopySuccess(null);
+    try {
+      const body = {
+        title: copyAssignment.title,
+        description: copyAssignment.description || "",
+        totalPoints: copyAssignment.totalPoints ?? 100,
+        inputMode: copyAssignment.inputMode,
+        inputFileName: copyAssignment.inputFileName || null,
+        inputFileContent: copyAssignment.inputFileContent || null,
+        groupAssignment: copyAssignment.groupAssignment ?? false,
+        groupSize: copyAssignment.groupSize ?? null,
+        scoresVisible: copyAssignment.scoresVisible ?? false,
+        published: false,
+        dueDate: copyDueDate ? `${copyDueDate}:00` : null,
+      };
+      const response = await fetch(`${API_BASE}/assignment/course/${copyDestCrn}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error("Failed to copy assignment");
+      const destCourse = classes.find((c) => c.crn === copyDestCrn);
+      setCopySuccess(destCourse?.courseName || "the selected course");
+    } catch (error) {
+      console.error("Error copying assignment:", error);
+    } finally {
+      setCopyLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8"><p className="text-zinc-500 dark:text-zinc-400">Loading...</p></div>;
   }
@@ -328,6 +366,13 @@ export default function CourseDetailPage() {
                                       </button>
                                       <button
                                           type="button"
+                                          onClick={(e) => { e.stopPropagation(); setCopyAssignment(a); setCopyDestCrn(""); setCopyDueDate(""); setCopySuccess(null); setActiveMenu(null); }}
+                                          className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                                      >
+                                        <Copy className="w-4 h-4" /> Copy to Course
+                                      </button>
+                                      <button
+                                          type="button"
                                           onClick={(e) => { e.stopPropagation(); setDeleteAssignmentConfirm({ isOpen: true, assignment: a }); setActiveMenu(null); }}
                                           className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
                                       >
@@ -388,6 +433,44 @@ export default function CourseDetailPage() {
               </div>
             </div>
         )}
+
+        {/* Copy Assignment to Course */}
+        <Dialog isOpen={!!copyAssignment} onClose={() => { setCopyAssignment(null); setCopySuccess(null); }} title="Copy Assignment to Course">
+          {copyAssignment && (
+            <div className="space-y-4">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Copying <span className="font-semibold text-zinc-900 dark:text-white">{copyAssignment.title}</span> to another course. It will be saved as an unpublished draft.
+              </p>
+              {copySuccess ? (
+                <>
+                  <div className="p-4 bg-green-600/10 border border-green-600/20 rounded-xl">
+                    <p className="text-green-400 text-sm font-medium">Assignment copied to {copySuccess}.</p>
+                  </div>
+                  <button type="button" onClick={() => { setCopyAssignment(null); setCopySuccess(null); }} className="w-full py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Close</button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className={labelClass}>Destination Course</label>
+                    <select value={copyDestCrn} onChange={(e) => setCopyDestCrn(e.target.value)} className={inputClass} required>
+                      <option value="">Select a course...</option>
+                      {classes.filter((c) => c.crn !== crn && !c.archived).map((c) => (
+                        <option key={c.crn} value={c.crn}>{c.courseName} ({c.courseAbbreviation})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <DueDatePicker id="copy-due-date" value={copyDueDate} onChange={(s) => setCopyDueDate(s || "")} optionalLabel="(optional)" />
+                  <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                    <button type="button" onClick={() => setCopyAssignment(null)} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
+                    <button type="button" onClick={handleCopyToOtherCourse} disabled={!copyDestCrn || copyLoading} className="flex-1 py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: "#862633" }}>
+                      {copyLoading ? "Copying..." : "Copy Assignment"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </Dialog>
 
         <NewAssignmentDialog isOpen={newAssignmentOpen} onClose={() => setNewAssignmentOpen(false)} crn={crn} onAssignmentCreated={(a) => setAssignments((prev) => [...prev, a])} />
         <GradeReportDialog isOpen={gradeReportOpen} onClose={() => setGradeReportOpen(false)} crn={crn} />
