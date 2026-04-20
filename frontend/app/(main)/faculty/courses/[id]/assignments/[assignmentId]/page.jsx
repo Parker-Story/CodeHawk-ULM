@@ -80,6 +80,9 @@ export default function GradingWorkspacePage() {
   const [assignmentReportOpen, setAssignmentReportOpen] = useState(false);
   const [runningPlagiarism, setRunningPlagiarism] = useState(false);
   const [expandedPair, setExpandedPair] = useState(null);
+  const [pairFilesCache, setPairFilesCache] = useState({});
+  const [aiExpandedUserId, setAiExpandedUserId] = useState(null);
+  const [aiFilesCache, setAiFilesCache] = useState({});
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [feedbackInputs, setFeedbackInputs] = useState({});
@@ -1851,7 +1854,18 @@ export default function GradingWorkspacePage() {
                         const bg = r.similarity >= 70 ? "bg-red-500/10 border-red-500/20" : r.similarity >= 50 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-zinc-800 border-zinc-700";
                         return (
                           <div key={idx} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0">
-                            <button type="button" onClick={() => setExpandedPair(isExpanded ? null : idx)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
+                            <button type="button" onClick={() => {
+                              const next = isExpanded ? null : idx;
+                              setExpandedPair(next);
+                              if (next !== null && !pairFilesCache[next]) {
+                                Promise.all([
+                                  fetch(`${API_BASE}/submission/files/${assignmentId}/${r.studentAId}`).then(res => res.ok ? res.json() : []).catch(() => []),
+                                  fetch(`${API_BASE}/submission/files/${assignmentId}/${r.studentBId}`).then(res => res.ok ? res.json() : []).catch(() => []),
+                                ]).then(([filesA, filesB]) => {
+                                  setPairFilesCache(prev => ({ ...prev, [next]: { filesA: Array.isArray(filesA) ? filesA : [], filesB: Array.isArray(filesB) ? filesB : [], activeA: 0, activeB: 0 } }));
+                                });
+                              }
+                            }} className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
                               <div className="flex items-center gap-4">
                                 <div className={`text-2xl font-bold ${color}`}>{r.similarity}%</div>
                                 <div>
@@ -1864,22 +1878,55 @@ export default function GradingWorkspacePage() {
                                 {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />}
                               </div>
                             </button>
-                            {isExpanded && (
-                              <div className="px-6 pb-5">
-                                <div className={`border rounded-xl overflow-hidden ${bg}`}>
-                                  <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-700">
-                                    <div>
-                                      <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentAName}</p></div>
-                                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentA || "No content"}</pre>
-                                    </div>
-                                    <div>
-                                      <div className="px-4 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"><p className="text-sm font-semibold text-zinc-900 dark:text-white">{r.studentBName}</p></div>
-                                      <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{r.fileContentB || "No content"}</pre>
+                            {isExpanded && (() => {
+                              const cached = pairFilesCache[idx];
+                              const filesA = cached?.filesA ?? [];
+                              const filesB = cached?.filesB ?? [];
+                              const activeA = cached?.activeA ?? 0;
+                              const activeB = cached?.activeB ?? 0;
+                              const contentA = filesA.length > 0 ? decodeBase64ToUtf8(filesA[activeA]?.fileContent) : (r.fileContentA || "No content");
+                              const contentB = filesB.length > 0 ? decodeBase64ToUtf8(filesB[activeB]?.fileContent) : (r.fileContentB || "No content");
+                              return (
+                                <div className="px-6 pb-5">
+                                  <div className={`border rounded-xl overflow-hidden ${bg}`}>
+                                    <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-700">
+                                      <div className="flex flex-col min-w-0">
+                                        <div className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50">
+                                          <p className="px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-white">{r.studentAName}</p>
+                                          {filesA.length > 1 && (
+                                            <div className="flex overflow-x-auto border-t border-zinc-200 dark:border-zinc-700">
+                                              {filesA.map((f, fi) => (
+                                                <button key={fi} type="button" onClick={() => setPairFilesCache(prev => ({ ...prev, [idx]: { ...prev[idx], activeA: fi } }))}
+                                                  className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${activeA === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                  {f.fileName}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{cached ? contentA : "Loading..."}</pre>
+                                      </div>
+                                      <div className="flex flex-col min-w-0">
+                                        <div className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50">
+                                          <p className="px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-white">{r.studentBName}</p>
+                                          {filesB.length > 1 && (
+                                            <div className="flex overflow-x-auto border-t border-zinc-200 dark:border-zinc-700">
+                                              {filesB.map((f, fi) => (
+                                                <button key={fi} type="button" onClick={() => setPairFilesCache(prev => ({ ...prev, [idx]: { ...prev[idx], activeB: fi } }))}
+                                                  className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${activeB === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                  {f.fileName}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{cached ? contentB : "Loading..."}</pre>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </div>
                         );
                       })
@@ -1912,38 +1959,83 @@ export default function GradingWorkspacePage() {
                               const barColor = {
                                 AI: "bg-red-500", Human: "bg-green-500", Uncertain: "bg-yellow-500",
                               }[label] ?? "bg-zinc-500";
+                              const userId = s.submissionId?.userId ?? s.user?.cwid;
+                              const isAiExpanded = aiExpandedUserId === userId;
+                              const aiCached = aiFilesCache[userId];
+                              const aiFiles = aiCached?.files ?? [];
+                              const aiActiveFile = aiCached?.activeFile ?? 0;
                               return (
-                                <tr key={s.submissionId?.userId ?? s.user?.cwid} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                                  <td className="py-3 px-6">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
-                                        <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
-                                      </div>
-                                      <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-6">
-                                    {pct != null && label && label !== "Unavailable" ? (
-                                      <div className="flex items-center gap-3 min-w-[140px]">
-                                        <div className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-                                          <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                <React.Fragment key={userId}>
+                                  <tr
+                                    className="border-b border-zinc-200 dark:border-zinc-700/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                                    onClick={() => {
+                                      if (isAiExpanded) { setAiExpandedUserId(null); return; }
+                                      setAiExpandedUserId(userId);
+                                      if (!aiFilesCache[userId]) {
+                                        fetch(`${API_BASE}/submission/files/${assignmentId}/${userId}`)
+                                          .then(res => res.ok ? res.json() : []).catch(() => [])
+                                          .then(files => setAiFilesCache(prev => ({ ...prev, [userId]: { files: Array.isArray(files) ? files : [], activeFile: 0 } })));
+                                      }
+                                    }}
+                                  >
+                                    <td className="py-3 px-6">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
+                                          <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
                                         </div>
-                                        <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">{pct.toFixed(1)}%</span>
+                                        <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
+                                        <span className="ml-1 text-zinc-400 dark:text-zinc-500 text-xs">{isAiExpanded ? "▲" : "▼"}</span>
                                       </div>
-                                    ) : (
-                                      <span className="text-zinc-600 text-sm">—</span>
-                                    )}
-                                  </td>
-                                  <td className="py-3 px-6">
-                                    {confidence && label && label !== "Unavailable" ? (
-                                      <span className={`text-xs ${confidence === "High" ? "text-zinc-900 dark:text-white font-medium" : confidence === "Medium" ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400"}`}>
-                                        {confidence}
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs text-zinc-600">—</span>
-                                    )}
-                                  </td>
-                                </tr>
+                                    </td>
+                                    <td className="py-3 px-6">
+                                      {pct != null && label && label !== "Unavailable" ? (
+                                        <div className="flex items-center gap-3 min-w-[140px]">
+                                          <div className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                                            <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                          </div>
+                                          <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">{pct.toFixed(1)}%</span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-zinc-600 text-sm">—</span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-6">
+                                      {confidence && label && label !== "Unavailable" ? (
+                                        <span className={`text-xs ${confidence === "High" ? "text-zinc-900 dark:text-white font-medium" : confidence === "Medium" ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                          {confidence}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-zinc-600">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                  {isAiExpanded && (
+                                    <tr className="border-b border-zinc-200 dark:border-zinc-700/50">
+                                      <td colSpan={3} className="px-6 pb-4 pt-2">
+                                        <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                                          {aiFiles.length > 1 && (
+                                            <div className="flex overflow-x-auto border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+                                              {aiFiles.map((f, fi) => (
+                                                <button key={fi} type="button"
+                                                  onClick={(e) => { e.stopPropagation(); setAiFilesCache(prev => ({ ...prev, [userId]: { ...prev[userId], activeFile: fi } })); }}
+                                                  className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${aiActiveFile === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                  {f.fileName}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {aiFiles.length === 0 ? (
+                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 p-4">{aiCached ? "No files found." : "Loading..."}</p>
+                                          ) : (
+                                            <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-80 whitespace-pre-wrap bg-white dark:bg-zinc-900">
+                                              {decodeBase64ToUtf8(aiFiles[aiActiveFile]?.fileContent) || "No content"}
+                                            </pre>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               );
                             })}
                         </tbody>
