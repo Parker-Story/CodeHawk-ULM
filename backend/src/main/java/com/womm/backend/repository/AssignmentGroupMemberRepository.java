@@ -21,4 +21,9 @@ public interface AssignmentGroupMemberRepository extends JpaRepository<Assignmen
     @Transactional
     @Query("DELETE FROM AssignmentGroupMember m WHERE m.group.id = :groupId")
     void deleteByGroupId(@Param("groupId") Long groupId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM AssignmentGroupMember m WHERE m.id.userId = :userId")
+    void deleteByUserId(@Param("userId") String userId);
 }

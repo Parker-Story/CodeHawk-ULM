@@ -42,6 +42,10 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [promoteTaError, setPromoteTaError] = useState(null);
+  const [manageMode, setManageMode] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+  const [deleteAccountsConfirm, setDeleteAccountsConfirm] = useState({ isOpen: false, students: [] });
+  const [deletingAccounts, setDeletingAccounts] = useState(false);
   const [codeVisible, setCodeVisible] = useState(false);
   const [codeDisplayOpen, setCodeDisplayOpen] = useState(false);
   const [copyAssignment, setCopyAssignment] = useState(null);
@@ -178,6 +182,16 @@ export default function CourseDetailPage() {
       console.error("Error promoting to TA:", error);
       setPromoteTaError("An unexpected error occurred.");
     }
+  };
+
+  const handleDeleteAccounts = async () => {
+    setDeletingAccounts(true);
+    const ids = deleteAccountsConfirm.students.map((s) => s.user.id);
+    await Promise.all(ids.map((id) => fetch(`${API_BASE}/api/users/${id}`, { method: "DELETE" })));
+    setRoster((prev) => prev.filter((s) => !ids.includes(s.user.id)));
+    setSelectedStudentIds(new Set());
+    setDeleteAccountsConfirm({ isOpen: false, students: [] });
+    setDeletingAccounts(false);
   };
 
   const handleDemoteFromTa = async (courseUser) => {
@@ -559,18 +573,56 @@ export default function CourseDetailPage() {
         </Dialog>
 
         {/* Roster */}
-        <Dialog isOpen={rosterOpen} onClose={() => setRosterOpen(false)} title="Course Roster">
+        <Dialog isOpen={rosterOpen} onClose={() => { setRosterOpen(false); setManageMode(false); setSelectedStudentIds(new Set()); }} title="Course Roster">
           <div className="space-y-3">
             {roster.length === 0 ? (
                 <p className="text-zinc-400 text-sm">No students enrolled yet.</p>
             ) : (
-                roster.map((courseUser) => (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    {manageMode ? (
+                      <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 accent-red-700"
+                          checked={roster.filter((cu) => cu.courseRole !== "FACULTY").every((cu) => selectedStudentIds.has(cu.user.id))}
+                          onChange={(e) => {
+                            const eligible = roster.filter((cu) => cu.courseRole !== "FACULTY").map((cu) => cu.user.id);
+                            setSelectedStudentIds(e.target.checked ? new Set(eligible) : new Set());
+                          }}
+                        />
+                        Select all
+                      </label>
+                    ) : <span />}
+                    <button
+                      type="button"
+                      onClick={() => { setManageMode((m) => !m); setSelectedStudentIds(new Set()); }}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      {manageMode ? "Cancel" : "Manage Accounts"}
+                    </button>
+                  </div>
+                  {roster.map((courseUser) => (
                     <div key={courseUser.user.id} className="group flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                       <div className="flex items-center gap-3">
+                        {manageMode && courseUser.courseRole !== "FACULTY" && (
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-red-700 shrink-0"
+                            checked={selectedStudentIds.has(courseUser.user.id)}
+                            onChange={(e) => {
+                              setSelectedStudentIds((prev) => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(courseUser.user.id) : next.delete(courseUser.user.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        )}
                         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
-                    <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
-                      {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
-                    </span>
+                          <span className="text-xs font-medium" style={{ color: "#c0a080" }}>
+                            {courseUser.user.firstName?.charAt(0)}{courseUser.user.lastName?.charAt(0)}
+                          </span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -585,7 +637,7 @@ export default function CourseDetailPage() {
                           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{courseUser.user.cwid ? `CWID: ${courseUser.user.cwid}` : courseUser.user.email}</p>
                         </div>
                       </div>
-                      {courseUser.courseRole !== "FACULTY" && (
+                      {!manageMode && courseUser.courseRole !== "FACULTY" && (
                           <div className="relative">
                             <button
                                 type="button"
@@ -606,15 +658,36 @@ export default function CourseDetailPage() {
                                         <UserCog className="w-4 h-4" /> Revoke TA
                                       </button>
                                   )}
-                                  <button type="button" onClick={() => { setRemoveConfirm({ isOpen: true, student: courseUser }); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
-                                    <Trash2 className="w-4 h-4" /> Remove
+                                  <button type="button" onClick={() => { setRemoveConfirm({ isOpen: true, student: courseUser }); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
+                                    <Trash2 className="w-4 h-4" /> Remove from Course
+                                  </button>
+                                  <button type="button" onClick={() => { setDeleteAccountsConfirm({ isOpen: true, students: [courseUser] }); setActiveMenu(null); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
+                                    <Trash2 className="w-4 h-4" /> Delete Account
                                   </button>
                                 </div>
                             )}
                           </div>
                       )}
                     </div>
-                ))
+                  ))}
+                  {manageMode && selectedStudentIds.size > 0 && (
+                    <div className="sticky bottom-0 pt-3 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-zinc-600 dark:text-zinc-300">{selectedStudentIds.size} student{selectedStudentIds.size !== 1 ? "s" : ""} selected</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const selected = roster.filter((cu) => selectedStudentIds.has(cu.user.id));
+                            setDeleteAccountsConfirm({ isOpen: true, students: selected });
+                          }}
+                          className="px-4 py-2 text-sm font-medium text-white bg-red-700 hover:bg-red-600 rounded-lg transition-colors"
+                        >
+                          Delete Selected Accounts
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
             )}
           </div>
         </Dialog>
@@ -643,6 +716,29 @@ export default function CourseDetailPage() {
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setRemoveConfirm({ isOpen: false, student: null })} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
               <button type="button" onClick={handleRemoveStudent} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors">Remove</button>
+            </div>
+          </div>
+        </Dialog>
+
+        {/* Delete Accounts */}
+        <Dialog isOpen={deleteAccountsConfirm.isOpen} onClose={() => !deletingAccounts && setDeleteAccountsConfirm({ isOpen: false, students: [] })} title="Delete Account(s)" size="sm">
+          <div className="space-y-4">
+            <p className="text-zinc-600 dark:text-zinc-300">
+              {deleteAccountsConfirm.students.length === 1
+                ? <>Permanently delete the account of <span className="font-semibold text-zinc-900 dark:text-white">{deleteAccountsConfirm.students[0]?.user?.firstName} {deleteAccountsConfirm.students[0]?.user?.lastName}</span>? This cannot be undone.</>
+                : <>Permanently delete <span className="font-semibold text-zinc-900 dark:text-white">{deleteAccountsConfirm.students.length} accounts</span>? This cannot be undone.</>
+              }
+            </p>
+            {deleteAccountsConfirm.students.length > 1 && (
+              <ul className="text-sm text-zinc-500 dark:text-zinc-400 space-y-1 max-h-40 overflow-y-auto">
+                {deleteAccountsConfirm.students.map((s) => <li key={s.user.id}>• {s.user.firstName} {s.user.lastName}</li>)}
+              </ul>
+            )}
+            <div className="flex gap-3 pt-2">
+              <button type="button" disabled={deletingAccounts} onClick={() => setDeleteAccountsConfirm({ isOpen: false, students: [] })} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50">Cancel</button>
+              <button type="button" disabled={deletingAccounts} onClick={handleDeleteAccounts} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+                {deletingAccounts ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </Dialog>

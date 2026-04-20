@@ -4,18 +4,43 @@ import com.womm.backend.dto.LoginResponse;
 import com.womm.backend.dto.RegisterRequest;
 import com.womm.backend.entity.User;
 import com.womm.backend.enums.Role;
+import com.womm.backend.repository.AssignmentGroupMemberRepository;
+import com.womm.backend.repository.CourseUserRepository;
+import com.womm.backend.repository.RubricScoreRepository;
+import com.womm.backend.repository.SubmissionFileRepository;
+import com.womm.backend.repository.SubmissionRepository;
+import com.womm.backend.repository.TestResultRepository;
 import com.womm.backend.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
     UserRepository userRepository;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final TestResultRepository testResultRepository;
+    private final RubricScoreRepository rubricScoreRepository;
+    private final SubmissionFileRepository submissionFileRepository;
+    private final SubmissionRepository submissionRepository;
+    private final AssignmentGroupMemberRepository assignmentGroupMemberRepository;
+    private final CourseUserRepository courseUserRepository;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository,
+                           TestResultRepository testResultRepository,
+                           RubricScoreRepository rubricScoreRepository,
+                           SubmissionFileRepository submissionFileRepository,
+                           SubmissionRepository submissionRepository,
+                           AssignmentGroupMemberRepository assignmentGroupMemberRepository,
+                           CourseUserRepository courseUserRepository) {
         this.userRepository = userRepository;
+        this.testResultRepository = testResultRepository;
+        this.rubricScoreRepository = rubricScoreRepository;
+        this.submissionFileRepository = submissionFileRepository;
+        this.submissionRepository = submissionRepository;
+        this.assignmentGroupMemberRepository = assignmentGroupMemberRepository;
+        this.courseUserRepository = courseUserRepository;
     }
 
     @Override
@@ -39,7 +64,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUser(String id) {
+        testResultRepository.deleteByUserId(id);
+        rubricScoreRepository.deleteByUserId(id);
+        submissionFileRepository.deleteByUserId(id);
+        submissionRepository.deleteByUserId(id);
+        assignmentGroupMemberRepository.deleteByUserId(id);
+        courseUserRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
 
