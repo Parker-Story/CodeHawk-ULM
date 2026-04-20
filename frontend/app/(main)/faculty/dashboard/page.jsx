@@ -193,6 +193,23 @@ export default function FacultyDashboardPage() {
       return;
     }
 
+    const toMinutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+    const newStart = toMinutes(formData.startTime);
+    const newEnd = toMinutes(formData.endTime);
+    const conflict = classes.find((c) => {
+      if (c.archived) return false;
+      if (c.semester !== formData.semester || String(c.year) !== String(formData.year)) return false;
+      const sharedDay = (c.days || []).some((d) => formData.days.includes(d));
+      if (!sharedDay) return false;
+      const cStart = toMinutes(c.startTime);
+      const cEnd = toMinutes(c.endTime);
+      return newStart < cEnd && newEnd > cStart;
+    });
+    if (conflict) {
+      setCourseError(`Time conflict with "${conflict.courseName}" (${conflict.startTime}–${conflict.endTime}). You cannot teach two courses at the same time.`);
+      return;
+    }
+
     const existingCodes = classes.map((c) => c.code).filter(Boolean);
     const code = generateUniqueCode(existingCodes);
     const newCourse = { ...formData, code, archived: false, days: formData.days.join(",") };
