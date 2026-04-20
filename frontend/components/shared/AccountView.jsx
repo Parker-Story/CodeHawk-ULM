@@ -7,6 +7,7 @@ import Dialog from "@/components/Dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { API_BASE } from "@/lib/apiBase";
+import { useRouter } from "next/navigation";
 
 export default function AccountView({
                                       displayName,
@@ -16,6 +17,7 @@ export default function AccountView({
   const { user, setUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { institution = "", cwid, email = "" } = academicInfo;
+  const router = useRouter();
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
@@ -25,6 +27,25 @@ export default function AccountView({
   const [editError, setEditError] = useState("");
   const [showToast, setShowToast] = useState(false);
   const toastTimeoutRef = useRef(null);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteAccount = async () => {
+    setDeleteError("");
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/${user.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setUser(null);
+      router.push("/");
+    } catch {
+      setDeleteError("Something went wrong. Please try again.");
+      setDeleteLoading(false);
+    }
+  };
 
   const openEdit = () => {
     setEditForm({ firstName: user.firstName ?? "", lastName: user.lastName ?? "", email: user.email ?? "" });
@@ -150,6 +171,20 @@ export default function AccountView({
             </button>
           </div>
         </section>
+
+        <section className={`mt-8 ${cardClass}`}>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Account Management</h2>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Permanently delete your account and all associated data.</p>
+            <button
+              type="button"
+              onClick={() => { setDeleteConfirmEmail(""); setDeleteError(""); setDeleteOpen(true); }}
+              className="shrink-0 ml-4 px-4 py-2 text-white font-medium rounded-lg bg-red-700 hover:bg-red-600 transition-colors"
+            >
+              Delete Account
+            </button>
+          </div>
+        </section>
       </div>
 
       {/* Edit Profile Dialog */}
@@ -201,6 +236,42 @@ export default function AccountView({
         onClose={() => setChangePasswordOpen(false)}
         onSuccess={() => {}}
       />
+
+      <Dialog isOpen={deleteOpen} onClose={() => !deleteLoading && setDeleteOpen(false)} title="Delete Account">
+        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
+          This will permanently delete your account and all associated data. This action cannot be undone.
+        </p>
+        <div className="mb-4">
+          <label className={labelClass}>Type your email to confirm</label>
+          <input
+            type="email"
+            value={deleteConfirmEmail}
+            onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+            placeholder={currentEmail}
+            className={inputClass}
+            disabled={deleteLoading}
+          />
+        </div>
+        {deleteError && <p className="text-sm text-red-400 mb-3">{deleteError}</p>}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={() => setDeleteOpen(false)}
+            disabled={deleteLoading}
+            className="px-4 py-2 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={deleteLoading || deleteConfirmEmail !== currentEmail}
+            className="px-4 py-2 text-white font-medium rounded-lg bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50"
+          >
+            {deleteLoading ? "Deleting..." : "Delete Account"}
+          </button>
+        </div>
+      </Dialog>
 
       {showToast && (
         <div role="status" aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-lg border border-zinc-200 dark:border-zinc-600">

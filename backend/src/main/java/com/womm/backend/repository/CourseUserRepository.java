@@ -24,4 +24,9 @@ public interface CourseUserRepository extends JpaRepository<CourseUser, CourseUs
 
     @Query("SELECT cu FROM CourseUser cu WHERE cu.user.id = :userId")
     List<CourseUser> findCourseUsersByUserId(@Param("userId") String userId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CourseUser cu WHERE cu.user.id = :userId")
+    void deleteByUserId(@Param("userId") String userId);
 }

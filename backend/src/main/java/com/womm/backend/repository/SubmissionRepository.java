@@ -26,5 +26,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Submissi
     @Query("DELETE FROM Submission s WHERE s.submissionId.userId = :userId AND s.assignment.course.crn = :crn")
     void deleteByUserIdAndCourseCrn(@Param("userId") String userId, @Param("crn") String crn);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Submission s WHERE s.submissionId.userId = :userId")
+    void deleteByUserId(@Param("userId") String userId);
 
 }
