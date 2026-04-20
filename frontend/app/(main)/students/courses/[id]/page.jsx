@@ -40,6 +40,7 @@ function VisibleTestCases({ assignmentId }) {
 
 function AssignmentRubric({ assignmentId }) {
   const [rubric, setRubric] = useState(null);
+  const [expandedItems, setExpandedItems] = useState({});
 
   useEffect(() => {
     fetch(`${API_BASE}/rubric/assignment/${assignmentId}`)
@@ -52,6 +53,8 @@ function AssignmentRubric({ assignmentId }) {
   }, [assignmentId]);
 
   if (!rubric) return null;
+
+  const toggleItem = (itemId) => setExpandedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
 
   return (
       <div className="space-y-2">
@@ -71,17 +74,50 @@ function AssignmentRubric({ assignmentId }) {
                   </p>
                 </div>
                 <div className="bg-white dark:bg-zinc-900 divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {(criteria.items || []).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">›</span>
-                          <span className="text-zinc-700 dark:text-zinc-300 text-xs">{item.label}</span>
+                  {(criteria.items || []).map((item) => {
+                    const hasDescriptors = rubric.weighted && (item.scoreLabels || []).length > 0;
+                    const isExpanded = !!expandedItems[item.id];
+                    return (
+                      <div key={item.id}>
+                        <div
+                          className={`flex items-center justify-between px-3 py-2 ${hasDescriptors ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60" : ""}`}
+                          onClick={hasDescriptors ? () => toggleItem(item.id) : undefined}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            {hasDescriptors ? (
+                              <span className={`text-zinc-400 dark:text-zinc-500 text-xs shrink-0 select-none transition-transform duration-150 ${isExpanded ? "rotate-90" : ""}`} style={{ display: "inline-block" }}>›</span>
+                            ) : (
+                              <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">›</span>
+                            )}
+                            <span className="text-zinc-700 dark:text-zinc-300 text-xs">{item.label}</span>
+                          </div>
+                          <span className="text-zinc-500 text-xs shrink-0 ml-2">
+                            {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
+                          </span>
                         </div>
-                        <span className="text-zinc-500 text-xs shrink-0 ml-2">
-                          {rubric.weighted ? `${item.weight}%` : `${item.maxPoints} pts`}
-                        </span>
+                        {hasDescriptors && isExpanded && (
+                          <div className="mx-3 mb-2 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
+                                  <th className="text-left px-3 py-1.5 font-medium text-zinc-500 dark:text-zinc-400 w-10">Score</th>
+                                  <th className="text-left px-3 py-1.5 font-medium text-zinc-500 dark:text-zinc-400">Descriptor</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                                {[...item.scoreLabels].sort((a, b) => b.score - a.score).map((sl) => (
+                                  <tr key={sl.id} className="bg-white dark:bg-zinc-900">
+                                    <td className="px-3 py-1.5 font-semibold text-zinc-700 dark:text-zinc-300">{sl.score}</td>
+                                    <td className="px-3 py-1.5 text-zinc-600 dark:text-zinc-400">{sl.label}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
           ))}
