@@ -118,6 +118,10 @@ export default function GradingWorkspacePage() {
   const [gradingCustomInputFile, setGradingCustomInputFile] = useState({ inputFileName: "", inputFileContentBase64: "" });
   const [gradingRunTab, setGradingRunTab] = useState("saved");
 
+  // Starter code state
+  const [starterCode, setStarterCode] = useState("");
+  const [savingStarterCode, setSavingStarterCode] = useState(false);
+
   // Group assignment state
   const [groups, setGroups] = useState([]);
   const [groupsExpanded, setGroupsExpanded] = useState(false);
@@ -139,6 +143,7 @@ export default function GradingWorkspacePage() {
         .then((res) => res.json())
         .then((assignmentData) => {
           setAssignment(assignmentData);
+          setStarterCode(assignmentData.starterCode || "");
           return fetch(`${API_BASE}/submission/assignment/${assignmentId}`)
               .then((res) => { if (!res.ok) throw new Error("Failed to fetch submissions"); return res.json(); })
               .then((data) => {
@@ -587,6 +592,20 @@ export default function GradingWorkspacePage() {
       if (!res.ok) throw new Error("Failed to run plagiarism check");
       setPlagiarismResults(await res.json());
     } catch (err) { console.error(err); } finally { setRunningPlagiarism(false); }
+  };
+
+  const handleSaveStarterCode = async () => {
+    setSavingStarterCode(true);
+    try {
+      const res = await fetch(`${API_BASE}/assignment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...assignment, starterCode }),
+      });
+      if (!res.ok) throw new Error("Failed to save starter code");
+      setAssignment(await res.json());
+    } catch (err) { console.error(err); }
+    finally { setSavingStarterCode(false); }
   };
 
   const handleToggleScoresVisible = async () => {
@@ -1142,6 +1161,32 @@ export default function GradingWorkspacePage() {
                 )}
               </section>
           )}
+
+          {/* Starter Code Section */}
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Starter Code</h2>
+                <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Provide a code template students can copy when starting the assignment.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveStarterCode}
+                disabled={savingStarterCode}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                style={{ background: "#862633" }}
+              >
+                {savingStarterCode ? "Saving..." : "Save"}
+              </button>
+            </div>
+            <textarea
+              value={starterCode}
+              onChange={(e) => setStarterCode(e.target.value)}
+              placeholder="Paste starter code here…"
+              rows={10}
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm font-mono text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-800/40 resize-y shadow-sm"
+            />
+          </section>
 
           {/* Rubric Section */}
           <section className="mb-8">

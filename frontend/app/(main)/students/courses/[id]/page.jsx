@@ -188,6 +188,7 @@ export default function StudentCourseDetailPage() {
   const [submissionFiles, setSubmissionFiles] = useState([]);
   const [activeSubmissionFile, setActiveSubmissionFile] = useState(0);
   const [myGroup, setMyGroup] = useState(null);
+  const [copiedStarterCode, setCopiedStarterCode] = useState(false);
 
   const [customTestCases, setCustomTestCases] = useState([
     { label: "", input: "", expectedOutput: "" },
@@ -850,7 +851,7 @@ export default function StudentCourseDetailPage() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-                  {["description", "upload", ...(selectedFiles.length > 0 || existingSubmission ? ["custom"] : []), ...(existingSubmission ? ["submission", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
+                  {["description", ...(selectedAssignment.starterCode ? ["starter"] : []), "upload", ...(selectedFiles.length > 0 || existingSubmission ? ["custom"] : []), ...(existingSubmission ? ["submission", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
                           type="button"
@@ -865,15 +866,17 @@ export default function StudentCourseDetailPage() {
                         {tab === "results" && <FlaskConical className="w-3.5 h-3.5" />}
                         {tab === "description"
                             ? "Description"
-                            : tab === "upload"
-                              ? "Upload Solution"
-                              : tab === "submission"
-                                ? "My Submission"
-                                : tab === "custom"
-                                  ? "Run With My Data"
-                                : tab === "results"
-                                  ? "Test Results"
-                                  : "Feedback"}
+                            : tab === "starter"
+                              ? "Starter Code"
+                              : tab === "upload"
+                                ? "Upload Solution"
+                                : tab === "submission"
+                                  ? "My Submission"
+                                  : tab === "custom"
+                                    ? "Run With My Data"
+                                    : tab === "results"
+                                      ? "Test Results"
+                                      : "Feedback"}
                       </button>
                   ))}
                 </div>
@@ -894,11 +897,14 @@ export default function StudentCourseDetailPage() {
                               </div>
                             </div>
                         )}
-                        {selectedAssignment.description ? (
-                            <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
-                        ) : (
-                            <p className="text-zinc-500 dark:text-zinc-400 text-sm">No description provided.</p>
-                        )}
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">Description</p>
+                          {selectedAssignment.description ? (
+                              <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">{selectedAssignment.description}</p>
+                          ) : (
+                              <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">No description provided.</p>
+                          )}
+                        </div>
                         {selectedAssignment.groupAssignment && (
                             <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                               <div className="flex items-center gap-2 mb-3">
@@ -932,6 +938,43 @@ export default function StudentCourseDetailPage() {
                             type="button"
                             onClick={() => setActiveTab("upload")}
                             className="mt-2 w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                            style={{ background: "#862633" }}
+                        >
+                          Go to Upload Solution
+                        </button>
+                      </div>
+                  )}
+
+                  {activeTab === "starter" && (
+                      <div className="space-y-4">
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Starter Code</p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(selectedAssignment.starterCode).then(() => {
+                                        setCopiedStarterCode(true);
+                                        setTimeout(() => setCopiedStarterCode(false), 2000);
+                                    });
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                                style={copiedStarterCode
+                                    ? { color: "#4ade80", borderColor: "#4ade8044", background: "#4ade8011" }
+                                    : { color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }
+                                }
+                            >
+                              {copiedStarterCode ? "Copied!" : "Copy"}
+                            </button>
+                          </div>
+                          <pre className="px-4 py-3 text-sm font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre bg-zinc-50 dark:bg-zinc-800/50">
+                            {selectedAssignment.starterCode}
+                          </pre>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("upload")}
+                            className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
                             style={{ background: "#862633" }}
                         >
                           Go to Upload Solution

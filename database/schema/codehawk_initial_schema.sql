@@ -63,6 +63,13 @@ ALTER TABLE assignments
     ADD COLUMN group_assignment BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN group_size INT DEFAULT NULL;
 
+-- ============================================================
+-- Starter Code (migration — run against existing DB)
+-- ============================================================
+
+ALTER TABLE assignments
+    ADD COLUMN starter_code LONGTEXT DEFAULT NULL;
+
 CREATE TABLE assignment_groups (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     assignment_id BIGINT NOT NULL,

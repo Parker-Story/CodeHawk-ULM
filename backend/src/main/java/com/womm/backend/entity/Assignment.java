@@ -40,6 +40,9 @@ public class Assignment {
     @Column(name = "input_file_content", columnDefinition = "LONGTEXT")
     private String inputFileContent;
 
+    @Column(name = "starter_code", columnDefinition = "LONGTEXT")
+    private String starterCode;
+
     @Column(name = "total_points", nullable = false)
     private int totalPoints = 100;
 
@@ -86,6 +89,8 @@ public class Assignment {
     public void setInputFileName(String inputFileName) { this.inputFileName = inputFileName; }
     public String getInputFileContent() { return inputFileContent; }
     public void setInputFileContent(String inputFileContent) { this.inputFileContent = inputFileContent; }
+    public String getStarterCode() { return starterCode; }
+    public void setStarterCode(String starterCode) { this.starterCode = starterCode; }
     public int getTotalPoints() { return totalPoints; }
     public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
 }
