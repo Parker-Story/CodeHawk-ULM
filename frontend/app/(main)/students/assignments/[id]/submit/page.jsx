@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE } from '@/lib/apiBase';
@@ -21,6 +21,23 @@ export default function SubmitAssignmentPage() {
     const [showToast,    setShowToast]    = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [toastType,    setToastType]    = useState('success');
+    const [assignment,   setAssignment]   = useState(null);
+    const [copied,       setCopied]       = useState(false);
+
+    useEffect(() => {
+        if (!assignmentId) return;
+        fetch(`${API_BASE}/assignment/${assignmentId}`)
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => { if (data) setAssignment(data); })
+            .catch(() => {});
+    }, [assignmentId]);
+
+    function handleCopyStarterCode() {
+        navigator.clipboard.writeText(assignment.starterCode).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    }
 
     function triggerToast(message, type = 'success') {
         setToastMessage(message);
@@ -94,6 +111,28 @@ export default function SubmitAssignmentPage() {
                         <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Submit Assignment</h1>
                         <p className="text-zinc-500 dark:text-zinc-400">Upload your files to complete the assignment</p>
                     </div>
+
+                    {assignment?.starterCode && (
+                        <div className="mb-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Starter Code</h2>
+                                <button
+                                    type="button"
+                                    onClick={handleCopyStarterCode}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                                    style={copied
+                                        ? { color: "#4ade80", borderColor: "#4ade8044", background: "#4ade8011" }
+                                        : { color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }
+                                    }
+                                >
+                                    {copied ? "Copied!" : "Copy"}
+                                </button>
+                            </div>
+                            <pre className="px-4 py-3 text-sm font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre bg-zinc-50 dark:bg-zinc-800/50 max-h-72">
+                                {assignment.starterCode}
+                            </pre>
+                        </div>
+                    )}
 
                     <form onSubmit={handleSubmit}>
                         <DropZone onFilesAdded={addFiles} />
