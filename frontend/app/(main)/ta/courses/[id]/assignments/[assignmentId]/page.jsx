@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, FileText, X, ClipboardList, ChevronDown, ChevronUp, MoreVertical, CheckCircle } from "lucide-react";
 import { API_BASE } from "@/lib/apiBase";
 import React from "react";
-import AiDetectionBadge from "@/components/AiDetectionBadge";  // ← new
 import dynamic from "next/dynamic";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -450,13 +449,12 @@ export default function TAGradingWorkspacePage() {
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Student</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Score</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Test Results</th>
-                                <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">AI Detection</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             {submissions.length === 0 ? (
-                                <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-500 dark:text-zinc-400">No submissions yet.</td></tr>
+                                <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-500 dark:text-zinc-400">No submissions yet.</td></tr>
                             ) : (
                                 submissions.map((s) => {
                                     const userId = s.submissionId.userId;
@@ -501,10 +499,6 @@ export default function TAGradingWorkspacePage() {
                                                         <span className="text-zinc-600 text-sm">—</span>
                                                     )}
                                                 </td>
-                                                {/* ── NEW: AI Detection cell ── */}
-                                                <td className="py-3 px-4">
-                                                    <AiDetectionBadge submission={s} />
-                                                </td>
                                                 <td className="py-3 px-4">
                                                     <div className="relative">
                                                         <button
@@ -533,7 +527,7 @@ export default function TAGradingWorkspacePage() {
                                             </tr>
                                             {isExpanded && studentResults.length > 0 && (
                                                 <tr className="border-b border-zinc-200 dark:border-zinc-700/50 bg-zinc-50 dark:bg-zinc-900/80">
-                                                    <td colSpan={5} className="px-4 py-3">
+                                                    <td colSpan={4} className="px-4 py-3">
                                                         <div className="space-y-2">
                                                             {studentResults.map((r) => (
                                                                 <div key={r.id} className="flex items-center gap-3 text-xs">
