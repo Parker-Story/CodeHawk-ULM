@@ -14,7 +14,7 @@ public interface CourseUserRepository extends JpaRepository<CourseUser, CourseUs
     @Query("SELECT cu.course FROM CourseUser cu WHERE cu.user.id = :userId")
     List<Course> findCoursesByUserId(@Param("userId") String userId);
 
-    @Query("SELECT cu FROM CourseUser cu WHERE cu.course.crn = :crn")
+    @Query("SELECT cu FROM CourseUser cu JOIN FETCH cu.user JOIN FETCH cu.course WHERE cu.course.crn = :crn")
     List<CourseUser> findUsersByCourseCrn(@Param("crn") String crn);
 
     @Modifying

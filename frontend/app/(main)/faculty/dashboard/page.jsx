@@ -188,8 +188,13 @@ export default function FacultyDashboardPage() {
     }
     const [sh, sm] = formData.startTime.split(":").map(Number);
     const [eh, em] = formData.endTime.split(":").map(Number);
-    if ((eh * 60 + em) - (sh * 60 + sm) < 30) {
-      setCourseError("Course duration must be at least 30 minutes.");
+    const durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (durationMinutes < 30) {
+      setCourseError("Class duration must be at least 30 minutes. Supported times: 7:00 AM – 12:00 AM.");
+      return;
+    }
+    if (durationMinutes > 120) {
+      setCourseError("Class duration cannot exceed 2 hours. Supported times: 7:00 AM – 12:00 AM.");
       return;
     }
 
@@ -361,13 +366,14 @@ export default function FacultyDashboardPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="startTime" className={labelStyles}>Start Time</label>
-                <TimeInput key={`start-${timeResetKey}`} id="startTime" placeholder="e.g. 8:00 AM" onChange={(v) => setFormData((p) => ({ ...p, startTime: v }))} />
+                <TimeInput key={`start-${timeResetKey}`} id="startTime" placeholder="e.g. 8:00 AM" onChange={(v) => { setFormData((p) => ({ ...p, startTime: v })); if (v) setCourseError(null); }} />
               </div>
               <div>
                 <label htmlFor="endTime" className={labelStyles}>End Time</label>
-                <TimeInput key={`end-${timeResetKey}`} id="endTime" placeholder="e.g. 9:15 AM" onChange={(v) => setFormData((p) => ({ ...p, endTime: v }))} />
+                <TimeInput key={`end-${timeResetKey}`} id="endTime" placeholder="e.g. 9:15 AM" onChange={(v) => { setFormData((p) => ({ ...p, endTime: v })); if (v) setCourseError(null); }} />
               </div>
             </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-2">Available times: 7:00 AM – 12:00 AM · Duration: 30 min – 2 hours</p>
             <div>
               <label htmlFor="courseDescription" className={labelStyles}>Course Description</label>
               <textarea id="courseDescription" name="courseDescription" value={formData.courseDescription} onChange={handleChange} placeholder="Brief description of the course..." rows={3} className={inputStyles} />
