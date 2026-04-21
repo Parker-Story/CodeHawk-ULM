@@ -104,6 +104,7 @@ export default function GradingWorkspacePage() {
   const [solutionCustomError, setSolutionCustomError] = useState(null);
   const [solutionCustomInputFile, setSolutionCustomInputFile] = useState({ inputFileName: "", inputFileContentBase64: "" });
   const [solutionRunTab, setSolutionRunTab] = useState("saved");
+  const [solutionPanelTab, setSolutionPanelTab] = useState("tests");
 
   // Grade Rubric execution state
   const [gradingEditMode, setGradingEditMode] = useState(false);
@@ -680,7 +681,7 @@ export default function GradingWorkspacePage() {
     setSolutionEditMode(false); setSolutionEdits({}); setSolutionRunResults(null);
     setSolutionRunError(null); setSolutionCustomInput(""); setSolutionCustomResult(null);
     setSolutionCustomError(null); setSolutionCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
-    setSolutionRunTab("saved");
+    setSolutionRunTab("saved"); setSolutionPanelTab("tests");
   };
 
   const resetGradingExecState = () => {
@@ -1438,8 +1439,9 @@ export default function GradingWorkspacePage() {
                       </button>
                       {solutionEditMode && <span className="text-xs text-amber-400 font-medium">Edit Mode — changes are temporary</span>}
                       <div className="flex-1" />
-                      <button type="button" onClick={() => setSolutionRunTab("saved")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "saved" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "saved" ? { background: "#862633" } : {}}>Run Tests</button>
-                      <button type="button" onClick={() => setSolutionRunTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                      <button type="button" onClick={() => setSolutionPanelTab("tests")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "tests" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "tests" ? { background: "#862633" } : {}}>Run Tests</button>
+                      <button type="button" onClick={() => setSolutionPanelTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                      <button type="button" onClick={() => setSolutionPanelTab("feedback")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "feedback" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "feedback" ? { background: "#862633" } : {}}>Feedback</button>
                     </div>
                     {/* Monaco */}
                     <div className="flex-1 min-h-0 overflow-hidden">
@@ -1455,9 +1457,9 @@ export default function GradingWorkspacePage() {
                           options={{ readOnly: !solutionEditMode, minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 13, automaticLayout: true }}
                       />
                     </div>
-                    {/* Run panel */}
+                    {/* Bottom panel */}
                     <div className="shrink-0 border-t border-zinc-700 bg-zinc-950" style={{ height: "220px" }}>
-                      {solutionRunTab === "saved" ? (
+                      {solutionPanelTab === "tests" ? (
                           <div className="h-full flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-zinc-800">
                               <span className="text-xs text-zinc-400 uppercase tracking-wider">Test Cases ({testCases.length}){Object.keys(solutionEdits).length > 0 && <span className="ml-2 text-amber-400 normal-case">· edited code</span>}</span>
@@ -1481,7 +1483,7 @@ export default function GradingWorkspacePage() {
                               ))}
                             </div>
                           </div>
-                      ) : (
+                      ) : solutionPanelTab === "custom" ? (
                           <div className="h-full flex flex-col overflow-hidden p-3 gap-2">
                             <textarea
                                 value={solutionCustomInput}
@@ -1507,6 +1509,26 @@ export default function GradingWorkspacePage() {
                                   <pre className="text-xs text-zinc-300 font-mono whitespace-pre-wrap bg-zinc-800 rounded-lg p-2 h-full">{solutionCustomResult.actualOutput || "(no output)"}</pre>
                                 </div>
                             )}
+                          </div>
+                      ) : (
+                          <div className="h-full flex flex-col overflow-hidden p-3 gap-2 bg-zinc-900">
+                            <textarea
+                                value={feedbackInputs[solutionUserId] ?? ""}
+                                onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [solutionUserId]: e.target.value }))}
+                                placeholder="Leave feedback for the student..."
+                                className="flex-1 min-h-0 resize-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-200 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                            />
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                  type="button"
+                                  onClick={() => handleSaveFeedback(solutionUserId)}
+                                  disabled={savingFeedback[solutionUserId]}
+                                  className="px-4 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+                                  style={{ background: "#862633" }}
+                              >
+                                {savingFeedback[solutionUserId] ? "Saving..." : "Save Feedback"}
+                              </button>
+                            </div>
                           </div>
                       )}
                     </div>

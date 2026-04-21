@@ -282,6 +282,7 @@ export default function StudentCourseDetailPage() {
   }, [activeTab, selectedAssignment, user?.id]);
 
   const existingSubmission = selectedAssignment ? submissions[selectedAssignment.id] : null;
+  const isGraded = existingSubmission?.score != null;
 
   const isPastDue = (assignment) => {
     if (!assignment?.dueDate) return false;
@@ -851,7 +852,7 @@ export default function StudentCourseDetailPage() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-                  {["description", ...(selectedAssignment.starterCode ? ["starter"] : []), "upload", ...(selectedFiles.length > 0 || existingSubmission ? ["custom"] : []), ...(existingSubmission ? ["submission", "results"] : []), ...(existingSubmission?.feedback ? ["feedback"] : [])].map((tab) => (
+                  {["description", ...(selectedAssignment.starterCode ? ["starter"] : []), "upload", ...(selectedFiles.length > 0 || existingSubmission ? ["custom"] : []), ...(existingSubmission ? ["submission", "results", "feedback"] : [])].map((tab) => (
                       <button
                           key={tab}
                           type="button"
@@ -1032,21 +1033,33 @@ export default function StudentCourseDetailPage() {
                                   Run With My Data
                                 </button>
                               </div>
-                              <button
-                                  type="button"
-                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); setSubmitted(false); }}
-                                  className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                  style={{ background: "#862633" }}
-                              >
-                                New Attempt
-                              </button>
-                              <button
-                                  type="button"
-                                  onClick={handleRemoveSubmission}
-                                  className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
-                              >
-                                Remove Submission
-                              </button>
+                              {isGraded ? (
+                                <div className="flex items-start gap-3 p-4 bg-amber-600/10 border border-amber-600/25 rounded-xl text-left">
+                                  <span className="text-amber-400 text-lg shrink-0">🔒</span>
+                                  <div>
+                                    <p className="text-amber-400 font-medium text-sm">Assignment Graded</p>
+                                    <p className="text-zinc-400 text-xs mt-0.5">Your instructor has already graded this assignment. New submissions are no longer accepted.</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                      type="button"
+                                      onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); setSubmitted(false); }}
+                                      className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                      style={{ background: "#862633" }}
+                                  >
+                                    New Attempt
+                                  </button>
+                                  <button
+                                      type="button"
+                                      onClick={handleRemoveSubmission}
+                                      className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
+                                  >
+                                    Remove Submission
+                                  </button>
+                                </>
+                              )}
                               <button
                                   type="button"
                                   onClick={closeModal}
@@ -1074,23 +1087,35 @@ export default function StudentCourseDetailPage() {
                                   )}
                                 </div>
                               </div>
-                              <button
-                                  type="button"
-                                  onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); }}
-                                  className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
-                                  style={{ background: "#862633" }}
-                              >
-                                New Attempt
-                              </button>
-                              <button
-                                  type="button"
-                                  onClick={handleRemoveSubmission}
-                                  className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
-                              >
-                                Remove Submission
-                              </button>
+                              {isGraded ? (
+                                <div className="flex items-start gap-3 p-4 bg-amber-600/10 border border-amber-600/25 rounded-xl text-left">
+                                  <span className="text-amber-400 text-lg shrink-0">🔒</span>
+                                  <div>
+                                    <p className="text-amber-400 font-medium text-sm">Assignment Graded</p>
+                                    <p className="text-zinc-400 text-xs mt-0.5">Your instructor has already graded this assignment. New submissions are no longer accepted.</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                      type="button"
+                                      onClick={() => { setNewAttempt(true); setSelectedFile(null); setSelectedFiles([]); }}
+                                      className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors"
+                                      style={{ background: "#862633" }}
+                                  >
+                                    New Attempt
+                                  </button>
+                                  <button
+                                      type="button"
+                                      onClick={handleRemoveSubmission}
+                                      className="w-full py-3 text-sm font-medium text-red-400 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors"
+                                  >
+                                    Remove Submission
+                                  </button>
+                                </>
+                              )}
                             </div>
-                        ) : existingSubmission && newAttempt ? (
+                        ) : existingSubmission && newAttempt && !isGraded ? (
                                 <div className="space-y-4">
                                   <div className="flex items-center justify-between gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                                     <div className="min-w-0">
@@ -1158,6 +1183,14 @@ export default function StudentCourseDetailPage() {
                                     >
                                       Run With My Data
                                     </button>
+                                  </div>
+                                </div>
+                            ) : isGraded ? (
+                                <div className="flex items-start gap-3 p-4 bg-amber-600/10 border border-amber-600/25 rounded-xl">
+                                  <span className="text-amber-400 text-lg shrink-0">🔒</span>
+                                  <div>
+                                    <p className="text-amber-400 font-medium text-sm">Assignment Graded</p>
+                                    <p className="text-zinc-400 text-xs mt-0.5">Your instructor has already graded this assignment. New submissions are no longer accepted.</p>
                                   </div>
                                 </div>
                             ) : (
@@ -1642,9 +1675,13 @@ export default function StudentCourseDetailPage() {
                   {activeTab === "feedback" && (
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
                         <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Instructor Feedback</p>
-                        <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
-                          {existingSubmission.feedback}
-                        </p>
+                        {existingSubmission?.feedback ? (
+                          <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+                            {existingSubmission.feedback}
+                          </p>
+                        ) : (
+                          <p className="text-zinc-400 dark:text-zinc-500 text-sm italic">No feedback has been provided yet.</p>
+                        )}
                       </div>
                   )}
                 </div>
