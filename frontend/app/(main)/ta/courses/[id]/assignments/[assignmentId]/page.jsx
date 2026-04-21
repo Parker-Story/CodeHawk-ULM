@@ -65,6 +65,14 @@ export default function TAGradingWorkspacePage() {
     const [solutionFiles, setSolutionFiles] = useState([]);
     const [activeSolutionFile, setActiveSolutionFile] = useState(0);
     const [testCases, setTestCases] = useState([]);
+    const [plagiarismResults, setPlagiarismResults] = useState(null);
+    const [plagiarismOpen, setPlagiarismOpen] = useState(false);
+    const [plagiarismTab, setPlagiarismTab] = useState("peer");
+    const [runningPlagiarism, setRunningPlagiarism] = useState(false);
+    const [expandedPair, setExpandedPair] = useState(null);
+    const [pairFilesCache, setPairFilesCache] = useState({});
+    const [aiExpandedUserId, setAiExpandedUserId] = useState(null);
+    const [aiFilesCache, setAiFilesCache] = useState({});
 
     const isFileMode = assignment?.inputMode === "FILE";
 
@@ -80,6 +88,7 @@ export default function TAGradingWorkspacePage() {
     const [solutionCustomError, setSolutionCustomError] = useState(null);
     const [solutionCustomInputFile, setSolutionCustomInputFile] = useState({ inputFileName: "", inputFileContentBase64: "" });
     const [solutionRunTab, setSolutionRunTab] = useState("saved");
+    const [solutionPanelTab, setSolutionPanelTab] = useState("tests");
 
     // Grade Rubric execution state
     const [gradingEditMode, setGradingEditMode] = useState(false);
@@ -187,7 +196,7 @@ export default function TAGradingWorkspacePage() {
         setSolutionEditMode(false); setSolutionEdits({}); setSolutionRunResults(null);
         setSolutionRunError(null); setSolutionCustomInput(""); setSolutionCustomResult(null);
         setSolutionCustomError(null); setSolutionCustomInputFile({ inputFileName: "", inputFileContentBase64: "" });
-        setSolutionRunTab("saved");
+        setSolutionRunTab("saved"); setSolutionPanelTab("tests");
     };
 
     const resetGradingExecState = () => {
@@ -335,6 +344,25 @@ export default function TAGradingWorkspacePage() {
         finally { setSavingFeedback((prev) => ({ ...prev, [userId]: false })); }
     };
 
+    const handleCheckPlagiarism = async () => {
+        setRunningPlagiarism(true);
+        try {
+            const res = await fetch(`${API_BASE}/plagiarism/check/${assignmentId}`);
+            if (!res.ok) throw new Error("Failed to run plagiarism check");
+            setPlagiarismResults(await res.json());
+        } catch (err) { console.error(err); } finally { setRunningPlagiarism(false); }
+    };
+
+    const handleDownloadPlagiarismCSV = () => {
+        if (!plagiarismResults) return;
+        const rows = [["Student A", "Student B", "Similarity %", "Flagged"], ...plagiarismResults.map((r) => [r.studentAName, r.studentBName, r.similarity, r.similarity >= 70 ? "Yes" : "No"])];
+        const csv = rows.map(r => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `plagiarism_${assignmentId}.csv`; a.click();
+    };
+
     const navigateStudent = (direction) => {
         const currentIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
         const nextIndex = currentIndex + direction;
@@ -404,6 +432,16 @@ export default function TAGradingWorkspacePage() {
                 <section className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Submissions</h2>
+                        <div className="flex items-center gap-2">
+                            {plagiarismResults && (
+                                <button type="button" onClick={() => setPlagiarismOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>
+                                    View Results
+                                </button>
+                            )}
+                            <button type="button" onClick={handleCheckPlagiarism} disabled={runningPlagiarism || submissions.length < 1} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50" style={{ background: "#862633" }}>
+                                {runningPlagiarism ? "Running..." : plagiarismResults ? "Re-run Check" : "Check Plagiarism"}
+                            </button>
+                        </div>
                     </div>
                     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm" style={{ minHeight: "280px" }}>
                         <table className="w-full text-sm">
@@ -412,12 +450,13 @@ export default function TAGradingWorkspacePage() {
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Student</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Score</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Test Results</th>
+                                <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">AI Detection</th>
                                 <th className="text-left py-3 px-4 font-semibold text-zinc-700 dark:text-white">Actions</th>
                             </tr>
                             </thead>
                             <tbody>
                             {submissions.length === 0 ? (
-                                <tr><td colSpan={4} className="py-8 px-4 text-center text-zinc-500 dark:text-zinc-400">No submissions yet.</td></tr>
+                                <tr><td colSpan={5} className="py-8 px-4 text-center text-zinc-500 dark:text-zinc-400">No submissions yet.</td></tr>
                             ) : (
                                 submissions.map((s) => {
                                     const userId = s.submissionId.userId;
@@ -494,7 +533,7 @@ export default function TAGradingWorkspacePage() {
                                             </tr>
                                             {isExpanded && studentResults.length > 0 && (
                                                 <tr className="border-b border-zinc-200 dark:border-zinc-700/50 bg-zinc-50 dark:bg-zinc-900/80">
-                                                    <td colSpan={4} className="px-4 py-3">
+                                                    <td colSpan={5} className="px-4 py-3">
                                                         <div className="space-y-2">
                                                             {studentResults.map((r) => (
                                                                 <div key={r.id} className="flex items-center gap-3 text-xs">
@@ -591,8 +630,9 @@ export default function TAGradingWorkspacePage() {
                                     </button>
                                     {solutionEditMode && <span className="text-xs text-amber-400 font-medium">Edit Mode — changes are temporary</span>}
                                     <div className="flex-1" />
-                                    <button type="button" onClick={() => setSolutionRunTab("saved")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "saved" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "saved" ? { background: "#862633" } : {}}>Run Tests</button>
-                                    <button type="button" onClick={() => setSolutionRunTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionRunTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionRunTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                                    <button type="button" onClick={() => setSolutionPanelTab("tests")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "tests" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "tests" ? { background: "#862633" } : {}}>Run Tests</button>
+                                    <button type="button" onClick={() => setSolutionPanelTab("custom")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "custom" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "custom" ? { background: "#862633" } : {}}>Custom Input</button>
+                                    <button type="button" onClick={() => setSolutionPanelTab("feedback")} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${solutionPanelTab === "feedback" ? "text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600"}`} style={solutionPanelTab === "feedback" ? { background: "#862633" } : {}}>Feedback</button>
                                 </div>
                                 {/* Monaco */}
                                 <div className="flex-1 min-h-0 overflow-hidden">
@@ -608,9 +648,9 @@ export default function TAGradingWorkspacePage() {
                                         options={{ readOnly: !solutionEditMode, minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 13, automaticLayout: true }}
                                     />
                                 </div>
-                                {/* Run panel */}
+                                {/* Bottom panel */}
                                 <div className="shrink-0 border-t border-zinc-700 bg-zinc-950" style={{ height: "220px" }}>
-                                    {solutionRunTab === "saved" ? (
+                                    {solutionPanelTab === "tests" ? (
                                         <div className="h-full flex flex-col overflow-hidden">
                                             <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-zinc-800">
                                                 <span className="text-xs text-zinc-400 uppercase tracking-wider">Test Cases ({testCases.length}){Object.keys(solutionEdits).length > 0 && <span className="ml-2 text-amber-400 normal-case">· edited code</span>}</span>
@@ -631,7 +671,7 @@ export default function TAGradingWorkspacePage() {
                                                 ))}
                                             </div>
                                         </div>
-                                    ) : (
+                                    ) : solutionPanelTab === "custom" ? (
                                         <div className="h-full flex flex-col overflow-hidden p-3 gap-2">
                                             <textarea
                                                 value={solutionCustomInput}
@@ -657,6 +697,26 @@ export default function TAGradingWorkspacePage() {
                                                     <pre className="text-xs text-zinc-300 font-mono whitespace-pre-wrap bg-zinc-800 rounded-lg p-2 h-full">{solutionCustomResult.actualOutput || "(no output)"}</pre>
                                                 </div>
                                             )}
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col overflow-hidden p-3 gap-2 bg-zinc-900">
+                                            <textarea
+                                                value={feedbackInputs[solutionUserId] ?? ""}
+                                                onChange={(e) => setFeedbackInputs((prev) => ({ ...prev, [solutionUserId]: e.target.value }))}
+                                                placeholder="Leave feedback for the student..."
+                                                className="flex-1 min-h-0 resize-none bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-200 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                                            />
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSaveFeedback(solutionUserId)}
+                                                    disabled={savingFeedback[solutionUserId]}
+                                                    className="px-4 py-1.5 text-xs font-medium text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+                                                    style={{ background: "#862633" }}
+                                                >
+                                                    {savingFeedback[solutionUserId] ? "Saving..." : "Save Feedback"}
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -949,6 +1009,251 @@ export default function TAGradingWorkspacePage() {
                     </div>
                 );
             })()}
+
+            {/* Plagiarism Results Modal */}
+            {plagiarismOpen && plagiarismResults && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
+                            <div>
+                                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Integrity Check Results</h2>
+                                <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-0.5">
+                                    {plagiarismTab === "peer"
+                                        ? `${plagiarismResults.length} pair${plagiarismResults.length !== 1 ? "s" : ""} compared • ${plagiarismResults.filter(r => r.similarity >= 70).length} flagged`
+                                        : `${submissions.length} submission${submissions.length !== 1 ? "s" : ""} analyzed • ${submissions.filter(s => s.aiLabel === "AI").length} flagged`}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {plagiarismTab === "peer" && (
+                                    <button type="button" onClick={handleDownloadPlagiarismCSV} className="px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>Download CSV</button>
+                                )}
+                                <button type="button" onClick={() => { setPlagiarismOpen(false); setExpandedPair(null); setPlagiarismTab("peer"); }} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
+                            </div>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex border-b border-zinc-200 dark:border-zinc-700 shrink-0 px-6">
+                            <button
+                                type="button"
+                                onClick={() => { setPlagiarismTab("peer"); setExpandedPair(null); }}
+                                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${plagiarismTab === "peer" ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                            >
+                                Peer-to-Peer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPlagiarismTab("ai")}
+                                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors -mb-px ${plagiarismTab === "ai" ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                            >
+                                AI Detection
+                            </button>
+                        </div>
+
+                        {/* Tab content */}
+                        <div className="overflow-auto flex-1">
+                            {plagiarismTab === "peer" ? (
+                                plagiarismResults.length === 0 ? (
+                                    <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">Not enough peer submissions to compare. At least 2 submissions are required for peer-to-peer analysis.</div>
+                                ) : (
+                                    plagiarismResults.map((r, idx) => {
+                                        const isExpanded = expandedPair === idx;
+                                        const color = r.similarity >= 70 ? "text-red-400" : r.similarity >= 50 ? "text-yellow-400" : "text-green-400";
+                                        const bg = r.similarity >= 70 ? "bg-red-500/10 border-red-500/20" : r.similarity >= 50 ? "bg-yellow-500/10 border-yellow-500/20" : "bg-zinc-800 border-zinc-700";
+                                        return (
+                                            <div key={idx} className="border-b border-zinc-200 dark:border-zinc-700/50 last:border-0">
+                                                <button type="button" onClick={() => {
+                                                    const next = isExpanded ? null : idx;
+                                                    setExpandedPair(next);
+                                                    if (next !== null && !pairFilesCache[next]) {
+                                                        Promise.all([
+                                                            fetch(`${API_BASE}/submission/files/${assignmentId}/${r.studentAId}`).then(res => res.ok ? res.json() : []).catch(() => []),
+                                                            fetch(`${API_BASE}/submission/files/${assignmentId}/${r.studentBId}`).then(res => res.ok ? res.json() : []).catch(() => []),
+                                                        ]).then(([filesA, filesB]) => {
+                                                            setPairFilesCache(prev => ({ ...prev, [next]: { filesA: Array.isArray(filesA) ? filesA : [], filesB: Array.isArray(filesB) ? filesB : [], activeA: 0, activeB: 0 } }));
+                                                        });
+                                                    }
+                                                }} className="w-full flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`text-2xl font-bold ${color}`}>{r.similarity}%</div>
+                                                        <div>
+                                                            <p className="text-zinc-900 dark:text-white text-sm font-medium">{r.studentAName} &amp; {r.studentBName}</p>
+                                                            {r.similarity >= 70 && <span className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">Flagged</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-zinc-500 dark:text-zinc-400 text-sm">{isExpanded ? "Hide" : "Compare"}</span>
+                                                        {isExpanded ? <ChevronUp className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> : <ChevronDown className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />}
+                                                    </div>
+                                                </button>
+                                                {isExpanded && (() => {
+                                                    const cached = pairFilesCache[idx];
+                                                    const filesA = cached?.filesA ?? [];
+                                                    const filesB = cached?.filesB ?? [];
+                                                    const activeA = cached?.activeA ?? 0;
+                                                    const activeB = cached?.activeB ?? 0;
+                                                    const contentA = filesA.length > 0 ? decodeBase64ToUtf8(filesA[activeA]?.fileContent) : (r.fileContentA || "No content");
+                                                    const contentB = filesB.length > 0 ? decodeBase64ToUtf8(filesB[activeB]?.fileContent) : (r.fileContentB || "No content");
+                                                    return (
+                                                        <div className="px-6 pb-5">
+                                                            <div className={`border rounded-xl overflow-hidden ${bg}`}>
+                                                                <div className="grid grid-cols-2 divide-x divide-zinc-200 dark:divide-zinc-700">
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <div className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50">
+                                                                            <p className="px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-white">{r.studentAName}</p>
+                                                                            {filesA.length > 1 && (
+                                                                                <div className="flex overflow-x-auto border-t border-zinc-200 dark:border-zinc-700">
+                                                                                    {filesA.map((f, fi) => (
+                                                                                        <button key={fi} type="button" onClick={() => setPairFilesCache(prev => ({ ...prev, [idx]: { ...prev[idx], activeA: fi } }))}
+                                                                                            className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${activeA === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                                                            {f.fileName}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{cached ? contentA : "Loading..."}</pre>
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <div className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50">
+                                                                            <p className="px-4 py-2 text-sm font-semibold text-zinc-900 dark:text-white">{r.studentBName}</p>
+                                                                            {filesB.length > 1 && (
+                                                                                <div className="flex overflow-x-auto border-t border-zinc-200 dark:border-zinc-700">
+                                                                                    {filesB.map((f, fi) => (
+                                                                                        <button key={fi} type="button" onClick={() => setPairFilesCache(prev => ({ ...prev, [idx]: { ...prev[idx], activeB: fi } }))}
+                                                                                            className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${activeB === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                                                            {f.fileName}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-96 whitespace-pre-wrap">{cached ? contentB : "Loading..."}</pre>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        );
+                                    })
+                                )
+                            ) : (
+                                /* AI Detection tab */
+                                submissions.length === 0 ? (
+                                    <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">No submissions to analyze.</div>
+                                ) : (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-zinc-100 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-700 sticky top-0">
+                                                <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">Student</th>
+                                                <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">AI Probability</th>
+                                                <th className="text-left py-3 px-6 font-semibold text-zinc-700 dark:text-zinc-300">Confidence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...submissions]
+                                                .sort((a, b) => (b.aiPercentage ?? 0) - (a.aiPercentage ?? 0))
+                                                .map((s) => {
+                                                    const label = s.aiLabel;
+                                                    const pct = s.aiPercentage;
+                                                    const confidence = s.aiConfidence;
+                                                    const scheme = {
+                                                        AI:        { color: "text-red-400",    bg: "bg-red-500/10 border-red-500/20"       },
+                                                        Human:     { color: "text-green-400",  bg: "bg-green-500/10 border-green-500/20"   },
+                                                        Uncertain: { color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/20" },
+                                                    }[label] ?? { color: "text-zinc-400", bg: "bg-zinc-500/10 border-zinc-500/20" };
+                                                    const barColor = {
+                                                        AI: "bg-red-500", Human: "bg-green-500", Uncertain: "bg-yellow-500",
+                                                    }[label] ?? "bg-zinc-500";
+                                                    const userId = s.submissionId?.userId ?? s.user?.cwid;
+                                                    const isAiExpanded = aiExpandedUserId === userId;
+                                                    const aiCached = aiFilesCache[userId];
+                                                    const aiFiles = aiCached?.files ?? [];
+                                                    const aiActiveFile = aiCached?.activeFile ?? 0;
+                                                    return (
+                                                        <React.Fragment key={userId}>
+                                                            <tr
+                                                                className="border-b border-zinc-200 dark:border-zinc-700/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                                                                onClick={() => {
+                                                                    if (isAiExpanded) { setAiExpandedUserId(null); return; }
+                                                                    setAiExpandedUserId(userId);
+                                                                    if (!aiFilesCache[userId]) {
+                                                                        fetch(`${API_BASE}/submission/files/${assignmentId}/${userId}`)
+                                                                            .then(res => res.ok ? res.json() : []).catch(() => [])
+                                                                            .then(files => setAiFilesCache(prev => ({ ...prev, [userId]: { files: Array.isArray(files) ? files : [], activeFile: 0 } })));
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <td className="py-3 px-6">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "#C9A84C1a" }}>
+                                                                            <span className="text-xs font-medium" style={{ color: "#c0a080" }}>{s.user?.firstName?.charAt(0)}{s.user?.lastName?.charAt(0)}</span>
+                                                                        </div>
+                                                                        <span className="text-zinc-700 dark:text-zinc-300">{s.user?.firstName} {s.user?.lastName}</span>
+                                                                        <span className="ml-1 text-zinc-400 dark:text-zinc-500 text-xs">{isAiExpanded ? "▲" : "▼"}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-3 px-6">
+                                                                    {pct != null && label && label !== "Unavailable" ? (
+                                                                        <div className="flex items-center gap-3 min-w-[140px]">
+                                                                            <div className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                                                                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                                                                            </div>
+                                                                            <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">{pct.toFixed(1)}%</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-zinc-600 text-sm">—</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-3 px-6">
+                                                                    {confidence && label && label !== "Unavailable" ? (
+                                                                        <span className={`text-xs ${confidence === "High" ? "text-zinc-900 dark:text-white font-medium" : confidence === "Medium" ? "text-zinc-600 dark:text-zinc-300" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                                                            {confidence}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-xs text-zinc-600">—</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                            {isAiExpanded && (
+                                                                <tr className="border-b border-zinc-200 dark:border-zinc-700/50">
+                                                                    <td colSpan={3} className="px-6 pb-4 pt-2">
+                                                                        <div className="border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                                                                            {aiFiles.length > 1 && (
+                                                                                <div className="flex overflow-x-auto border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+                                                                                    {aiFiles.map((f, fi) => (
+                                                                                        <button key={fi} type="button"
+                                                                                            onClick={(e) => { e.stopPropagation(); setAiFilesCache(prev => ({ ...prev, [userId]: { ...prev[userId], activeFile: fi } })); }}
+                                                                                            className={`px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 shrink-0 transition-colors ${aiActiveFile === fi ? "border-red-600 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+                                                                                            {f.fileName}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                            {aiFiles.length === 0 ? (
+                                                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 p-4">{aiCached ? "No files found." : "Loading..."}</p>
+                                                                            ) : (
+                                                                                <pre className="text-xs text-zinc-700 dark:text-zinc-300 font-mono p-4 overflow-auto max-h-80 whitespace-pre-wrap bg-white dark:bg-zinc-900">
+                                                                                    {decodeBase64ToUtf8(aiFiles[aiActiveFile]?.fileContent) || "No content"}
+                                                                                </pre>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                        </tbody>
+                                    </table>
+                                )
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
