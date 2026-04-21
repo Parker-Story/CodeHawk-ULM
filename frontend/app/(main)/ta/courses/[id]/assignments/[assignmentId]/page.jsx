@@ -362,6 +362,28 @@ export default function TAGradingWorkspacePage() {
         a.href = url; a.download = `plagiarism_${assignmentId}.csv`; a.click();
     };
 
+    const handleDownloadAiCSV = () => {
+        if (!submissions || submissions.length === 0) return;
+        const escape = (v) => (v == null ? "" : String(v).includes(",") ? `"${v}"` : String(v));
+        const rows = [
+            ["Student", "AI Label", "AI Probability (%)", "Confidence"],
+            ...[...submissions]
+                .sort((a, b) => (b.aiPercentage ?? 0) - (a.aiPercentage ?? 0))
+                .map((s) => [
+                    escape(`${s.user?.firstName ?? ""} ${s.user?.lastName ?? ""}`.trim()),
+                    escape(s.aiLabel ?? ""),
+                    escape(s.aiPercentage != null ? s.aiPercentage.toFixed(1) : ""),
+                    escape(s.aiConfidence ?? ""),
+                ]),
+        ];
+        const csv = rows.map(r => r.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `ai_detection_${assignmentId}.csv`; a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const navigateStudent = (direction) => {
         const currentIndex = submissions.findIndex(s => s.submissionId.userId === gradingStudent);
         const nextIndex = currentIndex + direction;
@@ -1019,9 +1041,12 @@ export default function TAGradingWorkspacePage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {plagiarismTab === "peer" && (
-                                    <button type="button" onClick={handleDownloadPlagiarismCSV} className="px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80" style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}>Download CSV</button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={plagiarismTab === "peer" ? handleDownloadPlagiarismCSV : handleDownloadAiCSV}
+                                    className="px-3 py-2 text-sm font-medium rounded-lg border transition-colors hover:opacity-80"
+                                    style={{ color: "#C9A84C", borderColor: "#C9A84C44", background: "#C9A84C11" }}
+                                >Download CSV</button>
                                 <button type="button" onClick={() => { setPlagiarismOpen(false); setExpandedPair(null); setPlagiarismTab("peer"); }} className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"><X className="w-5 h-5" /></button>
                             </div>
                         </div>

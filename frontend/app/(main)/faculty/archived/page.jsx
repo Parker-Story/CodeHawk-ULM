@@ -61,6 +61,7 @@ export default function FacultyArchivedPage() {
     const [openGroups, setOpenGroups] = useState({});
     const [expandedCourse, setExpandedCourse] = useState(null);
     const [enrollments, setEnrollments] = useState({});
+    const [enrollmentErrors, setEnrollmentErrors] = useState({});
     const [loadingCrn, setLoadingCrn] = useState(null);
 
     const archivedClasses = classes.filter((c) => c.archived);
@@ -82,24 +83,31 @@ export default function FacultyArchivedPage() {
     const toggleGroup = (label) =>
         setOpenGroups((prev) => ({ ...prev, [label]: !isGroupOpen(label) }));
 
-    const toggleCourse = async (crn) => {
+    const fetchRoster = async (crn) => {
+        setLoadingCrn(crn);
+        try {
+            const res = await fetch(`${API_BASE}/courseUser/roster/${crn}`);
+            if (!res.ok) throw new Error(`Server error ${res.status}`);
+            const data = await res.json();
+            setEnrollments((prev) => ({ ...prev, [crn]: Array.isArray(data) ? data : [] }));
+            setEnrollmentErrors((prev) => ({ ...prev, [crn]: null }));
+        } catch (err) {
+            console.error("Failed to load roster for", crn, err);
+            setEnrollments((prev) => ({ ...prev, [crn]: [] }));
+            setEnrollmentErrors((prev) => ({ ...prev, [crn]: err.message }));
+        } finally {
+            setLoadingCrn(null);
+        }
+    };
+
+    const toggleCourse = (crn) => {
         if (expandedCourse === crn) {
             setExpandedCourse(null);
             return;
         }
         setExpandedCourse(crn);
-        if (!enrollments[crn]) {
-            setLoadingCrn(crn);
-            try {
-                const res = await fetch(`${API_BASE}/courseUser/roster/${crn}`);
-                const data = await res.json();
-                setEnrollments((prev) => ({ ...prev, [crn]: data }));
-            } catch (err) {
-                console.error(err);
-                setEnrollments((prev) => ({ ...prev, [crn]: [] }));
-            } finally {
-                setLoadingCrn(null);
-            }
+        if (enrollments[crn] === undefined) {
+            fetchRoster(crn);
         }
     };
 
@@ -145,6 +153,7 @@ export default function FacultyArchivedPage() {
                                         {courses.map((classItem) => {
                                             const isExpanded = expandedCourse === classItem.crn;
                                             const isLoading = loadingCrn === classItem.crn;
+                                            const rosterError = enrollmentErrors[classItem.crn];
                                             const roster = enrollments[classItem.crn] ?? [];
                                             const students = roster.filter((cu) => cu.courseRole === "STUDENT");
                                             const tas = roster.filter((cu) => cu.courseRole === "TA");
@@ -197,6 +206,15 @@ export default function FacultyArchivedPage() {
 
                                                                 {isLoading ? (
                                                                     <p className="text-zinc-500 text-sm">Loading roster...</p>
+                                                                ) : rosterError ? (
+                                                                    <div className="flex items-center gap-3">
+                                                                        <p className="text-red-400 text-sm">Failed to load roster.</p>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => fetchRoster(classItem.crn)}
+                                                                            className="text-xs text-zinc-400 underline hover:text-zinc-200"
+                                                                        >Retry</button>
+                                                                    </div>
                                                                 ) : (
                                                                     <div className="grid grid-cols-2 gap-6">
                                                                         <RosterSection title="Students" people={students} emptyText="No students" />
