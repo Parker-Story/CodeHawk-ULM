@@ -29,7 +29,7 @@ export default function PortalDashboardPage({ variant }) {
     useEffect(() => {
         if (variant !== "student" || courseUsers.length === 0) return;
         Promise.all(
-            courseUsers.map((cu) =>
+            courseUsers.filter((cu) => !cu.course.archived).map((cu) =>
                 fetch(`${API_BASE}/assignment/course/${cu.course.crn}`)
                     .then((res) => (res.ok ? res.json() : []))
                     .then((data) =>
@@ -85,13 +85,15 @@ export default function PortalDashboardPage({ variant }) {
         }
     };
 
-    const courseGrid = courseUsers.length === 0 ? (
+    const visibleCourseUsers = courseUsers.filter((cu) => !cu.course.archived);
+
+    const courseGrid = visibleCourseUsers.length === 0 ? (
         <div className="flex items-center justify-center min-h-[60vh]">
             <p className="text-zinc-500 dark:text-zinc-400">No courses yet.</p>
         </div>
     ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courseUsers.map((courseUser) => {
+            {visibleCourseUsers.map((courseUser) => {
                 const course = courseUser.course;
                 const isTA = courseUser.courseRole === "TA";
                 return (
