@@ -35,6 +35,7 @@ export default function CourseDetailPage() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [editAssignment, setEditAssignment] = useState(null);
   const [deleteAssignmentConfirm, setDeleteAssignmentConfirm] = useState({ isOpen: false, assignment: null });
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
   const [promoteTaConfirm, setPromoteTaConfirm] = useState({ isOpen: false, courseUser: null });
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvResult, setCsvResult] = useState(null);
@@ -232,12 +233,17 @@ export default function CourseDetailPage() {
   };
 
   const handleDeleteAssignment = async () => {
+    setDeletingAssignment(true);
     try {
       const response = await fetch(`${API_BASE}/assignment/${deleteAssignmentConfirm.assignment.id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete assignment");
       setAssignments((prev) => prev.filter((a) => a.id !== deleteAssignmentConfirm.assignment.id));
       setDeleteAssignmentConfirm({ isOpen: false, assignment: null });
-    } catch (error) { console.error("Error deleting assignment:", error); }
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+    } finally {
+      setDeletingAssignment(false);
+    }
   };
 
   const handleCopyToOtherCourse = async () => {
@@ -522,12 +528,14 @@ export default function CourseDetailPage() {
         </Dialog>
 
         {/* Delete Assignment */}
-        <Dialog isOpen={deleteAssignmentConfirm.isOpen} onClose={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} title="Delete Assignment" size="sm">
+        <Dialog isOpen={deleteAssignmentConfirm.isOpen} onClose={() => !deletingAssignment && setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} title="Delete Assignment" size="sm">
           <div className="space-y-4">
             <p className="text-zinc-600 dark:text-zinc-300">Are you sure you want to delete <span className="font-semibold text-zinc-900 dark:text-white">{deleteAssignmentConfirm.assignment?.title}</span>? This action cannot be undone.</p>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors">Cancel</button>
-              <button type="button" onClick={handleDeleteAssignment} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors">Delete</button>
+              <button type="button" disabled={deletingAssignment} onClick={() => setDeleteAssignmentConfirm({ isOpen: false, assignment: null })} className="flex-1 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50">Cancel</button>
+              <button type="button" disabled={deletingAssignment} onClick={handleDeleteAssignment} className="flex-1 py-3 text-sm font-medium text-white bg-red-800 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+                {deletingAssignment ? "Deleting..." : "Delete"}
+              </button>
             </div>
           </div>
         </Dialog>
@@ -539,7 +547,7 @@ export default function CourseDetailPage() {
               <p className="text-zinc-500 dark:text-zinc-400 text-sm">Enter a student's CWID to add them individually.</p>
               <div>
                 <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 block mb-2">Student CWID</label>
-                <input type="text" value={studentCwid} onChange={(e) => setStudentCwid(e.target.value)} placeholder="e.g. 12345678" className={inputClass} />
+                <input type="text" value={studentCwid} onChange={(e) => setStudentCwid(e.target.value)} placeholder="e.g. 12345678" maxLength={8} className={inputClass} />
               </div>
               <button type="button" onClick={handleAddStudent} disabled={!studentCwid} className="w-full py-3 text-sm font-medium text-white rounded-xl hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: "#862633" }}>
                 Add Student
